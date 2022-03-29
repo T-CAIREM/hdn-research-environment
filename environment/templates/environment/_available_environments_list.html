@@ -1,0 +1,112 @@
+{% load action_buttons %}
+
+{% if recent_workflow %}
+    {% if recent_workflow_failed %}
+        <div class="alert alert-danger" role="alert">
+            {{ recent_workflow.get_type_display }} {{ recent_workflow.project }} failed! Try again later.
+        </div>
+    {% elif recent_workflow_succeeded %}
+        <div class="alert alert-success" role="alert">
+            {{ recent_workflow.get_type_display }} {{ recent_workflow.project }} finished!
+        </div>
+    {% endif %}
+{% endif %}
+
+<ul class="list-group list-group-flush">
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>
+                    Project
+                </strong>
+            </div>
+            <div class="col-md-3">
+                <strong>
+                    Details
+                </strong>
+            </div>
+            <div class="col-md-2">
+                <strong>
+                    Status
+                </strong>
+            </div>
+            <div class="col-md-4">
+                <strong>
+                    Actions
+                </strong>
+            </div>
+        </div>
+    </li>    
+    {% for environment, project, workflows in environment_project_workflow_triplets %}
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-md-3">
+                    <a href="{% url 'published_project' project.slug project.version %}" target="_blank">
+                        {{ project }}
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <small>
+                        <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
+                        <i>Instance type:</i> {{ environment.instance_type.value }}<br>
+                        <i>Region:</i> {{ environment.region.value }}
+                    </small>
+                </div>
+                <div class="col-md-2">
+                    {% if workflows.exists %}
+                        {{ workflows.first.get_type_display }}
+                    {% else %}
+                        {{ environment.status.value|capfirst }}
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex flex-wrap">
+                        {% if workflows.exists %}
+                            <div class="loader" style="margin: 18px; font-size: 5px">Loading...</div>
+                        {% elif environment.is_running or environment.is_paused %}
+                            {% if environment.is_running %}
+                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
+                                {% environment_modal_button environment=environment project=project button_type="modal_pause" %}
+                            {% else %}
+                                {% environment_modal_button environment=environment project=project button_type="modal_start" %}
+                            {% endif %}
+                            {% environment_modal_button environment=environment project=project button_type="modal_instance" %}
+                            {% environment_modal_button environment=environment project=project button_type="modal_destroy" %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+</ul>
+
+<script>
+    function refreshEnvironmentsCard(executionId) {
+        fetchNewEnvironmentsCard(executionId)
+        .then(html => $("#environments").html(html));
+    }
+
+    function pollExecutionStatus(executionId) {
+        const pollUrl = `{% url "check_execution_status" %}?execution_resource_name=${executionId}`;
+        fetch(pollUrl)
+        .then(response => response.json())
+        .then(({ finished }) => {
+            if (finished) {
+                refreshEnvironmentsCard(executionId);
+            } else {
+                scheduleExecutionPolling(executionId);
+            }
+        });
+    }
+
+    function scheduleExecutionPolling(executionId, immediate=false) {
+        const timeout = immediate ? 0 : 30000;
+        setTimeout(() => pollExecutionStatus(executionId), timeout);
+    }
+
+    {% for environment, project, workflows in environment_project_workflow_triplets %}
+        {% for workflow in workflows %}
+            scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
+        {% endfor %}
+    {% endfor %}
+</script>

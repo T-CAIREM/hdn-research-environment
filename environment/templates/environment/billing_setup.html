@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Billing Setup{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+    <h2 class="mb-4">
+      Research Environments
+    </h2>
+    <div class="card" style="width: 36rem;">
+      <div class="card-body">
+          <h5 class="card-title">
+            Your Cloud Identity was successfully created.
+          </h5>
+          <div class="card" style="width: 33rem;">
+            <h6 class="card-header p-2">
+              Credentials
+            </h6>
+            <div class="p-2">
+              <div class="card-text" style="word-break: break-all;">
+                <div>
+                  <strong><i>E-Mail:</i></strong> {{ email }}
+                </div>
+                <div>
+                    <strong><i>One Time Password:</i></strong> {{ otp|default_if_none:"--" }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <br>
+          <h6 class="card-title font-weight-bold">
+            You need to set up your billing account before creating your first research environment.
+          </h6>
+          <span >In order to do that:</span>
+          <ol>
+            <li>
+                <span class="font-italic">Visit <a href="https://console.cloud.google.com/billing" target="_blank">the Google Cloud Platform console</a> and follow the instructions there.</span>
+            </li>
+            <li>
+                <span class="font-italic">Copy the created billing account's ID.</span>
+            </li>
+            <li>
+                <span class="font-italic">Paste the ID in the form below and submit.</span>
+            </li>
+          </ol>
+
+          <form action="{% url 'billing_setup' %}" method="post" style="width: 24rem;">
+            {% csrf_token %}
+            {{ form }}
+            <button class="btn btn-primary mt-3 " type="submit">
+              Setup Billing Account
+            </button>
+          </form>
+      </div>
+    </div>
+</div>
+{% endblock %}

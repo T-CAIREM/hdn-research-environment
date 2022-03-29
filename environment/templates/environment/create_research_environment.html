@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Create Research Environment{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/create_research_environment.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+    <h1 class="mb-4">
+      Create Research Environment
+    </h1>
+    <div class="card" style="width: 36rem;">
+      <div class="card-body">
+        <h3 class="card-title">
+            Project: <span class="font-italic">{{ project.title }}</span>
+        </h3>
+
+        <form action="{% url 'create_research_environment' project_slug=project.slug project_version=project.version %}" method="post" style="width: 24rem;">
+            {% csrf_token %}
+            {{ form }}
+            <button class="btn btn-primary mt-3" type="submit">
+                Create environment
+            </button>
+        </form>
+      </div>
+    </div>
+</div>
+{% endblock %}

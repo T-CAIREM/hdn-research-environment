@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Create Cloud Identity{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+    <h2 class="mb-4">Research Environments</h2>
+    <div class="card" style="width: 36rem;">
+      <div class="card-body">
+        <p class="card-text font-weight-bold">You don't have any research environments yet.</p>
+        <p class="card-text">To start, click the button below to provide you Google Cloud Identity.</p>
+        <form id="environment_identity_provisioning_form" action="{% url 'identity_provisioning' %}" method="post">
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">
+            Create Cloud Identity
+          </button>
+        </form>
+      </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block local_js_bottom %}
+<script>
+  (function() {
+    const form = document.getElementById("environment_identity_provisioning_form");
+    let allowSubmit = true;
+
+    form.onsubmit = function() {
+      if (allowSubmit) {
+        form.querySelector("button").classList.add("disabled");
+        allowSubmit = false;
+        return true;
+      } else {
+        return false;
+      }
+    };
+  })();
+</script>
+{% endblock %}
