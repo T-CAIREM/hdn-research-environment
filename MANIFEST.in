@@ -1,4 +1,4 @@
 include LICENSE
 include README.md
-recursive-include polls/static *
-recursive-include polls/templates *
+recursive-include environment/static *
+recursive-include environment/templates *
