@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 from django.conf import settings
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.apps import apps
 
 from environment.services import (
     create_cloud_identity,
@@ -38,7 +39,10 @@ from environment.tests.helpers import (
     create_user_with_cloud_identity,
     create_user_with_billing_setup,
 )
-from project.models import PublishedProject
+
+
+PublishedProject = apps.get_model("project", "PublishedProject")
+
 
 User = get_user_model()
 

@@ -4,6 +4,7 @@ from django.db.models import Q, Model
 from django.core.mail import send_mail
 from django.template import loader
 from django.conf import settings
+from django.apps import apps
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
@@ -32,10 +33,13 @@ from environment.entities import (
     ResearchWorkspace,
 )
 from environment.utilities import left_join_iterators, inner_join_iterators
-from project.models import AccessPolicy, PublishedProject
+
+
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 User = Model
+
 
 DEFAULT_REGION = "us-central1"
 
@@ -188,16 +192,10 @@ def mark_user_workspace_setup_as_done(user: User):
 
 
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
-    data_access_filters = Q(dataaccesss__platform=5)
-    access_policy_filters = Q(access_policy=AccessPolicy.OPEN) | Q(
-        access_policy=AccessPolicy.RESTRICTED
-    )
-    if user.is_credentialed:
-        access_policy_filters = access_policy_filters | Q(
-            access_policy=AccessPolicy.CREDENTIALED
-        )
-    return PublishedProject.objects.prefetch_related("workflows").filter(
-        data_access_filters & access_policy_filters
+    return (
+        PublishedProject.objects.accessible_by(user)
+        .prefetch_related("workflows")
+        .filter(dataaccesss__platform=5)
     )
 
 

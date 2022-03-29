@@ -1,6 +1,4 @@
-import random
 from typing import Iterator, Tuple, Optional, TypeVar, Callable
-from string import ascii_uppercase
 
 from django.db.models import Model
 
