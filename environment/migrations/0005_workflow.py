@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("project", "0061_auto_20220223_0749"),
         ("environment", "0004_auto_20220309_0330"),
     ]
 
