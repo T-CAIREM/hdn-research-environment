@@ -401,17 +401,10 @@ def persist_workflow(
     )
 
 
-def get_execution_state_closure() -> Callable[[str], executions.Execution.State]:
+def get_execution_state(execution_resource_name) -> executions.Execution.State:
     client = executions_v1beta.ExecutionsClient()
-
-    def wrapper(execution_resource_name: str) -> bool:
-        execution = client.get_execution(request={"name": execution_resource_name})
-        return execution.state
-
-    return wrapper
-
-
-get_execution_state = get_execution_state_closure()
+    execution = client.get_execution(request={"name": execution_resource_name})
+    return execution.state
 
 
 def mark_workflow_as_finished(
