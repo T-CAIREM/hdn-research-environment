@@ -107,7 +107,7 @@ def _create_workbench_kwargs(
     region: str,
     instance_type: str,
     environment_type: str,
-    persistent_disk: Optional[int],
+    persistent_disk: int,
 ) -> dict:
     gcp_user_id = user.cloud_identity.gcp_user_id
 
@@ -135,7 +135,7 @@ def create_research_environment(
     region: str,
     instance_type: str,
     environment_type: str,
-    persistent_disk: Optional[int],
+    persistent_disk: int,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
