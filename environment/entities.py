@@ -17,6 +17,17 @@ class InstanceType(Enum):
     N1_STANDARD_8 = "n1-standard-8"
     N1_STANDARD_16 = "n1-standard-16"
 
+    def cpus(self):
+        INSTANCE_TO_CPU_MAP = {
+            InstanceType.N1_STANDARD_1: 1,
+            InstanceType.N1_STANDARD_2: 2,
+            InstanceType.N1_STANDARD_4: 4,
+            InstanceType.N1_STANDARD_8: 8,
+            InstanceType.N1_STANDARD_16: 16,
+        }
+
+        return INSTANCE_TO_CPU_MAP[self]
+
 
 class EnvironmentStatus(Enum):
     PROVISIONING = "inprogress"

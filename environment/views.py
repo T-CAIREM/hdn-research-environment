@@ -2,6 +2,7 @@ import json
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
@@ -176,19 +177,30 @@ def create_research_environment(request, project_slug, project_version):
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(request.POST)
         if form.is_valid():
-            services.create_research_environment(
+            cpu_usage = services.cpu_usage(
+                value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
                 user=request.user,
-                project=project,
-                region=form.cleaned_data["region"],
-                instance_type=form.cleaned_data["instance_type"],
-                environment_type=form.cleaned_data["environment_type"],
-                persistent_disk=form.cleaned_data.get("persistent_disk"),
             )
-            return redirect("research_environments")
+            if cpu_usage <= services.MAX_CPU_USAGE:
+                services.create_research_environment(
+                    user=request.user,
+                    project=project,
+                    region=form.cleaned_data["region"],
+                    instance_type=form.cleaned_data["instance_type"],
+                    environment_type=form.cleaned_data["environment_type"],
+                    persistent_disk=form.cleaned_data.get("persistent_disk"),
+                )
+                return redirect("research_environments")
+            else:
+                messages.error(
+                    request,
+                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {services.MAX_CPU_USAGE} CPUs",
+                )
     else:
         form = CreateResearchEnvironmentForm()
 
-    context = {"form": form, "project": project}
+    exceeded_quotas = services.exceeded_quotas(request.user)
+    context = {"form": form, "project": project, "exceeded_quotas": exceeded_quotas}
     return render(request, "environment/create_research_environment.html", context)
 
 

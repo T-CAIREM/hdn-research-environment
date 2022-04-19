@@ -42,6 +42,8 @@ User = Model
 
 
 DEFAULT_REGION = "us-central1"
+MAX_RUNNING_ENVIRONMENTS = 4
+MAX_CPU_USAGE = 32
 
 
 def _project_data_group(project: PublishedProject) -> str:
@@ -208,18 +210,20 @@ def _get_projects_for_environments(
     )
 
 
-def get_environments_with_projects(
-    user: User,
-) -> Iterable[Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
+def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     gcp_user_id = user.cloud_identity.gcp_user_id
     response = api.get_workspace_list(gcp_user_id)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetAvailableEnvironmentsFailed(error_message)
     all_environments = deserialize_research_environments(response.json())
-    active_environments = [
-        environment for environment in all_environments if environment.is_active
-    ]
+    return [environment for environment in all_environments if environment.is_active]
+
+
+def get_environments_with_projects(
+    user: User,
+) -> Iterable[Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
+    active_environments = get_active_environments(user)
     projects = _get_projects_for_environments(active_environments)
     environment_project_pairs = inner_join_iterators(
         _environment_data_group, active_environments, _project_data_group, projects
@@ -417,3 +421,21 @@ def mark_workflow_as_finished(
         workflow.status = Workflow.FAILED
 
     workflow.save()
+
+
+def cpu_usage(value, user) -> int:
+    running_environments = get_active_environments(user)
+    cpu = sum(environment.instance_type.cpus() for environment in running_environments)
+    return value + cpu
+
+
+def exceeded_quotas(user) -> Iterable[str]:
+    quotas_exceeded = []
+    # Check if user has exceeded MAX_RUNNING_ENVIRONMENTS
+    running_environments = get_active_environments(user)
+    if len(running_environments) >= MAX_RUNNING_ENVIRONMENTS:
+        quotas_exceeded.append(
+            f"You can only have {MAX_RUNNING_ENVIRONMENTS} running environments."
+        )
+
+    return quotas_exceeded
