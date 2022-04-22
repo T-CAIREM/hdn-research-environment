@@ -47,7 +47,7 @@ class EnvironmentStatus(Enum):
 
 class EnvironmentType(Enum):
     UNKNOWN = "unknown"
-    JUPYTER = "jypyternotebook"  # Typo in API
+    JUPYTER = "jupyter"
     RSTUDIO = "rstudio"
 
     @classmethod
