@@ -73,7 +73,7 @@ def create_workbench(
     instance_type: str,
     group_granting_data_access: str,
     persistent_disk: str,
-    bucket_name: Optional[str] = None,
+    bucket_name: str,
     vm_image: Optional[str] = None,
 ):
     json = {

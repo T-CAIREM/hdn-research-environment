@@ -120,11 +120,11 @@ def _create_workbench_kwargs(
         "instance_type": instance_type,
         "group_granting_data_access": _project_data_group(project),
         "persistent_disk": str(persistent_disk),
+        "bucket_name": project.project_file_root(),
     }
     if environment_type == "jupyter":
         jupyter_kwargs = {
             "vm_image": "common-cpu-notebooks",
-            "bucket_name": project.project_file_root(),
         }
         return {**common, **jupyter_kwargs}
     else:
