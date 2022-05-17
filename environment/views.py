@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods, require_GET
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.services as services
+import environment.quotas as quotas
 from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm
 from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
@@ -181,7 +182,7 @@ def create_research_environment(request, project_slug, project_version):
                 value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
                 user=request.user,
             )
-            if cpu_usage <= services.MAX_CPU_USAGE:
+            if cpu_usage <= quotas.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -194,7 +195,7 @@ def create_research_environment(request, project_slug, project_version):
             else:
                 messages.error(
                     request,
-                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {services.MAX_CPU_USAGE} CPUs",
+                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {quotas.MAX_CPU_USAGE} CPUs",
                 )
     else:
         form = CreateResearchEnvironmentForm()
