@@ -45,8 +45,13 @@ User = Model
 DEFAULT_REGION = "us-central1"
 
 
-def _project_data_group(project: PublishedProject) -> str:
-    return project.dataaccesss.get(platform=5).location
+def get_project_dataset_group(project: PublishedProject) -> str:
+    # The dataset group name has to:
+    #   * be 6-30 characters long
+    #   * match the [a-z]([-a-z0-9]*[a-z0-9]) regex
+    # To achieve this, slug max length is set to 20
+    # via the MAX_PROJECT_SLUG_LENGTH envvar
+    return project.project_file_root()
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
@@ -117,7 +122,7 @@ def _create_workbench_kwargs(
         "region": region,
         "environment_type": environment_type,
         "instance_type": instance_type,
-        "group_granting_data_access": _project_data_group(project),
+        "group_granting_data_access": get_project_dataset_group(project),
         "persistent_disk": str(persistent_disk),
         "bucket_name": project.project_file_root(),
     }
@@ -203,9 +208,9 @@ def get_available_projects(user: User) -> Iterable[PublishedProject]:
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[PublishedProject]:
-    group_granting_data_accesses = map(_environment_data_group, environments)
-    return PublishedProject.objects.filter(
-        dataaccesss__platform=5, dataaccesss__location__in=group_granting_data_accesses
+    group_names = map(_environment_data_group, environments)
+    return PublishedProject.objects.select_related("group_granting_data_access").filter(
+        group_granting_data_access__group_name=group_names
     )
 
 
@@ -225,7 +230,10 @@ def get_environments_with_projects(
     active_environments = get_active_environments(user)
     projects = _get_projects_for_environments(active_environments)
     environment_project_pairs = inner_join_iterators(
-        _environment_data_group, active_environments, _project_data_group, projects
+        _environment_data_group,
+        active_environments,
+        get_project_dataset_group,
+        projects,
     )
     return [
         (environment, project, project.workflows.in_progress().filter(user=user))
@@ -241,7 +249,7 @@ def get_available_projects_with_environments(
 ]:
     available_projects = get_available_projects(user)
     project_environment_pairs = left_join_iterators(
-        _project_data_group,
+        get_project_dataset_group,
         available_projects,
         _environment_data_group,
         environments,

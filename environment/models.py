@@ -5,6 +5,15 @@ from environment.validators import gcp_billing_account_id_validator
 from environment.managers import WorkflowManager
 
 
+class ProjectDatasetGroup(models.Model):
+    project = models.OneToOneField(
+        "project.PublishedProject",
+        related_name="group_granting_data_access",
+        on_delete=models.CASCADE,
+    )
+    group_name = models.CharField(max_length=100, unique=True)
+
+
 class CloudIdentity(models.Model):
     user = models.OneToOneField(
         "user.User", related_name="cloud_identity", on_delete=models.CASCADE

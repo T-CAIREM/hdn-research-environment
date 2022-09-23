@@ -4,8 +4,10 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models.signals import post_init, post_save
 
+from environment.services import get_project_dataset_group
 from environment.tasks import stop_environments_with_expired_access
 from environment.utilities import user_has_billing_setup
+from environment.models import ProjectDatasetGroup
 
 
 User = get_user_model()
@@ -13,6 +15,8 @@ User = get_user_model()
 Training = apps.get_model("user", "Training")
 
 DataAccessRequest = apps.get_model("project", "DataAccessRequest")
+
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 @receiver(post_init, sender=User)
@@ -68,3 +72,9 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
         stop_environments_with_expired_access(user.id, schedule=schedule)
     elif access_was_revoked:
         stop_environments_with_expired_access(user.id)
+
+
+@receiver(post_save, sender=PublishedProject)
+def assign_group_granting_data_access(instance: PublishedProject, **kwargs):
+    group_name = get_project_dataset_group(instance)
+    ProjectDatasetGroup.objects.get_or_create(project=instance, group_name=group_name)
