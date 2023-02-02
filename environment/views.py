@@ -201,7 +201,25 @@ def create_research_environment(request, project_slug, project_version):
         form = CreateResearchEnvironmentForm()
 
     exceeded_quotas = services.exceeded_quotas(request.user)
-    context = {"form": form, "project": project, "exceeded_quotas": exceeded_quotas}
+    expected_costs_dict = {
+        "us-central1": {
+            "n1-standard-1": 35, "n1-standard-2": 70, "n1-standard-4": 140, "n1-standard-8": 280, "n1-standard-16": 555,
+            "Persistent data disk 1GB": 0.05
+        },
+        "northamerica-northeast1": {
+            "n1-standard-1": 38, "n1-standard-2": 75, "n1-standard-4": 155, "n1-standard-8": 305, "n1-standard-16": 610,
+            "Persistent data disk 1GB": 0.05
+        },
+        "europe-west3": {
+            "n1-standard-1": 45, "n1-standard-2": 90, "n1-standard-4": 180, "n1-standard-8": 360, "n1-standard-16": 715,
+            "Persistent data disk 1GB": 0.05
+        },
+        "australia-southeast1": {
+            "n1-standard-1": 50, "n1-standard-2": 100, "n1-standard-4": 200, "n1-standard-8": 395, "n1-standard-16": 790,
+            "Persistent data disk 1GB": 0.05
+        }
+    }
+    context = {"form": form, "project": project, "exceeded_quotas": exceeded_quotas, "expected_costs": expected_costs_dict}
     return render(request, "environment/create_research_environment.html", context)
 
 

@@ -8,3 +8,16 @@ form > label {
     display: inline;
     list-style-type: none;
 }
+
+.container-body {
+    display: flex;
+    gap: 1rem;
+}
+
+.billing-information {
+    width: 35%;
+    min-width: 15rem;
+}
+.hidden {
+    display: none;
+}
