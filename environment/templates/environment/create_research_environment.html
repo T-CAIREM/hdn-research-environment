@@ -28,7 +28,7 @@
 
           {% if exceeded_quotas|length > 0 %}
               <div>
-                  <p style="color:red">You have exceedes the following quotas:</p>
+                  <p style="color:red">You have exceeded the following quotas:</p>
                   <ul>
                       {% for quota in exceeded_quotas %}
                           <li>{{ quota }}</li>
@@ -59,10 +59,10 @@
               </p>
                 {% for region_name, region_instances in expected_costs.items %}
                 <div id="{{ region_name }}" class="hidden">
-                    {% for instance_name, cost in region_instances.items %}
+                    {% for resource, cost, time_unit in region_instances %}
                       <div class="container-body">
-                        <p> {{ instance_name }} </p>
-                        <p> {{ cost }}$ per Month</p>
+                        <p> {{ resource }} </p>
+                        <p> {{ cost }}$ {{ time_unit }}</p>
                       </div>
                     {% endfor %}
                 </div>
