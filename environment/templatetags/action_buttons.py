@@ -4,7 +4,7 @@ from django import template
 from django.urls import reverse
 from django.db.models import Model
 
-from environment.entities import ResearchEnvironment, InstanceType
+from environment.entities import ResearchEnvironment, InstanceType, EnvironmentType
 
 
 PublishedProject = Model
@@ -87,7 +87,10 @@ def environment_modal_button(
         "action_button_type": data["action_button_type"],
     }
     if button_type == "modal_instance":
-        instance_types = [t.value for t in InstanceType]
+        if environment.type != EnvironmentType.RSTUDIO:
+            instance_types = [t.value for t in InstanceType]
+        else:
+            instance_types = [t.value for t in InstanceType if 'gpu' not in t.value]
         result_data["instance_types"] = instance_types
 
     return result_data

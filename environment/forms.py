@@ -24,6 +24,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("n1-standard-4", "n1-standard-4"),
         ("n1-standard-8", "n1-standard-8"),
         ("n1-standard-16", "n1-standard-16"),
+        ("a2-highgpu-1g", "a2-highgpu-1g"),
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
