@@ -47,7 +47,7 @@ PublishedProject = apps.get_model("project", "PublishedProject")
 User = get_user_model()
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class CreateCloudIdentityTestCase(TestCase):
     def setUp(self):
         self.user = create_user_without_cloud_identity()
@@ -80,7 +80,7 @@ class CreateCloudIdentityTestCase(TestCase):
         self.assertEqual(self.user.cloud_identity, identity)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class CreateBillingSetupTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()
@@ -92,7 +92,7 @@ class CreateBillingSetupTestCase(TestCase):
         self.assertEqual(billing_setup.billing_account_id, mock_billing_account)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class CreateResearchEnvironmentTestCase(TestCase):
     def setUp(self):
         self.project = MagicMock()
@@ -128,7 +128,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
         self.assertEqual(result, mock_create_workbench.return_value)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class StopRunningEnvironmentTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_billing_setup()
@@ -153,7 +153,7 @@ class StopRunningEnvironmentTestCase(TestCase):
         self.assertEqual(result, mock_stop_workbench.return_value)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class StartStoppedEnvironmentTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_billing_setup()
@@ -178,7 +178,7 @@ class StartStoppedEnvironmentTestCase(TestCase):
         self.assertEqual(result, mock_stop_workbench.return_value)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class ChangeEnvironmentInstanceTypeTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_billing_setup()
@@ -207,7 +207,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
         self.assertEqual(result, mock_change_workbench_instance_type.return_value)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class DeleteEnvironmentTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_billing_setup()
@@ -232,7 +232,7 @@ class DeleteEnvironmentTestCase(TestCase):
         self.assertEqual(result, mock_delete_workbench.return_value)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class VerifyBillingAndCreateWorkspaceTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()
@@ -254,7 +254,7 @@ class VerifyBillingAndCreateWorkspaceTestCase(TestCase):
         verify_billing_and_create_workspace(self.user, self.some_billing_id)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class GetAvailableEnvironmentsWithProjectsTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()

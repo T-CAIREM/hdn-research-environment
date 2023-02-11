@@ -16,7 +16,7 @@ from environment.utilities import (
 )
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class UserHasCloudIdentityTestCase(TestCase):
     def setUp(self):
         self.user_without_cloud_identity = create_user_without_cloud_identity()
@@ -31,7 +31,7 @@ class UserHasCloudIdentityTestCase(TestCase):
         self.assertTrue(user_has_cloud_identity(self.user_with_cloud_identity))
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class UserHasBillingSetupTestCase(TestCase):
     def setUp(self):
         self.user_without_cloud_identity = create_user_without_cloud_identity()
@@ -52,7 +52,7 @@ class UserHasBillingSetupTestCase(TestCase):
         self.assertTrue(user_has_billing_setup(self.user_with_billing_setup))
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class InnerJoinIteratorsTestCase(TestCase):
     def test_returns_lists_left_joined_on_keys(self):
         list1 = [
@@ -76,7 +76,7 @@ class InnerJoinIteratorsTestCase(TestCase):
         self.assertEqual(inner_joined, expected_output)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class LeftJoinIteratorsTestCase(TestCase):
     def test_returns_lists_left_joined_on_keys(self):
         list1 = [

@@ -13,7 +13,7 @@ from environment.tests.helpers import (
 from environment.exceptions import BillingVerificationFailed
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class IdentityProvisioningTestCase(TestCase):
     url = reverse("identity_provisioning")
 
@@ -54,7 +54,7 @@ class IdentityProvisioningTestCase(TestCase):
         self.assertEqual(self.client.session["cloud_identity_otp"], otp)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class BillingSetupTestCase(TestCase):
     url = reverse("billing_setup")
 
@@ -127,7 +127,7 @@ class BillingSetupTestCase(TestCase):
         )
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class ResearchEnvironmentsTestCase(TestCase):
     url = reverse("research_environments")
 
@@ -166,7 +166,7 @@ class ResearchEnvironmentsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class CreateResearchEnvironmentTestCase(TestCase):
     url = reverse(
         "create_research_environment",

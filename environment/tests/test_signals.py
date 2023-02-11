@@ -9,7 +9,7 @@ from django.utils import timezone
 from environment.signals import User, DataAccessRequest, Training
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class UserSignalsTestCase(TestCase):
     def test_memoizes_original_credentialing_on_init(self):
         new_user = User()
@@ -36,7 +36,7 @@ class UserSignalsTestCase(TestCase):
         mock_stop_environments_with_expired_access.assert_called()
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class TrainingSignalsTestCase(TestCase):
     def test_memoizes_original_validity_on_init(self):
         new_user = User()
@@ -71,7 +71,7 @@ class TrainingSignalsTestCase(TestCase):
         mock_stop_environments_with_expired_access.assert_called()
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class DataAccessRequestSignalsTestCase(TestCase):
     def test_memoizes_original_is_accepted_on_init(self):
         new_access_request = DataAccessRequest()

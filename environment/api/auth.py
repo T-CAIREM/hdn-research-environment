@@ -7,8 +7,8 @@ from django.conf import settings
 
 def _generate_credentials() -> jwt.Credentials:
     credentials = jwt.Credentials.from_service_account_file(
-        settings.RESEARCH_ENVIRONMENT_API_JWT_SERVICE_ACCOUNT_PATH,
-        audience=settings.RESEARCH_ENVIRONMENT_API_JWT_AUDIENCE,
+        settings.CLOUD_RESEARCH_ENVIRONMENTS_API_JWT_SERVICE_ACCOUNT_PATH,
+        audience=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_JWT_AUDIENCE,
     )
     return credentials
 

@@ -7,7 +7,7 @@ from django.conf import settings
 from environment.api.auth import apply_api_credentials
 
 
-@skipIf(not settings.ENABLE_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
 class AuthTestCase(TestCase):
     def test_apply_api_credentials_inserting_correct_headers(self):
         request = Request()
