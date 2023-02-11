@@ -46,7 +46,15 @@ DEFAULT_REGION = "us-central1"
 
 
 def _project_data_group(project: PublishedProject) -> str:
-    return project.dataaccesss.get(platform=5).location
+    # HACK: Use the slug and version to calculate the dataset group.
+    # The result has to match the patterns for:
+    # - Service Account ID: must start with a lower case letter, followed by one or more lower case alphanumerical characters that can be separated by hyphens
+    # - Role ID: can only include letters, numbers, full stops and underscores
+    #
+    # Potential collisions may happen:
+    # { slug: some-project, version: 1.1.0 } => someproject110
+    # { slug: some-project1, version: 1.0 }  => someproject110
+    return "".join(c for c in project.slug + project.version if c.isalnum())
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
@@ -193,20 +201,21 @@ def mark_user_workspace_setup_as_done(user: User):
 
 
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
-    return (
-        PublishedProject.objects.accessible_by(user)
-        .prefetch_related("workflows")
-        .filter(dataaccesss__platform=5)
-    )
+    return PublishedProject.objects.accessible_by(user).prefetch_related("workflows")
 
 
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[PublishedProject]:
     group_granting_data_accesses = map(_environment_data_group, environments)
-    return PublishedProject.objects.filter(
-        dataaccesss__platform=5, dataaccesss__location__in=group_granting_data_accesses
-    )
+    # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
+    # the only way to match the projects to their environments is to fetch all the records and
+    # calculate the group name for each of them.
+    return [
+        project
+        for project in PublishedProject.objects.all()
+        if _project_data_group(project) in group_granting_data_accesses
+    ]
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
