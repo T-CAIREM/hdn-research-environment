@@ -211,7 +211,11 @@ def _get_projects_for_environments(
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
     # calculate the group name for each of them.
-    [project for project in PublishedProject.objects.all() if _project_data_group(project) in group_granting_data_accesses]
+    return [
+        project
+        for project in PublishedProject.objects.all()
+        if _project_data_group(project) in group_granting_data_accesses
+    ]
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
