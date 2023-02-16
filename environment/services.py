@@ -131,7 +131,7 @@ def _create_workbench_kwargs(
     }
     if environment_type == "jupyter":
         jupyter_kwargs = {
-            "vm_image": "common-cpu-notebooks",
+            "vm_image": "r-4-2-cpu-experimental-notebooks",
         }
         return {**common, **jupyter_kwargs}
     else:
