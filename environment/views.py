@@ -8,7 +8,7 @@ from django.views.decorators.http import require_http_methods, require_GET
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.services as services
-import environment.quotas as quotas
+import environment.constants as constants
 from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm
 from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
@@ -183,7 +183,7 @@ def create_research_environment(request, project_slug, project_version):
                 value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
                 user=request.user,
             )
-            if cpu_usage <= quotas.MAX_CPU_USAGE:
+            if cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -196,32 +196,15 @@ def create_research_environment(request, project_slug, project_version):
             else:
                 messages.error(
                     request,
-                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {quotas.MAX_CPU_USAGE} CPUs",
+                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
         form = CreateResearchEnvironmentForm()
 
     exceeded_quotas = services.exceeded_quotas(request.user)
-    GcpExpectedCosts = namedtuple("GcpExpectedCosts", "resource cost time_unit", defaults=["per Hour"])
-    expected_costs_dict = {
-        "us-central1": [
-            GcpExpectedCosts("n1-standard-1", 0.05), GcpExpectedCosts("n1-standard-2", 0.09), GcpExpectedCosts("n1-standard-4", 0.19),
-            GcpExpectedCosts("n1-standard-8", 0.38), GcpExpectedCosts("n1-standard-16", 0.76), GcpExpectedCosts("Persistent data disk 1GB", 0.05, "per Month")
-            ],
-        "northamerica-northeast1": [
-            GcpExpectedCosts("n1-standard-1", 0.05), GcpExpectedCosts("n1-standard-2", 0.11), GcpExpectedCosts("n1-standard-4", 0.21),
-            GcpExpectedCosts("n1-standard-8", 0.42), GcpExpectedCosts("n1-standard-16", 0.84), GcpExpectedCosts("Persistent data disk 1GB", 0.05, "per Month")
-            ],
-        "europe-west3": [
-            GcpExpectedCosts("n1-standard-1", 0.06), GcpExpectedCosts("n1-standard-2", 0.12), GcpExpectedCosts("n1-standard-4", 0.24),
-            GcpExpectedCosts("n1-standard-8", 0.49), GcpExpectedCosts("n1-standard-16", 0.98), GcpExpectedCosts("Persistent data disk 1GB", 0.05, "per Month")
-            ],
-        "australia-southeast1": [
-            GcpExpectedCosts("n1-standard-1", 0.07), GcpExpectedCosts("n1-standard-2", 0.13), GcpExpectedCosts("n1-standard-4", 0.27),
-            GcpExpectedCosts("n1-standard-8", 0.354), GcpExpectedCosts("n1-standard-16", 1.07), GcpExpectedCosts("Persistent data disk 1GB", 0.05, "per Month")
-            ],
+    context = {
+        "form": form, "project": project, "exceeded_quotas": exceeded_quotas, "projected_costs": constants.PROJECTED_COSTS
     }
-    context = {"form": form, "project": project, "exceeded_quotas": exceeded_quotas, "expected_costs": expected_costs_dict}
     return render(request, "environment/create_research_environment.html", context)
 
 

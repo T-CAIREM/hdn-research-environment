@@ -18,6 +18,7 @@ form > label {
     width: 35%;
     min-width: 15rem;
 }
+
 .hidden {
     display: none;
 }

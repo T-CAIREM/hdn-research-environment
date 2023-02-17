@@ -6,6 +6,10 @@
 
 {% block title %}Create Research Environment{% endblock %}
 
+{% block local_js_top %}
+<script src="{% static 'environment/js/pricing_change.js' %}"></script>
+{% endblock %}
+
 {% block local_css %}
 <script src="{% static 'jquery/jquery.min.js' %}"></script>
 <script src="{% static 'environment/js/pricing_change.js' %}"></script>
@@ -54,14 +58,15 @@
           </h3>
             <div id="billing_data">
               <p>
-                Below listed prices may vary depending on selected region and time. For further information check:
+                 The prices listed below may vary depending on selected region and time. For further information check:
                 <a href="https://cloud.google.com/compute/all-pricing ">Google Pricing List</a>
               </p>
-                {% for region_name, region_instances in expected_costs.items %}
-                <div id="{{ region_name }}" class="hidden">
+                {% for region_name, region_instances in projected_costs.items %}
+                <div id="{{ region_name.value }}" class="hidden">
+                    {{ region_instances.value }}
                     {% for resource, cost, time_unit in region_instances %}
                       <div class="container-body">
-                        <p> {{ resource }} </p>
+                        <p> {{ resource.value }} </p>
                         <p> {{ cost }}$ {{ time_unit }}</p>
                       </div>
                     {% endfor %}

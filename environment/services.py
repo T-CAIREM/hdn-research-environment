@@ -8,7 +8,7 @@ from django.apps import apps
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-import environment.quotas as quotas
+import environment.constants as constants
 import environment.api as api
 from environment.models import CloudIdentity, BillingSetup, Workflow
 from environment.exceptions import (
@@ -432,9 +432,9 @@ def exceeded_quotas(user) -> Iterable[str]:
     quotas_exceeded = []
     # Check if user has exceeded MAX_RUNNING_ENVIRONMENTS
     running_environments = get_active_environments(user)
-    if len(running_environments) >= quotas.MAX_RUNNING_ENVIRONMENTS:
+    if len(running_environments) >= constants.MAX_RUNNING_ENVIRONMENTS:
         quotas_exceeded.append(
-            f"You can only have {quotas.MAX_RUNNING_ENVIRONMENTS} running environments."
+            f"You can only have {constants.MAX_RUNNING_ENVIRONMENTS} running environments."
         )
 
     return quotas_exceeded
