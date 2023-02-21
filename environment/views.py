@@ -8,7 +8,7 @@ from django.views.decorators.http import require_http_methods, require_GET
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.services as services
-import environment.quotas as quotas
+import environment.constants as constants
 from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm
 from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
@@ -24,6 +24,7 @@ from environment.utilities import (
     user_has_billing_setup,
 )
 from environment.models import CloudIdentity, Workflow
+from collections import namedtuple
 
 
 @require_http_methods(["GET", "POST"])
@@ -182,7 +183,7 @@ def create_research_environment(request, project_slug, project_version):
                 value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
                 user=request.user,
             )
-            if cpu_usage <= quotas.MAX_CPU_USAGE:
+            if cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -195,13 +196,15 @@ def create_research_environment(request, project_slug, project_version):
             else:
                 messages.error(
                     request,
-                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {quotas.MAX_CPU_USAGE} CPUs",
+                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
         form = CreateResearchEnvironmentForm()
 
     exceeded_quotas = services.exceeded_quotas(request.user)
-    context = {"form": form, "project": project, "exceeded_quotas": exceeded_quotas}
+    context = {
+        "form": form, "project": project, "exceeded_quotas": exceeded_quotas, "projected_costs": constants.PROJECTED_COSTS
+    }
     return render(request, "environment/create_research_environment.html", context)
 
 

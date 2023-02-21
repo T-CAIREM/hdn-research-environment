@@ -6,6 +6,10 @@
 
 {% block title %}Create Research Environment{% endblock %}
 
+{% block local_js_top %}
+<script src="{% static 'environment/js/pricing_change.js' %}"></script>
+{% endblock %}
+
 {% block local_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'environment/css/create_research_environment.css' %}">
@@ -17,31 +21,57 @@
     <h1 class="mb-4">
       Create Research Environment
     </h1>
-    <div class="card" style="width: 36rem;">
-      <div class="card-body">
-        <h3 class="card-title">
-            Project: <span class="font-italic">{{ project.title }}</span>
-        </h3>
+    <div class="container-body">
+      <div class="card" style="width: 36rem;">
+        <div class="card-body">
+          <h3 class="card-title">
+              Project: <span class="font-italic">{{ project.title }}</span>
+          </h3>
 
-        {% if exceeded_quotas|length > 0 %}
-            <div>
-                <p style="color:red">You have exceedes the following quotas:</p>
-                <ul>
-                    {% for quota in exceeded_quotas %}
-                        <li>{{ quota }}</li>
+          {% if exceeded_quotas|length > 0 %}
+              <div>
+                  <p style="color:red">You have exceeded the following quotas:</p>
+                  <ul>
+                      {% for quota in exceeded_quotas %}
+                          <li>{{ quota }}</li>
+                      {% endfor %}
+                  </ul>
+                  <a href="{% url 'research_environments' %}"><button class="btn btn-primary">Return</button></a>
+              </div>
+          {% else %}
+              <form action="{% url 'create_research_environment' project_slug=project.slug project_version=project.version %}" method="post" style="width: 24rem;">
+                  {% csrf_token %}
+                  {{ form }}
+                  <button class="btn btn-primary mt-3" type="submit">
+                      Create environment
+                  </button>
+              </form>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card billing-information">
+        <div class="card-body">
+          <h3 class="card-title">
+            Projected Costs
+          </h3>
+            <div id="billing_data">
+              <p>
+                 The prices listed below may vary depending on selected region and time. For further information check:
+                <a href="https://cloud.google.com/compute/all-pricing ">Google Pricing List</a>
+              </p>
+                {% for region_name, region_instances in projected_costs.items %}
+                <div id="{{ region_name.value }}" class="hidden">
+                    {{ region_instances.value }}
+                    {% for resource, cost, time_unit in region_instances %}
+                      <div class="container-body">
+                        <p> {{ resource.value }} </p>
+                        <p> {{ cost }}$ {{ time_unit }}</p>
+                      </div>
                     {% endfor %}
-                </ul>
-                <a href="{% url 'research_environments' %}"><button class="btn btn-primary">Return</button></a>
+                </div>
+                {% endfor %}
             </div>
-        {% else %}
-            <form action="{% url 'create_research_environment' project_slug=project.slug project_version=project.version %}" method="post" style="width: 24rem;">
-                {% csrf_token %}
-                {{ form }}
-                <button class="btn btn-primary mt-3" type="submit">
-                    Create environment
-                </button>
-            </form>
-        {% endif %}
+        </div>
       </div>
     </div>
 </div>
