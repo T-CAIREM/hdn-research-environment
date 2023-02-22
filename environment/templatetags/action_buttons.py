@@ -90,7 +90,9 @@ def environment_modal_button(
         if environment.type != EnvironmentType.RSTUDIO:
             instance_types = [t.value for t in InstanceType]
         else:
-            instance_types = [t.value for t in InstanceType if t != InstanceType.A2_HIGHGPU_1G]
+            instance_types = [
+                t.value for t in InstanceType if t != InstanceType.A2_HIGHGPU_1G
+            ]
         result_data["instance_types"] = instance_types
 
     return result_data
