@@ -191,6 +191,7 @@ def create_research_environment(request, project_slug, project_version):
                     instance_type=form.cleaned_data["instance_type"],
                     environment_type=form.cleaned_data["environment_type"],
                     persistent_disk=form.cleaned_data.get("persistent_disk"),
+                    gpu_accelerated=form.cleaned_data.get("gpu_accelerated"),
                 )
                 return redirect("research_environments")
             else:

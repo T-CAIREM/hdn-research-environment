@@ -47,3 +47,7 @@ class CreateResearchEnvironmentForm(forms.Form):
             attrs={"class": "form-control", "min": 0, "max": 64000}
         ),
     )
+    gpu_accelerated = forms.BooleanField(
+        label="Attach an NVIDIA T4 GPU",
+        required=False,
+    )

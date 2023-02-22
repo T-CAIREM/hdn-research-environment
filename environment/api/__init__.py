@@ -75,6 +75,7 @@ def create_workbench(
     persistent_disk: str,
     bucket_name: str,
     vm_image: Optional[str] = None,
+    gpu_accelerated: bool = False,
 ):
     json = {
         "userid": gcp_user_id,
@@ -85,6 +86,7 @@ def create_workbench(
         "bucketname": bucket_name,
         "persistentdisk": persistent_disk,
         "vmimage": vm_image,
+        "gpu_accelerated": gpu_accelerated,
     }
     json_without_empty_values = {
         key: val for key, val in json.items() if val is not None

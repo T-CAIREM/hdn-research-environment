@@ -22,3 +22,7 @@ form > label {
 .hidden {
     display: none;
 }
+
+#id_gpu_accelerated {
+    width: auto;
+}
