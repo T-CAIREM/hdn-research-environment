@@ -18,44 +18,44 @@ PROJECTED_COSTS = {
     Region.US_CENTRAL: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1, 0.05],
-            [InstanceType.N1_STANDARD_2, 0.09],
-            [InstanceType.N1_STANDARD_4, 0.19],
-            [InstanceType.N1_STANDARD_8, 0.38],
-            [InstanceType.N1_STANDARD_16, 0.76],
+            [InstanceType.N1_STANDARD_1.value, 0.05],
+            [InstanceType.N1_STANDARD_2.value, 0.09],
+            [InstanceType.N1_STANDARD_4.value, 0.19],
+            [InstanceType.N1_STANDARD_8.value, 0.38],
+            [InstanceType.N1_STANDARD_16.value, 0.76],
             [PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT],
         ]
     ],
     Region.NORTHAMERICA_NORTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1, 0.05],
-            [InstanceType.N1_STANDARD_2, 0.11],
-            [InstanceType.N1_STANDARD_4, 0.21],
-            [InstanceType.N1_STANDARD_8, 0.42],
-            [InstanceType.N1_STANDARD_16, 0.84],
+            [InstanceType.N1_STANDARD_1.value, 0.05],
+            [InstanceType.N1_STANDARD_2.value, 0.11],
+            [InstanceType.N1_STANDARD_4.value, 0.21],
+            [InstanceType.N1_STANDARD_8.value, 0.42],
+            [InstanceType.N1_STANDARD_16.value, 0.84],
             [PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT],
         ]
     ],
     Region.EUROPE_WEST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1, 0.06],
-            [InstanceType.N1_STANDARD_2, 0.12],
-            [InstanceType.N1_STANDARD_4, 0.24],
-            [InstanceType.N1_STANDARD_8, 0.49],
-            [InstanceType.N1_STANDARD_16, 0.98],
+            [InstanceType.N1_STANDARD_1.value, 0.06],
+            [InstanceType.N1_STANDARD_2.value, 0.12],
+            [InstanceType.N1_STANDARD_4.value, 0.24],
+            [InstanceType.N1_STANDARD_8.value, 0.49],
+            [InstanceType.N1_STANDARD_16.value, 0.98],
             [PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT],
         ]
     ],
     Region.AUSTRALIA_SOUTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1, 0.07],
-            [InstanceType.N1_STANDARD_2, 0.13],
-            [InstanceType.N1_STANDARD_4, 0.27],
-            [InstanceType.N1_STANDARD_8, 0.35],
-            [InstanceType.N1_STANDARD_16, 1.07],
+            [InstanceType.N1_STANDARD_1.value, 0.07],
+            [InstanceType.N1_STANDARD_2.value, 0.13],
+            [InstanceType.N1_STANDARD_4.value, 0.27],
+            [InstanceType.N1_STANDARD_8.value, 0.35],
+            [InstanceType.N1_STANDARD_16.value, 1.07],
             [PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT],
         ]
     ],

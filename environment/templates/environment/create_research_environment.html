@@ -64,7 +64,7 @@
                     {{ region_instances.value }}
                     {% for resource, cost, time_unit in region_instances %}
                       <div class="container-body">
-                        <p> {{ resource.value }} </p>
+                        <p> {{ resource }} </p>
                         <p> {{ cost }}$ {{ time_unit }}</p>
                       </div>
                     {% endfor %}
