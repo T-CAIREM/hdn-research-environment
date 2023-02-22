@@ -203,7 +203,10 @@ def create_research_environment(request, project_slug, project_version):
 
     exceeded_quotas = services.exceeded_quotas(request.user)
     context = {
-        "form": form, "project": project, "exceeded_quotas": exceeded_quotas, "projected_costs": constants.PROJECTED_COSTS
+        "form": form,
+        "project": project,
+        "exceeded_quotas": exceeded_quotas,
+        "projected_costs": constants.PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
 
