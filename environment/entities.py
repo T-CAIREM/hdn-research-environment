@@ -16,7 +16,6 @@ class InstanceType(Enum):
     N1_STANDARD_4 = "n1-standard-4"
     N1_STANDARD_8 = "n1-standard-8"
     N1_STANDARD_16 = "n1-standard-16"
-    A2_HIGHGPU_1G = "a2-highgpu-1g"
 
     def cpus(self):
         INSTANCE_TO_CPU_MAP = {
@@ -25,7 +24,6 @@ class InstanceType(Enum):
             InstanceType.N1_STANDARD_4: 4,
             InstanceType.N1_STANDARD_8: 8,
             InstanceType.N1_STANDARD_16: 16,
-            InstanceType.A2_HIGHGPU_1G: 12,
         }
 
         return INSTANCE_TO_CPU_MAP[self]
