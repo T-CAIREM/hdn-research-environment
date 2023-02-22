@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from environment.validators import gcp_billing_account_id_validator
-from environment.entities import Region, EnvironmentType
+from environment.entities import Region, EnvironmentType, InstanceType
 
 
 class BillingAccountIdForm(forms.Form):
@@ -61,13 +61,13 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.__limit_environment_based_on_instance_type(environment_type, instance_type)
 
     def __limit_instance_based_on_region(self, region, instance_type):
-        if "gpu" in instance_type and region != Region.US_CENTRAL.value:
+        if instance_type == InstanceType.A2_HIGHGPU_1G.value and region != Region.US_CENTRAL.value:
             raise ValidationError(
                 "GPU instances are not available in this region. Please choose other region."
             )
 
     def __limit_environment_based_on_instance_type(self, environment_type, instance_type):
-        if "gpu" in instance_type and environment_type == EnvironmentType.RSTUDIO.value:
+        if instance_type == InstanceType.A2_HIGHGPU_1G.value and environment_type == EnvironmentType.RSTUDIO.value:
             raise ValidationError(
                 "GPUs are not supported by Rstudio instances. Please choose other environment type."
             )
