@@ -20,6 +20,7 @@ PROJECTED_COSTS = {
             [InstanceType.N1_STANDARD_4, 0.19],
             [InstanceType.N1_STANDARD_8, 0.38],
             [InstanceType.N1_STANDARD_16, 0.76],
+            [InstanceType.A2_HIGHGPU_1G, 3.67],
             [PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT]
         ]
     ],
