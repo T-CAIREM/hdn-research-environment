@@ -207,7 +207,9 @@ def create_research_environment(request, project_slug, project_version):
         "form": form,
         "project": project,
         "exceeded_quotas": exceeded_quotas,
-        "projected_costs": constants.PROJECTED_COSTS,
+        "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
+        "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
+        "additional_projected_costs": constants.ADDITIONAL_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
 
