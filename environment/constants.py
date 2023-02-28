@@ -1,6 +1,7 @@
 from environment.entities import (
     InstanceType,
     Region,
+    GPUAcceleratorType,
 )
 from collections import namedtuple
 
@@ -9,12 +10,10 @@ MAX_RUNNING_ENVIRONMENTS = 4
 MAX_CPU_USAGE = 32
 
 PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
-PERSISTENT_DATA_DISK_TIME_UNIT = "per Month"
-
-T4_TESLA_GPU_NAME = "NVIDIA T4 Tesla"
+PERSISTENT_DATA_DISK_TIME_UNIT = "/month"
 
 ProjectedWorkbenchCost = namedtuple(
-    "ProjectedWorkbenchCost", "resource cost time_unit", defaults=["per Hour"]
+    "ProjectedWorkbenchCost", "resource cost time_unit", defaults=["/hour"]
 )
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
@@ -63,30 +62,30 @@ GPU_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [T4_TESLA_GPU_NAME, 0.35],
+            [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.35],
         ]
     ],
     Region.NORTHAMERICA_NORTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [T4_TESLA_GPU_NAME, 0.35],
+            [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.35],
         ]
     ],
     Region.EUROPE_WEST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [T4_TESLA_GPU_NAME, 0.41],
+            [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.41],
         ]
     ],
     Region.AUSTRALIA_SOUTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [T4_TESLA_GPU_NAME, 0.44],
+            [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.44],
         ]
     ],
 }
 
-ADDITIONAL_PROJECTED_COSTS = {
+DATA_STORAGE_PROJECTED_COSTS = {
     Region.US_CENTRAL: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
     Region.NORTHAMERICA_NORTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
     Region.EUROPE_WEST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),

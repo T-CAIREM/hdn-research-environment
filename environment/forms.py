@@ -29,6 +29,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
     ]
+    AVAILABLE_GPU_ACCELERATOR_TYPES = [
+        ("", "----------"),
+        ("NVIDIA_TESLA_T4", "Nvidia Tesla T4"),
+    ]
 
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
     instance_type = forms.ChoiceField(
@@ -47,7 +51,9 @@ class CreateResearchEnvironmentForm(forms.Form):
             attrs={"class": "form-control", "min": 0, "max": 64000}
         ),
     )
-    gpu_accelerated = forms.BooleanField(
-        label="Attach an NVIDIA T4 GPU",
-        required=False,
+    gpu_accelerator = forms.ChoiceField(
+        label="GPU Accelerator",
+        choices=AVAILABLE_GPU_ACCELERATOR_TYPES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        required=False
     )
