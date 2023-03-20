@@ -32,7 +32,7 @@ def schedule_stop_environments_if_credentialing_revoked(instance: User, **kwargs
 
 @receiver(post_init, sender=Event)
 def memoize_original_event_end_time(instance: Event, **kwargs):
-    instance._original_event_end_date = instance.end_date
+    instance._original_end_date = instance.end_date
 
 @receiver(post_save, sender=Event)
 def schedule_stop_environments_if_event_finished(instance: Event, **kwargs):
