@@ -14,6 +14,7 @@ Training = apps.get_model("user", "Training")
 
 DataAccessRequest = apps.get_model("project", "DataAccessRequest")
 
+Event = apps.get_model("events", "Event")
 
 @receiver(post_init, sender=User)
 def memoize_original_credentialing_status(instance: User, **kwargs):
@@ -28,6 +29,16 @@ def schedule_stop_environments_if_credentialing_revoked(instance: User, **kwargs
     if not instance.is_credentialed and instance._original_is_credentialed:
         stop_environments_with_expired_access(instance.id)
 
+
+@receiver(post_init, sender=Event)
+def memoize_original_event_end_time(instance: Event, **kwargs):
+    instance._original_event_end_date = instance.end_date
+
+@receiver(post_save, sender=Event)
+def schedule_stop_environments_if_event_finished(instance: Event, **kwargs):
+    if instance._original_event_end_date != instance.end_date or created is True:
+        for participant in instance.participants.all():
+            stop_environments_with_expired_access(participant.id, schedule=instance.end_date)
 
 @receiver(post_init, sender=Training)
 def memoize_original_validity(instance: Training, **kwargs):
