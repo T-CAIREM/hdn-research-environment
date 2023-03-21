@@ -13,7 +13,7 @@ PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
 PERSISTENT_DATA_DISK_TIME_UNIT = "/month"
 
 ProjectedWorkbenchCost = namedtuple(
-    "ProjectedWorkbenchCost", "resource cost time_unit", defaults=["/hour"]
+    "ProjectedWorkbenchCost", "resource cost time_unit", defaults=["hour"]
 )
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
