@@ -57,3 +57,8 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"}),
         required=False
     )
+
+    def clean_gpu_accelerator(self):
+        gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
+        gpu_accelerator = None if gpu_accelerator == "" else gpu_accelerator
+        return gpu_accelerator
