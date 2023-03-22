@@ -2,6 +2,7 @@ from typing import Iterable
 from datetime import timedelta
 
 from background_task import background
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -22,7 +23,13 @@ def _expired_environment_termination_schedule():
 
 @background
 def stop_environments_with_expired_access(user_id: int):
-    user = User.objects.get(pk=user_id)
+    user = User.objects.select_related("cloud_identity__billing_setup").get(pk=user_id)
+
+    try:
+        user.cloud_identity.billing_setup
+    except ObjectDoesNotExist:
+        return
+
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
     environments, projects = zip(*expired_pairs)
     for environment in environments:
