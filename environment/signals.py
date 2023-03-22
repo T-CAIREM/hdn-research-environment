@@ -36,7 +36,7 @@ def memoize_original_event_end_time(instance: Event, **kwargs):
 
 @receiver(post_save, sender=Event)
 def schedule_stop_environments_if_event_finished(instance: Event, **kwargs):
-    if instance._original_event_end_date != instance.end_date or created is True:
+    if instance._original_end_date != instance.end_date or created:
         for participant in instance.participants.all():
             stop_environments_with_expired_access(participant.user_id, schedule=instance.end_date)
 
