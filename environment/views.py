@@ -75,9 +75,11 @@ def billing_setup(request):
         form = BillingAccountIdForm()
 
     cloud_identity = request.user.cloud_identity
+    session_otp = request.session.get("cloud_identity_otp")
+    one_time_password = session_otp if session_otp else services.get_user_info(cloud_identity.gcp_user_id).get("one-time-password")
     context = {
         "email": cloud_identity.email,
-        "otp": request.session.get("cloud_identity_otp"),
+        "otp": one_time_password,
         "form": form,
     }
     return render(request, "environment/billing_setup.html", context)
