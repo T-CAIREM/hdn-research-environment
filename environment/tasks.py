@@ -4,6 +4,7 @@ from datetime import timedelta
 from background_task import background
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
+from django.apps import apps
 from django.utils import timezone
 
 from environment.utilities import user_has_billing_setup
@@ -17,9 +18,18 @@ from environment.services import (
 
 User = get_user_model()
 
+Event = apps.get_model("events", "Event")
+
 
 def _expired_environment_termination_schedule():
     return timezone.now() + timedelta(days=14)
+
+
+@background
+def stop_event_participants_environments_with_expired_access(event_id: int):
+    event = Event.objects.prefetch_related("participants").get(pk=event_id)
+    for participant in event.participants.all():
+        stop_environments_with_expired_access(participant.user_id)
 
 
 @background
