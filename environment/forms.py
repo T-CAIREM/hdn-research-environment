@@ -50,6 +50,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.NumberInput(
             attrs={"class": "form-control", "min": 0, "max": 64000}
         ),
+        initial=0,
     )
     gpu_accelerator = forms.ChoiceField(
         label="GPU Accelerator",

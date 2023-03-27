@@ -10,10 +10,9 @@ MAX_RUNNING_ENVIRONMENTS = 4
 MAX_CPU_USAGE = 32
 
 PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
-PERSISTENT_DATA_DISK_TIME_UNIT = "/month"
 
 ProjectedWorkbenchCost = namedtuple(
-    "ProjectedWorkbenchCost", "resource cost time_unit", defaults=["hour"]
+    "ProjectedWorkbenchCost", "resource cost"
 )
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
@@ -86,8 +85,8 @@ GPU_PROJECTED_COSTS = {
 }
 
 DATA_STORAGE_PROJECTED_COSTS = {
-    Region.US_CENTRAL: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
-    Region.NORTHAMERICA_NORTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
-    Region.EUROPE_WEST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
-    Region.AUSTRALIA_SOUTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05, PERSISTENT_DATA_DISK_TIME_UNIT),
+    Region.US_CENTRAL: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
+    Region.NORTHAMERICA_NORTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
+    Region.EUROPE_WEST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
+    Region.AUSTRALIA_SOUTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
 }

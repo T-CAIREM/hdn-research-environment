@@ -8,7 +8,7 @@
 
 {% block local_js_top %}
 <script src="{% static 'environment/js/pricing_change.js' %}"></script>
-<script src="{% static 'environment/js/gpu_acceleration_disabling.js' %}"></script>
+<!--<script src="{% static 'environment/js/gpu_acceleration_disabling.js' %}"></script>-->
 {% endblock %}
 
 {% block local_css %}
@@ -64,24 +64,24 @@
                   Instance Costs
                 </h5>
                 {% for region_name, region_instances in instance_projected_costs.items %}
-                  {% for resource, cost, time_unit in region_instances %}
+                  {% for resource, cost in region_instances %}
                     <div class="container-body instance-costs hidden" id="{{ region_name.value }}-{{ resource }}" data-cost="{{ cost }}">
-                      Instance: {{ cost }} ${{ time_unit }}
+                      Instance: {{ cost }} $/hour
                     </div>
                   {% endfor %}
                 {% endfor %}
               </div>
               <div id="gpu_accelerator_costs" class="hidden">
                 {% for region_name, region_instances in gpu_projected_costs.items %}
-                  {% for gpu_accelerator, cost, time_unit in region_instances %}
+                  {% for gpu_accelerator, cost in region_instances %}
                     <div class="container-body gpu-accelerator-costs hidden" id="{{ region_name.value }}-{{ gpu_accelerator }}" data-cost="{{ cost }}">
-                      GPU: {{ cost }} $/{{ time_unit }}
+                      GPU: {{ cost }} $/hour
                     </div>
                   {% endfor %}
                 {% endfor %}
               </div>
               <p id="instance_total_cost">
-                <b>Total: 0 $/hour</b>
+                <b>Total: <span>0</span> $/hour</b>
               </p>
               <div>
                 <h5 class="card-title">
@@ -89,11 +89,11 @@
                 </h5>
                 {% for region_name, additional_feature in data_storage_projected_costs.items %}
                   <div class="container-body data-storage-costs hidden" id="{{ region_name.value }}-{{ additional_feature.resource }}" data-cost="{{ additional_feature.cost }}">
-                    {{ additional_feature.resource }}: {{ additional_feature.cost }} ${{ additional_feature.time_unit }}
+                    {{ additional_feature.resource }}: {{ additional_feature.cost }} $/month
                   </div>
                 {% endfor %}
                 <p id="data_total_cost">
-                    <b>Total: 0 $/month</b>
+                    <b>Total: <span>0</span> $/month</b>
                 </p>
               </div>
               <p>
