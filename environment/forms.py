@@ -3,6 +3,21 @@ from django import forms
 from environment.validators import gcp_billing_account_id_validator
 
 
+class CloudIdentityPasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput())
+    confirm_password = forms.CharField(widget=forms.PasswordInput())
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        confirm_password = cleaned_data.get("confirm_password")
+
+        if password != confirm_password:
+            raise forms.ValidationError(
+                "Passwords that were provided does not match"
+            )
+
+
 class BillingAccountIdForm(forms.Form):
     billing_account_id = forms.CharField(
         label="Billing Account ID",
