@@ -13,7 +13,10 @@ from environment.decorators import (
 )
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 class CloudIdentityRequiredTestCase(TestCase):
     def test_redirects_user_without_cloud_identity_to_identity_provisioning(self):
         request_with_user_without_cloud_identity = Mock(
@@ -37,7 +40,10 @@ class CloudIdentityRequiredTestCase(TestCase):
         view.assert_called()
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 class BillingSetupRequiredTestCase(TestCase):
     def test_redirects_user_without_billing_account_to_billing_setup(self):
         request_with_user_without_billing_account = Mock(
@@ -61,7 +67,10 @@ class BillingSetupRequiredTestCase(TestCase):
         view.assert_called()
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 class RequirePatchTestCase(TestCase):
     def test_returns_405_for_non_patch_requests(self):
         methods = [
@@ -90,7 +99,10 @@ class RequirePatchTestCase(TestCase):
         view.assert_called()
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 class RequireDeleteTestCase(TestCase):
     def test_returns_405_for_non_delete_requests(self):
         methods = ["PATCH", "GET", "POST", "HEAD", "PUT", "CONNECT", "OPTIONS", "TRACE"]

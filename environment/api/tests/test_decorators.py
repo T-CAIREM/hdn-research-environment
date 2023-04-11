@@ -12,7 +12,10 @@ SAMPLE_BASE_URL = "http://example.com"
 SAMPLE_ENDPOINT = "/some_path"
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_API_URL=SAMPLE_BASE_URL)
 class DecoratorsTestCase(TestCase):
     def setUp(self):
