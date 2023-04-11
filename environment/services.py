@@ -117,7 +117,7 @@ def _create_workbench_kwargs(
     instance_type: str,
     environment_type: str,
     persistent_disk: int,
-    gpu_accelerated: bool = False,
+    gpu_accelerator: Optional[str] = None,
 ) -> dict:
     gcp_user_id = user.cloud_identity.gcp_user_id
 
@@ -133,12 +133,12 @@ def _create_workbench_kwargs(
     if environment_type == "jupyter":
         vm_image = (
             "common-cu110-notebooks"
-            if gpu_accelerated
+            if gpu_accelerator
             else "r-4-2-cpu-experimental-notebooks"
         )
         jupyter_kwargs = {
             "vm_image": vm_image,
-            "gpu_accelerated": gpu_accelerated,
+            "gpu_accelerator": gpu_accelerator,
         }
         return {**common, **jupyter_kwargs}
     else:
@@ -152,7 +152,7 @@ def create_research_environment(
     instance_type: str,
     environment_type: str,
     persistent_disk: int,
-    gpu_accelerated: bool = False,
+    gpu_accelerator: Optional[str] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
@@ -161,7 +161,7 @@ def create_research_environment(
         instance_type,
         environment_type,
         persistent_disk,
-        gpu_accelerated,
+        gpu_accelerator,
     )
     response = api.create_workbench(**kwargs)
     if not response.ok:

@@ -29,6 +29,10 @@ class InstanceType(Enum):
         return INSTANCE_TO_CPU_MAP[self]
 
 
+class GPUAcceleratorType(Enum):
+    NVIDIA_TESLA_T4 = "NVIDIA_TESLA_T4"
+
+
 class EnvironmentStatus(Enum):
     PROVISIONING = "inprogress"
     PROVISIONING_FAILED = "workbench-setup-failed"

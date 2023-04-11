@@ -193,7 +193,7 @@ def create_research_environment(request, project_slug, project_version):
                     instance_type=form.cleaned_data["instance_type"],
                     environment_type=form.cleaned_data["environment_type"],
                     persistent_disk=form.cleaned_data.get("persistent_disk"),
-                    gpu_accelerated=form.cleaned_data.get("gpu_accelerated"),
+                    gpu_accelerator=form.cleaned_data.get("gpu_accelerator"),
                 )
                 return redirect("research_environments")
             else:
@@ -209,7 +209,9 @@ def create_research_environment(request, project_slug, project_version):
         "form": form,
         "project": project,
         "exceeded_quotas": exceeded_quotas,
-        "projected_costs": constants.PROJECTED_COSTS,
+        "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
+        "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
+        "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
 
