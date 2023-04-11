@@ -14,7 +14,7 @@ class CloudIdentityPasswordForm(forms.Form):
 
         if password != confirm_password:
             raise forms.ValidationError(
-                "Passwords that were provided does not match"
+                "The passwords don't match"
             )
 
 
