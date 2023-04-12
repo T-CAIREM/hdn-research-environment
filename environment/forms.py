@@ -6,6 +6,8 @@ from environment.validators import gcp_billing_account_id_validator
 class CloudIdentityPasswordForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput())
     confirm_password = forms.CharField(widget=forms.PasswordInput())
+    recovery_email = forms.EmailField(widget=forms.EmailInput(
+        attrs={'class': 'form-control'}))
 
     def clean(self):
         cleaned_data = super().clean()
