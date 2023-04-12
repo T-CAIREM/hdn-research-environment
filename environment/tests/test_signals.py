@@ -166,4 +166,4 @@ class EventSignalsTestCase(TestCase):
         event.save()
         event.enroll_user(participant)
 
-        mock_stop_event_participants_environments_with_expired_access.assert_called()
+        mock_stop_event_participants_environments_with_expired_access.assert_called_with(event.id, schedule=event.end_date)
