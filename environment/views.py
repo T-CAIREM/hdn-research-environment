@@ -76,9 +76,9 @@ def billing_setup(request):
 
     cloud_identity = request.user.cloud_identity
     session_otp = request.session.get("cloud_identity_otp")
-    one_time_password = session_otp or services.get_user_info(
-        cloud_identity.gcp_user_id
-    ).get("one-time-password")
+    one_time_password = session_otp or services.get_user_info(request.user).get(
+        "one-time-password"
+    )
     context = {
         "email": cloud_identity.email,
         "otp": one_time_password,
