@@ -17,10 +17,11 @@
     <div class="card" style="width: 36rem;">
       <div class="card-body">
         <p class="card-text font-weight-bold">You don't have any research environments yet.</p>
-        <p class="card-text">To start, click the button below to provide you Google Cloud Identity.</p>
+        <p class="card-text">Provide a password and click the button below to create your Google Cloud Identity.</p>
         <form id="environment_identity_provisioning_form" action="{% url 'identity_provisioning' %}" method="post">
           {% csrf_token %}
-          <button class="btn btn-primary" type="submit">
+          {{ form }}
+          <button class="btn btn-primary mt-3" type="submit">
             Create Cloud Identity
           </button>
         </form>

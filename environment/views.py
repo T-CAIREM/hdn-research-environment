@@ -43,11 +43,14 @@ def identity_provisioning(request):
         return redirect("billing_setup")
 
     if request.method == "POST":
-        otp, _ = services.create_cloud_identity(request.user)
-        request.session["cloud_identity_otp"] = otp
-        return redirect("billing_setup")
+        form = CloudIdentityPasswordForm(request.POST)
+        if form.is_valid():
+            services.create_cloud_identity(request.user, form.cleaned_data.get("password"))
+            return redirect("billing_setup")
+    else:
+        form = CloudIdentityPasswordForm()
 
-    return render(request, "environment/identity_provisioning.html")
+    return render(request, "environment/identity_provisioning.html", context={"form": form})
 
 
 @require_http_methods(["GET", "POST"])
