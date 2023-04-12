@@ -1,12 +1,13 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from unittest import skipIf
 from unittest.mock import patch
+
 
 from django.test import TestCase
 from django.conf import settings
 from django.utils import timezone
 
-from environment.signals import User, DataAccessRequest, Training
+from environment.signals import User, DataAccessRequest, Training, Event
 
 
 @skipIf(
@@ -151,3 +152,27 @@ class DataAccessRequestSignalsTestCase(TestCase):
         new_data_access_request.is_revoked = lambda: True
         new_data_access_request.save()
         mock_stop_environments_with_expired_access.assert_called()
+
+
+@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+class EventSignalsTestCase(TestCase):
+    def test_memoize_original_event_end_time(self):
+        new_event = Event()
+        self.assertEqual(
+            new_event._original_end_date, new_event.end_date
+        )
+
+    @patch("environment.signals.stop_event_participants_environments_with_expired_access")
+    def test_schedule_stop_environments_if_event_finished(
+        self, mock_stop_event_participants_environments_with_expired_access
+    ):
+        host = User()
+        participant = User(username="participant", email="participant@email.com")
+        host.save()
+        participant.save()
+
+        event = Event(host_id=host.id, end_date=datetime(year=2000, month=12, day=12))
+        event.save()
+        event.enroll_user(participant)
+
+        mock_stop_event_participants_environments_with_expired_access.assert_called_with(event.id, schedule=event.end_date)

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models.signals import post_init, post_save
 
-from environment.tasks import stop_environments_with_expired_access
+from environment.tasks import stop_environments_with_expired_access, stop_event_participants_environments_with_expired_access
 from environment.utilities import user_has_billing_setup
 
 
@@ -14,6 +14,7 @@ Training = apps.get_model("user", "Training")
 
 DataAccessRequest = apps.get_model("project", "DataAccessRequest")
 
+Event = apps.get_model("events", "Event")
 
 @receiver(post_init, sender=User)
 def memoize_original_credentialing_status(instance: User, **kwargs):
@@ -28,6 +29,15 @@ def schedule_stop_environments_if_credentialing_revoked(instance: User, **kwargs
     if not instance.is_credentialed and instance._original_is_credentialed:
         stop_environments_with_expired_access(instance.id)
 
+
+@receiver(post_init, sender=Event)
+def memoize_original_event_end_time(instance: Event, **kwargs):
+    instance._original_end_date = instance.end_date
+
+@receiver(post_save, sender=Event)
+def schedule_stop_environments_if_event_finished(instance: Event, created: bool, **kwargs):
+    if instance._original_end_date != instance.end_date or created:
+        stop_event_participants_environments_with_expired_access(instance.id, schedule=instance.end_date)
 
 @receiver(post_init, sender=Training)
 def memoize_original_validity(instance: Training, **kwargs):
