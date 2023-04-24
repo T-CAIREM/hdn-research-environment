@@ -34,19 +34,19 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("australia-southeast1", "australia-southeast1"),
     ]
     AVAILABLE_INSTANCE_TYPES = [
-        ("n1-standard-1", "n1-standard-1"),
-        ("n1-standard-2", "n1-standard-2"),
-        ("n1-standard-4", "n1-standard-4"),
-        ("n1-standard-8", "n1-standard-8"),
-        ("n1-standard-16", "n1-standard-16"),
+        ("n1-standard-1", "n1-standard-1 (1 CPU, 3.75GB RAM)"),
+        ("n1-standard-2", "n1-standard-2 (2 CPU, 7.5GB RAM)"),
+        ("n1-standard-4", "n1-standard-4 (4 CPU, 15GB RAM)"),
+        ("n1-standard-8", "n1-standard-8 (8 CPU, 30GB RAM)"),
+        ("n1-standard-16", "n1-standard-16 (16 CPU, 60GB RAM)"),
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
     ]
     AVAILABLE_GPU_ACCELERATOR_TYPES = [
-        ("", "----------"),
-        ("NVIDIA_TESLA_T4", "Nvidia Tesla T4"),
+        ("", "Machine without GPU attached"),
+        ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
