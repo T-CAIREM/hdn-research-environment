@@ -19,7 +19,6 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("australia-southeast1", "australia-southeast1"),
     ]
     AVAILABLE_INSTANCE_TYPES = [
-        ("n1-standard-1", "n1-standard-1"),
         ("n1-standard-2", "n1-standard-2"),
         ("n1-standard-4", "n1-standard-4"),
         ("n1-standard-8", "n1-standard-8"),
