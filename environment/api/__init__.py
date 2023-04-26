@@ -9,19 +9,22 @@ from environment.api.decorators import api_request
 def create_cloud_identity(
     gcp_user_id: str, given_name: str, family_name: str, password: str
 ) -> Request:
-    json = {"userid": gcp_user_id, "givenName": given_name, "familyName": family_name, "password": password}
-    return Request("POST", url="/user", json=json)
+    json = {"user_name": gcp_user_id, "given_name": given_name, "family_name": family_name, "password": password}
+    return Request("POST", url="/identity/create", json=json)
 
 
 @api_request
-def get_user_info(gcp_user_id: str) -> Request:
-    return Request("GET", url=f"/user/{gcp_user_id}")
+def list_billing_accounts(
+    email: str
+) -> Request:
+    json = {"email": email}
+    return Request("POST", url="/billing/list", json=json)
 
 
 @api_request
 def create_workspace(gcp_user_id: str, billing_id: str, region: str) -> Request:
     json = {"userid": gcp_user_id, "billingid": billing_id, "region": region}
-    return Request("POST", url="/onetimeplatformsetup", json=json)
+    return Request("POST", url="/workspace/create", json=json)
 
 
 @api_request

@@ -51,14 +51,14 @@
         <li class="nav-item">
           <a
             class="nav-link"
-            id="cloud-identity-tab"
+            id="billing-accounts-tab"
             data-toggle="tab"
-            href="#cloud-identity"
+            href="#billing_accounts"
             role="tab"
-            aria-controls="cloud-identity"
+            aria-controls="billing_accounts"
             aria-selected="false"
           >
-            Cloud Identity
+            Billing
           </a>
         </li>
       </ul>
@@ -83,11 +83,11 @@
         </div>
         <div
           class="tab-pane fade"
-          id="cloud-identity"
+          id="billing_accounts"
           role="tabpanel"
-          aria-labelledby="cloud-identity-tab"
+          aria-labelledby="billing-accounts-tab"
         >
-          {% include "environment/_cloud_identity_info.html" %}
+          {% include "environment/_billing_accounts_list.html" %}
         </div>
       </div>
     </div>

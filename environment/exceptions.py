@@ -36,3 +36,7 @@ class GetUserInfoFailed(Exception):
 
 class GetWorkspaceDetailsFailed(Exception):
     pass
+
+
+class GetBillingAccountsList(Exception):
+    pass
