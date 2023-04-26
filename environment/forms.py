@@ -40,7 +40,6 @@ class CreateWorkspaceForm(forms.Form):
 
 class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_INSTANCE_TYPES = [
-        ("n1-standard-1", "1 CPU, 3.75GB RAM"),
         ("n1-standard-2", "2 CPU, 7.5GB RAM"),
         ("n1-standard-4", "4 CPU, 15GB RAM"),
         ("n1-standard-8", "8 CPU, 30GB RAM"),

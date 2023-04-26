@@ -16,7 +16,6 @@ INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1.value, 0.05],
             [InstanceType.N1_STANDARD_2.value, 0.09],
             [InstanceType.N1_STANDARD_4.value, 0.19],
             [InstanceType.N1_STANDARD_8.value, 0.38],
@@ -26,7 +25,6 @@ INSTANCE_PROJECTED_COSTS = {
     Region.NORTHAMERICA_NORTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1.value, 0.05],
             [InstanceType.N1_STANDARD_2.value, 0.11],
             [InstanceType.N1_STANDARD_4.value, 0.21],
             [InstanceType.N1_STANDARD_8.value, 0.42],
@@ -36,7 +34,6 @@ INSTANCE_PROJECTED_COSTS = {
     Region.EUROPE_WEST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1.value, 0.06],
             [InstanceType.N1_STANDARD_2.value, 0.12],
             [InstanceType.N1_STANDARD_4.value, 0.24],
             [InstanceType.N1_STANDARD_8.value, 0.49],
@@ -46,7 +43,6 @@ INSTANCE_PROJECTED_COSTS = {
     Region.AUSTRALIA_SOUTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
-            [InstanceType.N1_STANDARD_1.value, 0.07],
             [InstanceType.N1_STANDARD_2.value, 0.13],
             [InstanceType.N1_STANDARD_4.value, 0.27],
             [InstanceType.N1_STANDARD_8.value, 0.35],

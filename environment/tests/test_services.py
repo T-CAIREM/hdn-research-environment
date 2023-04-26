@@ -101,7 +101,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
             self.user,
             self.project,
             "us-central1",
-            "n1-standard-1",
+            "n1-standard-2",
             "enviornment_type",
             "100",
         )
@@ -113,7 +113,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
             self.user,
             self.project,
             "us-central1",
-            "n1-standard-1",
+            "n1-standard-2",
             "enviornment_type",
             "100",
         )
@@ -193,7 +193,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
             self.user,
             "workbench_id",
             Region.AUSTRALIA_SOUTHEAST,
-            InstanceType.N1_STANDARD_1,
+            InstanceType.N1_STANDARD_2,
         )
 
     @patch("environment.api.change_workbench_instance_type")
@@ -203,7 +203,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
             self.user,
             "workbench_id",
             Region.AUSTRALIA_SOUTHEAST,
-            InstanceType.N1_STANDARD_1,
+            InstanceType.N1_STANDARD_2,
         )
         self.assertEqual(result, mock_change_workbench_instance_type.return_value)
 
