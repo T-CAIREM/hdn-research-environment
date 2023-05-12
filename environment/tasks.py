@@ -2,7 +2,6 @@ from typing import Iterable
 from datetime import timedelta
 
 from background_task import background
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.utils import timezone

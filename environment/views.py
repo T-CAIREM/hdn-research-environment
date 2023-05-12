@@ -28,7 +28,6 @@ from environment.utilities import (
     user_has_billing_setup,
 )
 from environment.models import CloudIdentity, Workflow
-from collections import namedtuple
 
 
 @require_http_methods(["GET", "POST"])
