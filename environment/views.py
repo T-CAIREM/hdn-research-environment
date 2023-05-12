@@ -9,7 +9,7 @@ from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.services as services
 import environment.constants as constants
-from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm
+from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm, CloudIdentityPasswordForm
 from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
     cloud_identity_required,
