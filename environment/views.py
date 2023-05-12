@@ -9,7 +9,11 @@ from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.services as services
 import environment.constants as constants
-from environment.forms import BillingAccountIdForm, CreateResearchEnvironmentForm, CloudIdentityPasswordForm
+from environment.forms import (
+    BillingAccountIdForm,
+    CreateResearchEnvironmentForm,
+    CloudIdentityPasswordForm,
+)
 from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
     cloud_identity_required,
@@ -48,13 +52,15 @@ def identity_provisioning(request):
             services.create_cloud_identity(
                 request.user,
                 form.cleaned_data.get("password"),
-                form.cleaned_data.get("recovery_email")
+                form.cleaned_data.get("recovery_email"),
             )
             return redirect("billing_setup")
     else:
         form = CloudIdentityPasswordForm()
 
-    return render(request, "environment/identity_provisioning.html", context={"form": form})
+    return render(
+        request, "environment/identity_provisioning.html", context={"form": form}
+    )
 
 
 @require_http_methods(["GET", "POST"])

@@ -154,15 +154,18 @@ class DataAccessRequestSignalsTestCase(TestCase):
         mock_stop_environments_with_expired_access.assert_called()
 
 
-@skipIf(not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS, "Research environments are disabled")
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
 class EventSignalsTestCase(TestCase):
     def test_memoize_original_event_end_time(self):
         new_event = Event()
-        self.assertEqual(
-            new_event._original_end_date, new_event.end_date
-        )
+        self.assertEqual(new_event._original_end_date, new_event.end_date)
 
-    @patch("environment.signals.stop_event_participants_environments_with_expired_access")
+    @patch(
+        "environment.signals.stop_event_participants_environments_with_expired_access"
+    )
     def test_schedule_stop_environments_if_event_finished(
         self, mock_stop_event_participants_environments_with_expired_access
     ):
@@ -175,4 +178,6 @@ class EventSignalsTestCase(TestCase):
         event.save()
         event.enroll_user(participant)
 
-        mock_stop_event_participants_environments_with_expired_access.assert_called_with(event.id, schedule=event.end_date)
+        mock_stop_event_participants_environments_with_expired_access.assert_called_with(
+            event.id, schedule=event.end_date
+        )

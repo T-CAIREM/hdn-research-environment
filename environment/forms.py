@@ -6,8 +6,9 @@ from environment.validators import gcp_billing_account_id_validator
 class CloudIdentityPasswordForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput())
     confirm_password = forms.CharField(widget=forms.PasswordInput())
-    recovery_email = forms.EmailField(widget=forms.EmailInput(
-        attrs={'class': 'form-control'}))
+    recovery_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control"})
+    )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -15,9 +16,7 @@ class CloudIdentityPasswordForm(forms.Form):
         confirm_password = cleaned_data.get("confirm_password")
 
         if password != confirm_password:
-            raise forms.ValidationError(
-                "The passwords don't match"
-            )
+            raise forms.ValidationError("The passwords don't match")
 
 
 class BillingAccountIdForm(forms.Form):

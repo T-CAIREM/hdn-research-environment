@@ -61,10 +61,16 @@ def _environment_data_group(environment: ResearchEnvironment) -> str:
     return environment.group_granting_data_access
 
 
-def create_cloud_identity(user: User, password: str, recovery_email: str) -> Tuple[str, CloudIdentity]:
+def create_cloud_identity(
+    user: User, password: str, recovery_email: str
+) -> Tuple[str, CloudIdentity]:
     gcp_user_id = user.username
     response = api.create_cloud_identity(
-        gcp_user_id, user.profile.first_names, user.profile.last_name, password, recovery_email
+        gcp_user_id,
+        user.profile.first_names,
+        user.profile.last_name,
+        password,
+        recovery_email,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -72,7 +78,10 @@ def create_cloud_identity(user: User, password: str, recovery_email: str) -> Tup
 
     body = response.json()
     identity = CloudIdentity.objects.create(
-        user=user, gcp_user_id=gcp_user_id, email=body["email-id"], receovery_email=recovery_email
+        user=user,
+        gcp_user_id=gcp_user_id,
+        email=body["email-id"],
+        receovery_email=recovery_email,
     )
     return identity
 
