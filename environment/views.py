@@ -45,7 +45,11 @@ def identity_provisioning(request):
     if request.method == "POST":
         form = CloudIdentityPasswordForm(request.POST)
         if form.is_valid():
-            services.create_cloud_identity(request.user, form.cleaned_data.get("password"))
+            services.create_cloud_identity(
+                request.user,
+                form.cleaned_data.get("password"),
+                form.cleaned_data.get("recovery_email")
+            )
             return redirect("billing_setup")
     else:
         form = CloudIdentityPasswordForm()
