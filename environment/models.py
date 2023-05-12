@@ -14,7 +14,6 @@ class CloudIdentity(models.Model):
         max_length=255, unique=True, validators=[EmailValidator()]
     )
     initial_workspace_setup_done = models.BooleanField(default=False)
-    recovery_email = models.CharField(max_length=255)
 
 
 class BillingSetup(models.Model):
