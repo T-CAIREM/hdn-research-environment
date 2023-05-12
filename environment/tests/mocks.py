@@ -16,7 +16,7 @@ get_workspace_list_json = {
                     "creation-timestamp": None,
                     "group-granting-data-access": "random_value",
                     "id": None,
-                    "machine-type": "n1-standard-1",
+                    "machine-type": "n1-standard-2",
                     "name": None,
                     "persistent_disk": None,
                     "region": "us-central1",
@@ -50,7 +50,7 @@ get_workspace_list_json = {
                     "creation-timestamp": None,
                     "group-granting-data-access": "random-value",
                     "id": None,
-                    "machine-type": "n1-standard-1",
+                    "machine-type": "n1-standard-2",
                     "name": None,
                     "persistent_disk": None,
                     "region": "us-central1",
@@ -84,7 +84,7 @@ get_workspace_list_json = {
                     "creation-timestamp": "2022-02-11T05:20:38.433-08:00",
                     "group-granting-data-access": "randomvalue",
                     "id": "7950866383761038413",
-                    "machine-type": "n1-standard-1",
+                    "machine-type": "n1-standard-2",
                     "name": "workspace-randomvalue-jupyterlab",
                     "persistent_disk": "1",
                     "region": "us-central1",
@@ -104,7 +104,6 @@ get_workspace_list_json = {
                         {
                             "config-name": "instance-type",
                             "possible-values": [
-                                "n1-standard-1",
                                 "n1-standard-2",
                                 "n1-standard-4",
                                 "n1-standard-8",
@@ -143,7 +142,7 @@ get_workspace_list_json = {
                     "creation-timestamp": "2022-02-14T03:43:48.926-08:00",
                     "group-granting-data-access": "demopsn",
                     "id": "6122925253156404891",
-                    "machine-type": "n1-standard-1",
+                    "machine-type": "n1-standard-2",
                     "name": "workspace-demopsn-jupyterlab",
                     "persistent_disk": "1",
                     "region": "us-central1",
@@ -163,7 +162,6 @@ get_workspace_list_json = {
                         {
                             "config-name": "instance-type",
                             "possible-values": [
-                                "n1-standard-1",
                                 "n1-standard-2",
                                 "n1-standard-4",
                                 "n1-standard-8",
