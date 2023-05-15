@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("environment", "0003_cloudidentity_is_workspace_done"),
     ]

@@ -7,9 +7,19 @@ from environment.api.decorators import api_request
 
 @api_request
 def create_cloud_identity(
-    gcp_user_id: str, given_name: str, family_name: str, password: str
+    gcp_user_id: str,
+    given_name: str,
+    family_name: str,
+    password: str,
+    recovery_email: str,
 ) -> Request:
-    json = {"user_name": gcp_user_id, "given_name": given_name, "family_name": family_name, "password": password}
+    json = {
+        "userid": gcp_user_id,
+        "givenName": given_name,
+        "familyName": family_name,
+        "password": password,
+        "recoveryEmail": recovery_email,
+    }
     return Request("POST", url="/identity/create", json=json)
 
 
