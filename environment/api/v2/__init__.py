@@ -25,3 +25,17 @@ def create_cloud_identity(
         "recovery_email": recovery_email,
     }
     return Request("POST", url="/identity/create", json=json)
+
+
+@api_v2_request
+def share_billing_account(
+    owner_email: str,
+    user_email: str,
+    billing_account_id: str,
+) -> Request:
+    json = {
+        "owner_email": owner_email,
+        "user_email": user_email,
+        "billing_account_id": billing_account_id,
+    }
+    return Request("POST", url="/billing/share", json=json)

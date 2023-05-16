@@ -26,6 +26,10 @@ class BillingVerificationFailed(Exception):
     pass
 
 
+class BillingSharingFailed(Exception):
+    pass
+
+
 class GetAvailableEnvironmentsFailed(Exception):
     pass
 
