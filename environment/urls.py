@@ -15,13 +15,6 @@ urlpatterns = [
         views.identity_provisioning,
         name="identity_provisioning",
     ),
-    path("billing-setup/", views.billing_setup, name="billing_setup"),
-    path("workspace-setup", views.workspace_setup, name="workspace_setup"),
-    path(
-        "is-workspace-setup-done",
-        views.is_workspace_setup_done,
-        name="is_workspace_setup_done",
-    ),
     path(
         "environment/stop",
         views.stop_running_environment,
