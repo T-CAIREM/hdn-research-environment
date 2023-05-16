@@ -16,15 +16,6 @@ class CloudIdentity(models.Model):
     initial_workspace_setup_done = models.BooleanField(default=False)
 
 
-class BillingSetup(models.Model):
-    cloud_identity = models.OneToOneField(
-        CloudIdentity, related_name="billing_setup", on_delete=models.CASCADE
-    )
-    billing_account_id = models.CharField(
-        max_length=20, unique=True, validators=[gcp_billing_account_id_validator]
-    )
-
-
 class Workflow(models.Model):
     objects = WorkflowManager()
 

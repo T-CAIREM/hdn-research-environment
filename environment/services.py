@@ -23,7 +23,7 @@ from environment.exceptions import (
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
-    GetUserInfoFailed,
+    GetBillingAccountsListFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
@@ -87,14 +87,11 @@ def create_cloud_identity(
     return identity
 
 
-def get_user_info(user: User):
-    response = api_v1.get_user_info(gcp_user_id=user.username)
-
-    if (
-        not response.ok
-    ):  # right now response form API is always ok (maybe except Runtime)
+def get_billing_accounts_list(user: User):
+    response = api_v2.list_billing_accounts(user.cloud_identity.email)
+    if not response.ok:
         error_message = response.json()["message"]
-        raise GetUserInfoFailed(error_message)
+        raise GetBillingAccountsListFailed(error_message)
 
     return response.json()
 

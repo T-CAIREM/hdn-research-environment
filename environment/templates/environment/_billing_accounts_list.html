@@ -1,0 +1,16 @@
+<div class="p-1">
+    <ul class="list-group list-group-flush">
+        {% for billing_account in billing_accounts_list %}
+            <li class="list-group-item">
+               <div class="row">
+                    <div class="col d-flex">
+                        <h2 class="w-100">
+                            {{ billing_account.display_name }}
+                        </h2>
+                        <a class="btn btn-secondary"> Share </a>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+</div>

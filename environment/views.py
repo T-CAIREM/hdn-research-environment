@@ -72,10 +72,12 @@ def research_environments(request):
         projects_with_environments_being_created + environment_project_workflow_triplets
     )
 
+    billing_accounts_list = services.get_billing_accounts_list(request.user)
+
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
         "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "cloud_identity": request.user.cloud_identity,
+        "billing_accounts_list": billing_accounts_list,
     }
 
     return render(

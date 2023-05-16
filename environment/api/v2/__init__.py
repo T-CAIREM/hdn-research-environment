@@ -28,6 +28,12 @@ def create_cloud_identity(
 
 
 @api_v2_request
+def list_billing_accounts(email: str) -> Request:
+    json = {"email": email}
+    return Request("POST", url="/billing/list", json=json)
+
+
+@api_v2_request
 def share_billing_account(
     owner_email: str,
     user_email: str,
@@ -39,3 +45,15 @@ def share_billing_account(
         "billing_account_id": billing_account_id,
     }
     return Request("POST", url="/billing/share", json=json)
+
+
+@api_v2_request
+def create_workspace(
+    email: str, billing_account_id: str, region: str
+) -> Request:
+    json = {
+        "email": email,
+        "billing_account_id": billing_account_id,
+        "region": region,
+    }
+    return Request("POST", url="/workspace/create", json=json)

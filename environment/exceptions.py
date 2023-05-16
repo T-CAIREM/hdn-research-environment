@@ -40,3 +40,7 @@ class GetUserInfoFailed(Exception):
 
 class GetWorkspaceDetailsFailed(Exception):
     pass
+
+
+class GetBillingAccountsListFailed(Exception):
+    pass

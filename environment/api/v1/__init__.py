@@ -34,12 +34,6 @@ def get_user_info(gcp_user_id: str) -> Request:
 
 
 @api_v1_request
-def create_workspace(gcp_user_id: str, billing_id: str, region: str) -> Request:
-    json = {"userid": gcp_user_id, "billingid": billing_id, "region": region}
-    return Request("POST", url="/onetimeplatformsetup", json=json)
-
-
-@api_v1_request
 def get_workspace_details(gcp_user_id: str, region: str) -> Request:
     return Request("GET", url=f"/workspace/{gcp_user_id}/{region}")
 
