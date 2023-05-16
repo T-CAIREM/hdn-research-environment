@@ -1,8 +1,8 @@
 from typing import Callable
 
 import google.auth.jwt as jwt
-from requests import Request
 from django.conf import settings
+from requests import Request
 
 
 def _generate_credentials() -> jwt.Credentials:

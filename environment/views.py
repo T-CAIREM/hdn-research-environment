@@ -10,41 +10,28 @@ from google.cloud.workflows.executions_v1beta.types.executions import Execution
 import environment.services as services
 import environment.constants as constants
 from environment.forms import (
-    BillingAccountIdForm,
     CreateResearchEnvironmentForm,
     CloudIdentityPasswordForm,
 )
-from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
     cloud_identity_required,
-    billing_setup_required,
-    workspace_setup_required,
     require_DELETE,
     require_PATCH,
 )
 from environment.entities import Region, InstanceType
 from environment.utilities import (
     user_has_cloud_identity,
-    user_has_billing_setup,
 )
-from environment.models import CloudIdentity, Workflow
+from environment.models import Workflow
 
 
 @require_http_methods(["GET", "POST"])
 @login_required
 def identity_provisioning(request):
     if user_has_cloud_identity(request.user):
-        return redirect("billing_setup")
+        return redirect("research_environments")
 
-    user_info = services.get_user_info(request.user)
-    if user_info.get("user-status") == "user-added-in-cloud-identity":
-        CloudIdentity.objects.create(
-            user=request.user,
-            gcp_user_id=user_info.get("user-id"),
-            email=user_info.get("email-id"),
-        )
-        return redirect("billing_setup")
-
+    # TODO: Handle the case where the user was created successfully, but the response was lost.
     if request.method == "POST":
         form = CloudIdentityPasswordForm(request.POST)
         if form.is_valid():
@@ -53,7 +40,7 @@ def identity_provisioning(request):
                 form.cleaned_data.get("password"),
                 form.cleaned_data.get("recovery_email"),
             )
-            return redirect("billing_setup")
+            return redirect("research_environments")
     else:
         form = CloudIdentityPasswordForm()
 
@@ -62,63 +49,9 @@ def identity_provisioning(request):
     )
 
 
-@require_http_methods(["GET", "POST"])
-@login_required
-@cloud_identity_required
-def billing_setup(request):
-    if user_has_billing_setup(request.user):
-        return redirect("research_environments")
-
-    if request.method == "POST":
-        form = BillingAccountIdForm(request.POST)
-        if form.is_valid():
-            try:
-                services.verify_billing_and_create_workspace(
-                    user=request.user,
-                    billing_id=form.cleaned_data["billing_account_id"],
-                )
-                services.create_billing_setup(
-                    request.user, form.cleaned_data["billing_account_id"]
-                )
-                return redirect("research_environments")
-            except BillingVerificationFailed as err:
-                form.add_error("billing_account_id", err)
-    else:
-        form = BillingAccountIdForm()
-
-    cloud_identity = request.user.cloud_identity
-    session_otp = request.session.get("cloud_identity_otp")
-    one_time_password = session_otp or services.get_user_info(request.user).get(
-        "one-time-password"
-    )
-    context = {
-        "email": cloud_identity.email,
-        "otp": one_time_password,
-        "form": form,
-    }
-    return render(request, "environment/billing_setup.html", context)
-
-
 @require_GET
 @login_required
 @cloud_identity_required
-@billing_setup_required
-def workspace_setup(request):
-    if request.user.cloud_identity.initial_workspace_setup_done:
-        return redirect("research_environments")
-
-    is_workspace_done = services.is_user_workspace_setup_done(request.user)
-    if not is_workspace_done:
-        return render(request, "environment/workspace_being_provisioned.html")
-    services.mark_user_workspace_setup_as_done(request.user)
-    return redirect("research_environments")
-
-
-@require_GET
-@login_required
-@cloud_identity_required
-@billing_setup_required
-@workspace_setup_required
 def research_environments(request):
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user
@@ -155,8 +88,6 @@ def research_environments(request):
 @require_GET
 @login_required
 @cloud_identity_required
-@billing_setup_required
-@workspace_setup_required
 def research_environments_partial(request):
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user
@@ -186,7 +117,6 @@ def research_environments_partial(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def create_research_environment(request, project_slug, project_version):
     project = services.get_available_projects(request.user).get(
         slug=project_slug, version=project_version
@@ -233,7 +163,6 @@ def create_research_environment(request, project_slug, project_version):
 @require_PATCH
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def stop_running_environment(request):
     data = json.loads(request.body)
     services.stop_running_environment(
@@ -248,7 +177,6 @@ def stop_running_environment(request):
 @require_PATCH
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def start_stopped_environment(request):
     data = json.loads(request.body)
     services.start_stopped_environment(
@@ -263,7 +191,6 @@ def start_stopped_environment(request):
 @require_PATCH
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def change_environment_instance_type(request):
     data = json.loads(request.body)
     services.change_environment_instance_type(
@@ -279,7 +206,6 @@ def change_environment_instance_type(request):
 @require_DELETE
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def delete_environment(request):
     data = json.loads(request.body)
     services.delete_environment(
@@ -294,7 +220,6 @@ def delete_environment(request):
 @require_GET
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def is_workspace_setup_done(request):
     workspace_setup_finished = services.is_user_workspace_setup_done(user=request.user)
     return JsonResponse({"finished": workspace_setup_finished})
@@ -303,7 +228,6 @@ def is_workspace_setup_done(request):
 @require_GET
 @login_required
 @cloud_identity_required
-@billing_setup_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
     execution_state = services.get_execution_state(

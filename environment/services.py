@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, Optional, Callable
+from typing import Tuple, Iterable, Optional
 
 from django.db.models import Q, Model
 from django.core.mail import send_mail
@@ -10,7 +10,8 @@ from google.cloud.workflows.executions_v1beta.types import executions
 
 import environment.constants as constants
 import environment.api.v1 as api_v1
-from environment.models import CloudIdentity, BillingSetup, Workflow
+import environment.api.v2 as api_v2
+from environment.models import CloudIdentity, Workflow
 from environment.exceptions import (
     IdentityProvisioningFailed,
     StopEnvironmentFailed,
@@ -65,7 +66,7 @@ def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> Tuple[str, CloudIdentity]:
     gcp_user_id = user.username
-    response = api_v1.create_cloud_identity(
+    response = api_v2.create_cloud_identity(
         gcp_user_id,
         user.profile.first_names,
         user.profile.last_name,
@@ -80,8 +81,7 @@ def create_cloud_identity(
     identity = CloudIdentity.objects.create(
         user=user,
         gcp_user_id=gcp_user_id,
-        email=body["email-id"],
-        receovery_email=recovery_email,
+        email=body["primary_email"],
     )
     return identity
 
@@ -108,14 +108,6 @@ def verify_billing_and_create_workspace(user: User, billing_id: str):
     if not response.ok:
         error_message = response.json()["error"]
         raise BillingVerificationFailed(error_message)
-
-
-def create_billing_setup(user: User, billing_account_id: str) -> BillingSetup:
-    cloud_identity = user.cloud_identity
-    billing_setup = BillingSetup.objects.create(
-        cloud_identity=cloud_identity, billing_account_id=billing_account_id
-    )
-    return billing_setup
 
 
 def _create_workbench_kwargs(
