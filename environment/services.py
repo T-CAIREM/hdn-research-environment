@@ -19,6 +19,7 @@ from environment.exceptions import (
     DeleteEnvironmentFailed,
     ChangeEnvironmentInstanceTypeFailed,
     BillingVerificationFailed,
+    BillingSharingFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
@@ -96,6 +97,20 @@ def get_user_info(user: User):
         raise GetUserInfoFailed(error_message)
 
     return response.json()
+
+
+def share_billing_account(owner: User, user: User, billing_account_resource_name: str):
+    owner_email = owner.cloud_identity.email
+    user_email = user.cloud_identity.email
+
+    response = api_v2.share_billing_account(
+        owner_email=owner_email,
+        user_email=user_email,
+        resource_name=billing_account_resource_name,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise BillingSharingFailed(error_message)
 
 
 def verify_billing_and_create_workspace(user: User, billing_id: str):

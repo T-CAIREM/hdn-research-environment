@@ -6,7 +6,9 @@ from requests import Request, Response, Session
 from environment.api.auth import apply_api_credentials
 
 
-def api_request(api_url: str, request_creator_callable: Callable[..., Request]) -> Callable:
+def api_request(
+    api_url: str, request_creator_callable: Callable[..., Request]
+) -> Callable:
     @wraps(request_creator_callable)
     def wrapper(*args, **kwargs) -> Response:
         session = Session()
