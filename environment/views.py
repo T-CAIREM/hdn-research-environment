@@ -10,41 +10,28 @@ from google.cloud.workflows.executions_v1beta.types.executions import Execution
 import environment.services as services
 import environment.constants as constants
 from environment.forms import (
-    BillingAccountIdForm,
     CreateResearchEnvironmentForm,
     CloudIdentityPasswordForm,
 )
-from environment.exceptions import BillingVerificationFailed
 from environment.decorators import (
     cloud_identity_required,
-    billing_setup_required,
-    workspace_setup_required,
     require_DELETE,
     require_PATCH,
 )
 from environment.entities import Region, InstanceType
 from environment.utilities import (
     user_has_cloud_identity,
-    user_has_billing_setup,
 )
-from environment.models import CloudIdentity, Workflow
+from environment.models import Workflow
 
 
 @require_http_methods(["GET", "POST"])
 @login_required
 def identity_provisioning(request):
     if user_has_cloud_identity(request.user):
-        return redirect("billing_setup")
+        return redirect("research_environments")
 
-    user_info = services.get_user_info(request.user)
-    if user_info.get("user-status") == "user-added-in-cloud-identity":
-        CloudIdentity.objects.create(
-            user=request.user,
-            gcp_user_id=user_info.get("user-id"),
-            email=user_info.get("email-id"),
-        )
-        return redirect("billing_setup")
-
+    # TODO: Handle the case where the user was created successfully, but the response was lost.
     if request.method == "POST":
         form = CloudIdentityPasswordForm(request.POST)
         if form.is_valid():
@@ -53,7 +40,7 @@ def identity_provisioning(request):
                 form.cleaned_data.get("password"),
                 form.cleaned_data.get("recovery_email"),
             )
-            return redirect("billing_setup")
+            return redirect("research_environments")
     else:
         form = CloudIdentityPasswordForm()
 
@@ -65,18 +52,6 @@ def identity_provisioning(request):
 @require_GET
 @login_required
 @cloud_identity_required
-def workspace_setup(request):
-    is_workspace_done = services.is_user_workspace_setup_done(request.user)
-    if not is_workspace_done:
-        return render(request, "environment/workspace_being_provisioned.html")
-    services.mark_user_workspace_setup_as_done(request.user)
-    return redirect("research_environments")
-
-
-@require_GET
-@login_required
-@cloud_identity_required
-@workspace_setup_required
 def research_environments(request):
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user
@@ -115,7 +90,6 @@ def research_environments(request):
 @require_GET
 @login_required
 @cloud_identity_required
-@workspace_setup_required
 def research_environments_partial(request):
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user

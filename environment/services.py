@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, Optional, Callable
+from typing import Tuple, Iterable, Optional
 
 from django.db.models import Q, Model
 from django.core.mail import send_mail
@@ -9,8 +9,9 @@ from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
 import environment.constants as constants
-import environment.api as api
-from environment.models import CloudIdentity, BillingSetup, Workflow
+import environment.api.v1 as api_v1
+import environment.api.v2 as api_v2
+from environment.models import CloudIdentity, Workflow
 from environment.exceptions import (
     IdentityProvisioningFailed,
     StopEnvironmentFailed,
@@ -18,6 +19,7 @@ from environment.exceptions import (
     DeleteEnvironmentFailed,
     ChangeEnvironmentInstanceTypeFailed,
     BillingVerificationFailed,
+    BillingSharingFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
@@ -65,7 +67,7 @@ def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> Tuple[str, CloudIdentity]:
     gcp_user_id = user.username
-    response = api.create_cloud_identity(
+    response = api_v2.create_cloud_identity(
         gcp_user_id,
         user.profile.first_names,
         user.profile.last_name,
@@ -80,14 +82,13 @@ def create_cloud_identity(
     identity = CloudIdentity.objects.create(
         user=user,
         gcp_user_id=gcp_user_id,
-        email=body["email-id"],
-        receovery_email=recovery_email,
+        email=body["primary_email"],
     )
     return identity
 
 
 def get_billing_accounts_list(user: User):
-    response = api.list_billing_accounts(user.cloud_identity.email)
+    response = api_v2.list_billing_accounts(user.cloud_identity.email)
     if not response.ok:
         error_message = response.json()["message"]
         raise GetBillingAccountsListFailed(error_message)
@@ -95,9 +96,23 @@ def get_billing_accounts_list(user: User):
     return response.json()
 
 
+def share_billing_account(owner: User, user: User, billing_account_resource_name: str):
+    owner_email = owner.cloud_identity.email
+    user_email = user.cloud_identity.email
+
+    response = api_v2.share_billing_account(
+        owner_email=owner_email,
+        user_email=user_email,
+        resource_name=billing_account_resource_name,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise BillingSharingFailed(error_message)
+
+
 def verify_billing_and_create_workspace(user: User, billing_id: str):
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.create_workspace(
+    response = api_v1.create_workspace(
         gcp_user_id=gcp_user_id,
         billing_id=billing_id,
         region=DEFAULT_REGION,
@@ -105,14 +120,6 @@ def verify_billing_and_create_workspace(user: User, billing_id: str):
     if not response.ok:
         error_message = response.json()["error"]
         raise BillingVerificationFailed(error_message)
-
-
-def create_billing_setup(user: User, billing_account_id: str) -> BillingSetup:
-    cloud_identity = user.cloud_identity
-    billing_setup = BillingSetup.objects.create(
-        cloud_identity=cloud_identity, billing_account_id=billing_account_id
-    )
-    return billing_setup
 
 
 def _create_workbench_kwargs(
@@ -168,7 +175,7 @@ def create_research_environment(
         persistent_disk,
         gpu_accelerator,
     )
-    response = api.create_workbench(**kwargs)
+    response = api_v1.create_workbench(**kwargs)
     if not response.ok:
         error_message = response.json()[
             "error"
@@ -188,7 +195,7 @@ def create_research_environment(
 
 def get_workspace_details(user: User, region: Region) -> ResearchWorkspace:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.get_workspace_details(
+    response = api_v1.get_workspace_details(
         gcp_user_id=gcp_user_id,
         region=region.value,
     )
@@ -234,7 +241,7 @@ def _get_projects_for_environments(
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.get_workspace_list(gcp_user_id)
+    response = api_v1.get_workspace_list(gcp_user_id)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetAvailableEnvironmentsFailed(error_message)
@@ -302,7 +309,7 @@ def stop_running_environment(
     user: User, project_id: str, workbench_id: str, region: Region
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.stop_workbench(
+    response = api_v1.stop_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
@@ -326,7 +333,7 @@ def start_stopped_environment(
     user: User, project_id: str, workbench_id: str, region: Region
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.start_workbench(
+    response = api_v1.start_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
@@ -354,7 +361,7 @@ def change_environment_instance_type(
     new_instance_type: InstanceType,
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.change_workbench_instance_type(
+    response = api_v1.change_workbench_instance_type(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
@@ -379,7 +386,7 @@ def delete_environment(
     user: User, project_id: str, workbench_id: str, region: Region
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api.delete_workbench(
+    response = api_v1.delete_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
