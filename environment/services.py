@@ -21,8 +21,7 @@ from environment.exceptions import (
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
-    GetUserInfoFailed,
-    GetBillingAccountsList,
+    GetBillingAccountsListFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
@@ -91,7 +90,7 @@ def get_billing_accounts_list(user: User):
     response = api.list_billing_accounts(user.cloud_identity.email)
     if not response.ok:
         error_message = response.json()["message"]
-        raise GetBillingAccountsList(error_message)
+        raise GetBillingAccountsListFailed(error_message)
 
     return response.json()
 
