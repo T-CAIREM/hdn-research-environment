@@ -1,6 +1,5 @@
 from typing import Iterator, Tuple, Optional, TypeVar, Callable
 
-from django.db.models import prefetch_related_objects
 from django.db.models import Model
 
 
@@ -13,13 +12,6 @@ User = Model
 
 def user_has_cloud_identity(user: User) -> bool:
     return hasattr(user, "cloud_identity")
-
-
-def user_has_billing_setup(user: User) -> bool:
-    prefetch_related_objects([user], "cloud_identity__billing_setup")
-    if not user_has_cloud_identity(user):
-        return False
-    return hasattr(user.cloud_identity, "billing_setup")
 
 
 def user_workspace_setup_done(user: User) -> bool:
