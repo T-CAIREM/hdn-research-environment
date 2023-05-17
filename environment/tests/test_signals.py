@@ -20,20 +20,9 @@ class UserSignalsTestCase(TestCase):
         self.assertEqual(new_user._original_is_credentialed, new_user.is_credentialed)
 
     @patch("environment.signals.stop_environments_with_expired_access")
-    def test_does_not_schedule_task_on_save_if_user_has_no_billing_setup(
+    def test_schedules_task_on_save_if_credentialing_was_revoked(
         self, mock_stop_environments_with_expired_access
     ):
-        new_user = User(is_credentialed=True)
-        new_user.is_credentialed = False
-        new_user.save()
-        mock_stop_environments_with_expired_access.assert_not_called()
-
-    @patch("environment.signals.stop_environments_with_expired_access")
-    @patch("environment.signals.user_has_billing_setup")
-    def test_schedules_task_on_save_if_credentialing_was_revoked(
-        self, mock_user_has_billing_setup, mock_stop_environments_with_expired_access
-    ):
-        mock_user_has_billing_setup.return_value = True
         new_user = User(is_credentialed=True)
         new_user.is_credentialed = False
         new_user.save()
@@ -52,21 +41,9 @@ class TrainingSignalsTestCase(TestCase):
         self.assertEqual(new_training._original_is_valid, new_training.is_valid())
 
     @patch("environment.signals.stop_environments_with_expired_access")
-    def test_does_not_schedule_task_on_save_if_user_has_no_billing_setup(
+    def test_schedules_task_on_save_if_training_was_accepted(
         self, mock_stop_environments_with_expired_access
     ):
-        new_user = User()
-        new_user.save()
-        new_training = Training(user=new_user, training_type_id=1)
-        new_training.save()
-        mock_stop_environments_with_expired_access.assert_not_called()
-
-    @patch("environment.signals.stop_environments_with_expired_access")
-    @patch("environment.signals.user_has_billing_setup")
-    def test_schedules_task_on_save_if_training_was_accepted(
-        self, mock_user_has_billing_setup, mock_stop_environments_with_expired_access
-    ):
-        mock_user_has_billing_setup.return_value = True
         new_user = User()
         new_user.save()
         new_training = Training(
@@ -96,25 +73,9 @@ class DataAccessRequestSignalsTestCase(TestCase):
         )
 
     @patch("environment.signals.stop_environments_with_expired_access")
-    def test_does_not_schedule_task_on_save_if_user_has_no_billing_setup(
+    def test_does_not_schedule_task_on_save_if_access_duration_was_not_specified(
         self, mock_stop_environments_with_expired_access
     ):
-        requester = User()
-        requester.save()
-        new_data_access_request = DataAccessRequest(
-            requester=requester, project_id=1, duration=timedelta(days=10)
-        )
-        new_data_access_request._original_is_accepted = False
-        new_data_access_request.is_accepted = lambda: True
-        new_data_access_request.save()
-        mock_stop_environments_with_expired_access.assert_not_called()
-
-    @patch("environment.signals.stop_environments_with_expired_access")
-    @patch("environment.signals.user_has_billing_setup")
-    def test_does_not_schedule_task_on_save_if_access_duration_was_not_specified(
-        self, mock_user_has_billing_setup, mock_stop_environments_with_expired_access
-    ):
-        mock_user_has_billing_setup.return_value = True
         requester = User()
         requester.save()
         new_data_access_request = DataAccessRequest(requester=requester, project_id=1)
@@ -124,11 +85,9 @@ class DataAccessRequestSignalsTestCase(TestCase):
         mock_stop_environments_with_expired_access.assert_not_called()
 
     @patch("environment.signals.stop_environments_with_expired_access")
-    @patch("environment.signals.user_has_billing_setup")
     def test_schedules_task_on_save_if_request_with_duration_was_accepted(
-        self, mock_user_has_billing_setup, mock_stop_environments_with_expired_access
+        self, mock_stop_environments_with_expired_access
     ):
-        mock_user_has_billing_setup.return_value = True
         requester = User()
         requester.save()
         new_data_access_request = DataAccessRequest(
@@ -140,11 +99,9 @@ class DataAccessRequestSignalsTestCase(TestCase):
         mock_stop_environments_with_expired_access.assert_called()
 
     @patch("environment.signals.stop_environments_with_expired_access")
-    @patch("environment.signals.user_has_billing_setup")
     def test_schedules_task_on_save_if_access_was_revoked(
-        self, mock_user_has_billing_setup, mock_stop_environments_with_expired_access
+        self, mock_stop_environments_with_expired_access
     ):
-        mock_user_has_billing_setup.return_value = True
         requester = User()
         requester.save()
         new_data_access_request = DataAccessRequest(requester=requester, project_id=1)

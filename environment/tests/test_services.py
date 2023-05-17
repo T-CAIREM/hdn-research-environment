@@ -8,7 +8,6 @@ from django.apps import apps
 
 from environment.services import (
     create_cloud_identity,
-    create_billing_setup,
     create_research_environment,
     stop_running_environment,
     start_stopped_environment,
@@ -37,7 +36,6 @@ from environment.tests.mocks import get_workspace_list_json
 from environment.tests.helpers import (
     create_user_without_cloud_identity,
     create_user_with_cloud_identity,
-    create_user_with_billing_setup,
 )
 
 
@@ -87,27 +85,12 @@ class CreateCloudIdentityTestCase(TestCase):
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
     "Research environments are disabled",
 )
-class CreateBillingSetupTestCase(TestCase):
-    def setUp(self):
-        self.user = create_user_with_cloud_identity()
-
-    def test_creates_billing_setup_for_specified_user(self):
-        mock_billing_account = "XXXXXX-XXXXXX-XXXXXX"
-        billing_setup = create_billing_setup(self.user, mock_billing_account)
-        self.assertEqual(self.user.cloud_identity.billing_setup, billing_setup)
-        self.assertEqual(billing_setup.billing_account_id, mock_billing_account)
-
-
-@skipIf(
-    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
-    "Research environments are disabled",
-)
 class CreateResearchEnvironmentTestCase(TestCase):
     def setUp(self):
         self.project = MagicMock()
         self.project.slug = "slug"
         self.project.get_project_file_root.return_value = "bucket"
-        self.user = create_user_with_billing_setup()
+        self.user = create_user_with_cloud_identity()
 
     @patch("environment.api.create_workbench")
     def test_raises_if_request_fails(self, mock_create_workbench):
@@ -143,7 +126,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
 )
 class StopRunningEnvironmentTestCase(TestCase):
     def setUp(self):
-        self.user = create_user_with_billing_setup()
+        self.user = create_user_with_cloud_identity()
 
     @patch("environment.api.stop_workbench")
     def test_raises_if_request_fails(self, mock_stop_workbench):
@@ -171,7 +154,7 @@ class StopRunningEnvironmentTestCase(TestCase):
 )
 class StartStoppedEnvironmentTestCase(TestCase):
     def setUp(self):
-        self.user = create_user_with_billing_setup()
+        self.user = create_user_with_cloud_identity()
 
     @patch("environment.api.start_workbench")
     def test_raises_if_request_fails(self, mock_start_workbench):
@@ -199,7 +182,7 @@ class StartStoppedEnvironmentTestCase(TestCase):
 )
 class ChangeEnvironmentInstanceTypeTestCase(TestCase):
     def setUp(self):
-        self.user = create_user_with_billing_setup()
+        self.user = create_user_with_cloud_identity()
 
     @patch("environment.api.change_workbench_instance_type")
     def test_raises_if_request_fails(self, mock_change_workbench_instance_type):
@@ -231,7 +214,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
 )
 class DeleteEnvironmentTestCase(TestCase):
     def setUp(self):
-        self.user = create_user_with_billing_setup()
+        self.user = create_user_with_cloud_identity()
 
     @patch("environment.api.delete_workbench")
     def test_raises_if_request_fails(self, mock_delete_workbench):

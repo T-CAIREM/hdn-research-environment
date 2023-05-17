@@ -7,7 +7,6 @@ from django.conf import settings
 
 from environment.decorators import (
     cloud_identity_required,
-    billing_setup_required,
     require_PATCH,
     require_DELETE,
 )
@@ -37,33 +36,6 @@ class CloudIdentityRequiredTestCase(TestCase):
         view = Mock()
         decorated_view = cloud_identity_required(view)
         decorated_view(request_with_user_without_cloud_identity)
-        view.assert_called()
-
-
-@skipIf(
-    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
-    "Research environments are disabled",
-)
-class BillingSetupRequiredTestCase(TestCase):
-    def test_redirects_user_without_billing_account_to_billing_setup(self):
-        request_with_user_without_billing_account = Mock(
-            user=Mock(spec=[]),
-        )
-        view = Mock()
-        decorated_view = billing_setup_required(view)
-        response = decorated_view(request_with_user_without_billing_account)
-        self.assertRedirects(
-            response, reverse("billing_setup"), fetch_redirect_response=False
-        )
-        view.assert_not_called()
-
-    def test_does_not_redirect_user_with_billing_account(self):
-        request_with_user_without_billing_account = Mock(
-            user=Mock(spec=["cloud_identity"]),
-        )
-        view = Mock()
-        decorated_view = billing_setup_required(view)
-        decorated_view(request_with_user_without_billing_account)
         view.assert_called()
 
 
