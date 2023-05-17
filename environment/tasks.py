@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.utils import timezone
 
-from environment.utilities import user_has_billing_setup
 from environment.services import (
     get_environment_project_pairs_with_expired_access,
     stop_running_environment,
@@ -33,10 +32,7 @@ def stop_event_participants_environments_with_expired_access(event_id: int):
 
 @background
 def stop_environments_with_expired_access(user_id: int):
-    user = User.objects.select_related("cloud_identity__billing_setup").get(pk=user_id)
-
-    if not user_has_billing_setup(user):
-        return
+    user = User.objects.select_related("cloud_identity").get(pk=user_id)
 
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
     environments, projects = zip(*expired_pairs)

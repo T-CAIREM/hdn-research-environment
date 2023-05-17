@@ -8,7 +8,6 @@ from environment.tasks import (
     stop_environments_with_expired_access,
     stop_event_participants_environments_with_expired_access,
 )
-from environment.utilities import user_has_billing_setup
 
 
 User = get_user_model()
@@ -27,9 +26,6 @@ def memoize_original_credentialing_status(instance: User, **kwargs):
 
 @receiver(post_save, sender=User)
 def schedule_stop_environments_if_credentialing_revoked(instance: User, **kwargs):
-    if not user_has_billing_setup(instance):
-        return
-
     if not instance.is_credentialed and instance._original_is_credentialed:
         stop_environments_with_expired_access(instance.id)
 
@@ -57,8 +53,6 @@ def memoize_original_validity(instance: Training, **kwargs):
 @receiver(post_save, sender=Training)
 def schedule_stop_environment_if_training_accepted(instance: Training, **kwargs):
     user = instance.user
-    if not user_has_billing_setup(user):
-        return
 
     if instance.is_valid() and not instance._original_is_valid:
         schedule = instance.process_datetime + instance.training_type.valid_duration
@@ -76,8 +70,6 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
     instance: DataAccessRequest, **kwargs
 ):
     user = instance.requester
-    if not user_has_billing_setup(user):
-        return
 
     request_was_accepted = instance.is_accepted() and not instance._original_is_accepted
     access_was_revoked = instance.is_revoked() and not instance._original_is_revoked
