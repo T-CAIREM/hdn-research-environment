@@ -48,9 +48,7 @@ def share_billing_account(
 
 
 @api_v2_request
-def create_workspace(
-    email: str, billing_account_id: str, region: str
-) -> Request:
+def create_workspace(email: str, billing_account_id: str, region: str) -> Request:
     json = {
         "email": email,
         "billing_account_id": billing_account_id,
