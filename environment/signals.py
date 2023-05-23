@@ -40,8 +40,9 @@ def schedule_stop_environments_if_event_finished(
     instance: Event, created: bool, **kwargs
 ):
     if instance._original_end_date != instance.end_date or created:
+        schedule = datetime.combine(instance.end_date, datetime.min.time())
         stop_event_participants_environments_with_expired_access(
-            instance.id, schedule=instance.end_date
+            instance.id, schedule=schedule
         )
 
 
