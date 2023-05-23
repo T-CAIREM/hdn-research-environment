@@ -1,6 +1,10 @@
 from django import forms
+from django.contrib.auth import get_user_model
 
 from environment.validators import gcp_billing_account_id_validator
+
+
+User = get_user_model()
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -17,14 +21,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
         if password != confirm_password:
             raise forms.ValidationError("The passwords don't match")
-
-
-class BillingAccountIdForm(forms.Form):
-    billing_account_id = forms.CharField(
-        label="Billing Account ID",
-        max_length=20,
-        validators=[gcp_billing_account_id_validator],
-    )
 
 
 class CreateResearchEnvironmentForm(forms.Form):
@@ -79,3 +75,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
         gpu_accelerator = None if gpu_accelerator == "" else gpu_accelerator
         return gpu_accelerator
+
+
+class ShareBillingAccountForm(forms.Form):
+    user_email = forms.EmailField(label="User E-Mail")
