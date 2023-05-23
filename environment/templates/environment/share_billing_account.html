@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+{% endblock %}
+
+{% block title %}Share Billing Account{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+      Share Billing Account
+    </h1>
+    <div class="container-body">
+      <div class="card" style="width: 36rem;">
+        <div class="card-body">
+          <h3 class="card-title">
+              Billing Account: <span class="font-italic">{{ billing_account_id }}</span>
+          </h3>
+
+            <form action="{% url 'share_billing_account' billing_account_id=billing_account_id %}" method="post" style="width: 24rem;">
+                {% csrf_token %}
+                {{ form }}
+                <button class="btn btn-primary mt-3" type="submit">
+                    Share
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

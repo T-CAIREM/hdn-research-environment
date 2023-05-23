@@ -10,6 +10,8 @@ from environment.tasks import (
     stop_environments_with_expired_access,
     stop_event_participants_environments_with_expired_access,
 )
+from environment.models import CloudIdentity, BillingAccountSharingInvite
+from environment.tasks import give_user_permission_to_access_billing_account
 
 
 User = get_user_model()
@@ -19,6 +21,31 @@ Training = apps.get_model("user", "Training")
 DataAccessRequest = apps.get_model("project", "DataAccessRequest")
 
 Event = apps.get_model("events", "Event")
+
+
+@receiver(post_save, sender=BillingAccountSharingInvite)
+@receiver(post_save, sender=CloudIdentity)
+def consume_billing_account_sharing_invites(instance, **kwargs):
+    if isinstance(instance, CloudIdentity):
+        cloud_identity = instance
+        outstanding_invites = (
+            cloud_identity.user.user_billingaccountsharinginvite_set.select_related(
+                "owner__cloud_identity"
+            ).filter(is_consumed=False)
+        )
+    elif hasattr(instance.user, "cloud_identity"):
+        outstanding_invites = [instance]
+        cloud_identity = instance.user.cloud_identity
+    else:
+        # The instance is neither CloudIdentity nor a BillingAccountSharingInvite
+        # bound to a user that already has a CloudIdentity.
+        return
+
+    for invite in outstanding_invites:
+        owner_email = invite.owner.cloud_identity.email
+        give_user_permission_to_access_billing_account(
+            invite.id, owner_email, cloud_identity.email, invite.billing_account_id
+        )
 
 
 @receiver(post_init, sender=User)

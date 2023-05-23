@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.views.decorators.http import require_http_methods, require_GET
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
@@ -12,6 +13,7 @@ import environment.constants as constants
 from environment.forms import (
     CreateResearchEnvironmentForm,
     CloudIdentityPasswordForm,
+    ShareBillingAccountForm,
 )
 from environment.decorators import (
     cloud_identity_required,
@@ -160,6 +162,43 @@ def create_research_environment(request, project_slug, project_version):
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+@transaction.atomic
+def share_billing_account(request, billing_account_id):
+    if request.method == "POST":
+        form = ShareBillingAccountForm(request.POST)
+        if form.is_valid():
+            owner = request.user
+            services.invite_user_to_shared_billing_account(
+                request=request,
+                owner=owner,
+                user_email=form.cleaned_data["user_email"],
+                billing_account_id=billing_account_id,
+            )
+            return redirect("research_environments")
+    else:
+        form = ShareBillingAccountForm()
+
+    context = {
+        "form": form,
+        "billing_account_id": billing_account_id,
+    }
+
+    return render(request, "environment/share_billing_account.html", context)
+
+
+@require_GET
+@login_required
+def confirm_billing_account_sharing(request):
+    token = request.GET.get("token")
+    if token:
+        services.consume_billing_account_sharing_token(user=request.user, token=token)
+
+    return redirect("research_environments")
 
 
 @require_PATCH
