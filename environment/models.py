@@ -27,6 +27,8 @@ class Workflow(models.Model):
     )
     execution_resource_name = models.CharField(max_length=256, unique=True)
 
+    workspace_name = models.CharField(max_length=256)
+
     INPROGRESS = 0
     SUCCESS = 1
     FAILED = 2

@@ -44,3 +44,7 @@ class GetWorkspaceDetailsFailed(Exception):
 
 class GetBillingAccountsListFailed(Exception):
     pass
+
+
+class GetWorkspacesListFailed(Exception):
+    pass

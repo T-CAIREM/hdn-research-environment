@@ -1,4 +1,5 @@
 from typing import Tuple, Iterable, Optional
+from collections import defaultdict
 
 from django.db.models import Q, Model
 from django.core.mail import send_mail
@@ -24,10 +25,12 @@ from environment.exceptions import (
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
     GetBillingAccountsListFailed,
+    GetWorkspacesListFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspace_details,
+    deserialize_workspaces,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -303,6 +306,38 @@ def get_environment_project_pairs_with_expired_access(
         for environment, project in all_environment_project_pairs
         if not project.has_access(user)
     ]
+
+
+def sort_environments_per_workspace(
+    environment_project_workflow_triplets: Iterable[
+        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
+    ],
+    workspaces: Iterable[ResearchWorkspace],
+):
+    sorted_environments_project_workflow_triplets = defaultdict(
+        list, {workspace.gcp_project_id: [] for workspace in workspaces}
+    )
+    for environment, project, workflows in environment_project_workflow_triplets:
+        if environment:
+            sorted_environments_project_workflow_triplets[
+                environment.workspace_name
+            ].append((environment, project, workflows))
+        else:
+            sorted_environments_project_workflow_triplets[
+                workflows.last().project_name
+            ].append((environment, project, workflows))
+    sorted_environments_project_workflow_triplets.default_factory = None
+    return sorted_environments_project_workflow_triplets
+
+
+def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
+    gcp_user_id = user.cloud_identity.gcp_user_id
+    response = api_v1.get_workspace_list(gcp_user_id)
+    if not response.ok:
+        error_message = response.json()["error"]
+        raise GetWorkspacesListFailed(error_message)
+    all_workspaces = deserialize_workspaces(response.json())
+    return [workspace for workspace in all_workspaces]
 
 
 def stop_running_environment(

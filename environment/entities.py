@@ -78,6 +78,7 @@ class ResearchEnvironment:
     status: EnvironmentStatus
     bucket_name: Optional[str]
     url: Optional[str]
+    workspace_name: str
 
     @property
     def is_running(self):
