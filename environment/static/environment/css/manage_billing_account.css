@@ -1,0 +1,9 @@
+form > label {
+    font-weight: bold;
+    margin-top: 1rem;
+}
+
+.container-body {
+    display: flex;
+    gap: 1rem;
+}

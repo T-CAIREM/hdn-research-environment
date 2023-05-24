@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/manage_billing_account.css' %}">
+{% endblock %}
+
+{% block title %}Manage Billing Account{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h3 class="mb-4 jumbotron">
+      Manage Billing Account
+    </h3>
+    <div class="container-body">
+        <div class="card" style="height: fit-content; width: 42rem;">
+            <div class="card-body">
+                <div id="billing-account-id-card">
+                    <h5 class="card-title">
+                        Billing Account Details
+                    </h5>
+                    <div>
+                        <b>ID:</b> <i>{{ billing_account_id }}</i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="width: 100%;">
+            <div class="card-body">
+                <div id="new-share-card">
+                    <h5 class="card-title">
+                        New Share
+                    </h5>
+
+                    <form action="{% url 'manage_billing_account' billing_account_id=billing_account_id %}" method="post" style="width: 24rem;">
+                        {% csrf_token %}
+                        {{ form }}
+                        <button class="btn btn-sm btn-primary mt-3" type="submit">
+                            Share
+                        </button>
+                    </form>
+                </div>
+
+                <div id="existing-shares-card" class="mt-5">
+                    <h5 class="card-title">
+                        Existing Shares
+                    </h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <strong>
+                                        Username
+                                    </strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>
+                                        Actions
+                                    </strong>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    Some user
+                                </div>
+                                <div class="col-md-4">
+                                    <a href="" class="btn btn-sm btn-danger">
+                                        Revoke
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

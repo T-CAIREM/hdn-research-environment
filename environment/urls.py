@@ -6,9 +6,9 @@ from environment import views
 urlpatterns = [
     path("", views.research_environments, name="research_environments"),
     path(
-        "billing/share/<billing_account_id>",
-        views.share_billing_account,
-        name="share_billing_account",
+        "billing/manage/<billing_account_id>",
+        views.manage_billing_account,
+        name="manage_billing_account",
     ),
     path(
         "billing/confirm",

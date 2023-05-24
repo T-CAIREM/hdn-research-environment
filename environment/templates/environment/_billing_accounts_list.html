@@ -23,8 +23,8 @@
                 </div>
                 <div class="col-md-4">
                 {% if billing_account.is_owner %}
-                    <a href="{% url 'share_billing_account' billing_account_id=billing_account.id %}" class="btn btn-sm btn-primary">
-                        Share
+                    <a href="{% url 'manage_billing_account' billing_account_id=billing_account.id %}" class="btn btn-sm btn-primary">
+                        Manage
                     </a>
                 {% endif %}
                 </div>
@@ -32,4 +32,3 @@
         </li>
     {% endfor %}
 </ul>
-

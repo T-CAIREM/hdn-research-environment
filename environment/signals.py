@@ -25,21 +25,25 @@ Event = apps.get_model("events", "Event")
 
 @receiver(post_save, sender=BillingAccountSharingInvite)
 @receiver(post_save, sender=CloudIdentity)
-def consume_billing_account_sharing_invites(instance, **kwargs):
-    if isinstance(instance, CloudIdentity):
+def consume_billing_account_sharing_invites(sender, created, instance, **kwargs):
+    if not created:
+        return
+
+    if sender is CloudIdentity:
         cloud_identity = instance
         outstanding_invites = (
             cloud_identity.user.user_billingaccountsharinginvite_set.select_related(
                 "owner__cloud_identity"
             ).filter(is_consumed=False)
         )
-    elif hasattr(instance.user, "cloud_identity"):
+    else: # BillingAccountSharingInvite
+        if not hasattr(instance.user, "cloud_identity"):
+            # The user that used the invite does not have a CloudIdentity yet.
+            # The invite record will be consumed after the CloudIdentity is created.
+            # See the `sender is CloudIdentity` case.
+            return
         outstanding_invites = [instance]
         cloud_identity = instance.user.cloud_identity
-    else:
-        # The instance is neither CloudIdentity nor a BillingAccountSharingInvite
-        # bound to a user that already has a CloudIdentity.
-        return
 
     for invite in outstanding_invites:
         owner_email = invite.owner.cloud_identity.email
