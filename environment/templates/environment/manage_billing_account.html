@@ -46,44 +46,68 @@
                     </form>
                 </div>
 
-                <div id="existing-shares-card" class="mt-5">
+                <div id="pending-shares-card" class="mt-5">
                     <h5 class="card-title">
-                        Existing Shares
+                        Pending Shares
                     </h5>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-8">
                                     <strong>
                                         E-Mail
                                     </strong>
                                 </div>
                                 <div class="col-md-4">
                                     <strong>
-                                        Status
+                                        Actions
                                     </strong>
                                 </div>
-                                <div class="col-md-2">
+                            </div>
+                        </li>
+                        {% for share in pending_shares %}
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ share.user_contact_email }}
+                                </div>
+                                <div class="col-md-4">
+                                    <a href="" class="btn btn-sm btn-danger disabled">
+                                        Revoke
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div id="active-shares-card" class="mt-5">
+                    <h5 class="card-title">
+                        Active Shares
+                    </h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <strong>
+                                        E-Mail
+                                    </strong>
+                                </div>
+                                <div class="col-md-4">
                                     <strong>
                                         Actions
                                     </strong>
                                 </div>
                             </div>
                         </li>
-                        {% for share in billing_account_shares %}
+                        {% for share in consumed_shares %}
                         <li class="list-group-item">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-8">
                                     {{ share.user_contact_email }}
                                 </div>
                                 <div class="col-md-4">
-                                    {% if share.is_consumed %}
-                                        Accepted
-                                    {% else %}
-                                        Pending
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-2">
                                     <a href="" class="btn btn-sm btn-danger disabled">
                                         Revoke
                                     </a>

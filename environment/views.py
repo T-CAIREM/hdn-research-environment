@@ -187,10 +187,16 @@ def manage_billing_account(request, billing_account_id):
     billing_account_shares = services.get_owned_shares_of_billing_account(
         owner=owner, billing_account_id=billing_account_id
     )
+    pending_shares = [
+        share for share in billing_account_shares if not share.is_consumed
+    ]
+    consumed_shares = [share for share in billing_account_shares if share.is_consumed]
+
     context = {
         "form": form,
         "billing_account_id": billing_account_id,
-        "billing_account_shares": billing_account_shares,
+        "pending_shares": pending_shares,
+        "consumed_shares": consumed_shares,
     }
 
     return render(request, "environment/manage_billing_account.html", context)
