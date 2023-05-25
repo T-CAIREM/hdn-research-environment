@@ -31,7 +31,6 @@ def _expired_environment_termination_schedule():
 def give_user_permission_to_access_billing_account(
     invite_id: int, owner_email: str, user_email: str, billing_account_id: str
 ):
-    owner_email = "karoldev@healthdatanexus.ai"
     invite = BillingAccountSharingInvite.objects.get(pk=invite_id)
     invite.is_consumed = True
     invite.save()
