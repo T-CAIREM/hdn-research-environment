@@ -180,7 +180,7 @@ def manage_billing_account(request, billing_account_id):
                 user_email=form.cleaned_data["user_email"],
                 billing_account_id=billing_account_id,
             )
-            return redirect("research_environments")
+            return redirect(request.path)
     else:
         form = ShareBillingAccountForm()
 
