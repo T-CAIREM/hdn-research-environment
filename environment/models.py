@@ -30,6 +30,7 @@ class BillingAccountSharingInvite(models.Model):
         on_delete=models.CASCADE,
         null=True,
     )
+    user_contact_email = models.EmailField()
     billing_account_id = models.CharField(
         max_length=32, validators=[gcp_billing_account_id_validator]
     )

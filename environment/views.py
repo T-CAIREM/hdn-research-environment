@@ -168,11 +168,12 @@ def create_research_environment(request, project_slug, project_version):
 @login_required
 @cloud_identity_required
 @transaction.atomic
-def share_billing_account(request, billing_account_id):
+def manage_billing_account(request, billing_account_id):
+    owner = request.user
+
     if request.method == "POST":
         form = ShareBillingAccountForm(request.POST)
         if form.is_valid():
-            owner = request.user
             services.invite_user_to_shared_billing_account(
                 request=request,
                 owner=owner,
@@ -183,12 +184,16 @@ def share_billing_account(request, billing_account_id):
     else:
         form = ShareBillingAccountForm()
 
+    billing_account_shares = services.get_owned_shares_of_billing_account(
+        owner=owner, billing_account_id=billing_account_id
+    )
     context = {
         "form": form,
         "billing_account_id": billing_account_id,
+        "billing_account_shares": billing_account_shares,
     }
 
-    return render(request, "environment/share_billing_account.html", context)
+    return render(request, "environment/manage_billing_account.html", context)
 
 
 @require_GET

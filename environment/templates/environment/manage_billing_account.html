@@ -53,30 +53,44 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <strong>
-                                        Username
+                                        E-Mail
                                     </strong>
                                 </div>
                                 <div class="col-md-4">
+                                    <strong>
+                                        Status
+                                    </strong>
+                                </div>
+                                <div class="col-md-2">
                                     <strong>
                                         Actions
                                     </strong>
                                 </div>
                             </div>
                         </li>
+                        {% for share in billing_account_shares %}
                         <li class="list-group-item">
                             <div class="row">
-                                <div class="col-md-8">
-                                    Some user
+                                <div class="col-md-6">
+                                    {{ share.user_contact_email }}
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="" class="btn btn-sm btn-danger">
+                                    {% if share.is_consumed %}
+                                        Accepted
+                                    {% else %}
+                                        Pending
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <a href="" class="btn btn-sm btn-danger disabled">
                                         Revoke
                                     </a>
                                 </div>
                             </div>
                         </li>
+                        {% endfor %}
                     </ul>
                 </div>
             </div>

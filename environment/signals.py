@@ -36,7 +36,7 @@ def consume_billing_account_sharing_invites(sender, created, instance, **kwargs)
                 "owner__cloud_identity"
             ).filter(is_consumed=False)
         )
-    else: # BillingAccountSharingInvite
+    else:  # BillingAccountSharingInvite
         if not hasattr(instance.user, "cloud_identity"):
             # The user that used the invite does not have a CloudIdentity yet.
             # The invite record will be consumed after the CloudIdentity is created.

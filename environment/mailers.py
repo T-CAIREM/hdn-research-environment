@@ -11,9 +11,7 @@ def url_domain(request):
     return f"https://{site.domain}"
 
 
-def send_billing_sharing_confirmation(
-    request, user_email: str, invite: BillingAccountSharingInvite
-):
+def send_billing_sharing_confirmation(request, invite: BillingAccountSharingInvite):
     confirmation_path = (
         reverse("confirm_billing_account_sharing") + f"?token={invite.token}"
     )
@@ -23,6 +21,6 @@ def send_billing_sharing_confirmation(
         "Billing Account Shared",
         f"Visit: {confirmation_url}",
         settings.DEFAULT_FROM_EMAIL,
-        [user_email],
+        [invite.user_contact_email],
         fail_silently=False,
     )

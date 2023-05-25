@@ -100,15 +100,21 @@ def get_billing_accounts_list(user: User):
     return response.json()
 
 
+def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
+    return owner.owner_billingaccountsharinginvite_set.filter(
+        billing_account_id=billing_account_id
+    )
+
+
 def invite_user_to_shared_billing_account(
     request, owner: User, user_email: str, billing_account_id: str
 ) -> BillingAccountSharingInvite:
     invite = BillingAccountSharingInvite.objects.create(
-        owner=owner, billing_account_id=billing_account_id
+        owner=owner,
+        billing_account_id=billing_account_id,
+        user_contact_email=user_email,
     )
-    mailers.send_billing_sharing_confirmation(
-        request=request, user_email=user_email, invite=invite
-    )
+    mailers.send_billing_sharing_confirmation(request=request, invite=invite)
     return invite
 
 
