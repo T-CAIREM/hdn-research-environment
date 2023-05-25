@@ -19,13 +19,13 @@ from environment.exceptions import (
     StartEnvironmentFailed,
     DeleteEnvironmentFailed,
     ChangeEnvironmentInstanceTypeFailed,
-    BillingVerificationFailed,
     BillingSharingFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
     GetBillingAccountsListFailed,
     GetWorkspacesListFailed,
+    CreateWorkspaceFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
@@ -112,17 +112,29 @@ def share_billing_account(owner: User, user: User, billing_account_resource_name
         error_message = response.json()
         raise BillingSharingFailed(error_message)
 
+#TODO: delete this
 
-def verify_billing_and_create_workspace(user: User, billing_id: str):
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.create_workspace(
-        gcp_user_id=gcp_user_id,
-        billing_id=billing_id,
-        region=DEFAULT_REGION,
+# def verify_billing_and_create_workspace(user: User, billing_id: str):
+#     gcp_user_id = user.cloud_identity.gcp_user_id
+#     response = api_v1.create_workspace(
+#         gcp_user_id=gcp_user_id,
+#         billing_id=billing_id,
+#         region=DEFAULT_REGION,
+#     )
+#     if not response.ok:
+#         error_message = response.json()["error"]
+#         raise BillingVerificationFailed(error_message)
+
+
+def create_workspace(user: User, billing_account_id: str, region: str):
+    response = api_v2.create_workspace(
+        email=user.cloud_identity.email,
+        billing_account_id=billing_account_id,
+        region=region
     )
     if not response.ok:
         error_message = response.json()["error"]
-        raise BillingVerificationFailed(error_message)
+        raise CreateWorkspaceFailed(error_message)
 
 
 def _create_workbench_kwargs(
@@ -326,8 +338,7 @@ def sort_environments_per_workspace(
             sorted_environments_project_workflow_triplets[
                 workflows.last().project_name
             ].append((environment, project, workflows))
-    sorted_environments_project_workflow_triplets.default_factory = None
-    return sorted_environments_project_workflow_triplets
+    return dict(sorted_environments_project_workflow_triplets)
 
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
@@ -336,8 +347,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     if not response.ok:
         error_message = response.json()["error"]
         raise GetWorkspacesListFailed(error_message)
-    all_workspaces = deserialize_workspaces(response.json())
-    return [workspace for workspace in all_workspaces]
+    return deserialize_workspaces(response.json())
 
 
 def stop_running_environment(
@@ -496,10 +506,10 @@ def cpu_usage(value, user) -> int:
 def exceeded_quotas(user) -> Iterable[str]:
     quotas_exceeded = []
     # Check if user has exceeded MAX_RUNNING_ENVIRONMENTS
-    running_environments = get_active_environments(user)
-    if len(running_environments) >= constants.MAX_RUNNING_ENVIRONMENTS:
+    running_workspaces = get_workspaces_list(user)
+    if len(running_workspaces) >= constants.MAX_RUNNING_WORKSPACES:
         quotas_exceeded.append(
-            f"You can only have {constants.MAX_RUNNING_ENVIRONMENTS} running environments."
+            f"You can only have {constants.MAX_RUNNING_WORKSPACES} running workspaces."
         )
 
     return quotas_exceeded

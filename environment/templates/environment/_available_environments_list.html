@@ -11,11 +11,17 @@
         </div>
     {% endif %}
 {% endif %}
+<div class="w-100 d-flex justify-content-between mb-3">
+    <h5 class="text-center"> Workspaces List</h5>
+    <a class="btn btn-primary" href="{% url 'create_workspace' %}">
+      Create workspace
+    </a>
+</div>
 
 {% for workspace_name, environments_project_workflow_triplets in available_project_environment_workflow_triplets_dict.items %}
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">Workspace name: {{ workspace_name }}</h5>
+            <h5 class="card-title">{{ workspace_name }}</h5>
             <ul class="list-group list-group-flush">
                 {% for environment, project, workflows in environments_project_workflow_triplets %}
                     <li class="list-group-item">

@@ -5,7 +5,7 @@ from environment.entities import (
 )
 from collections import namedtuple
 
-MAX_RUNNING_ENVIRONMENTS = 4
+MAX_RUNNING_WORKSPACES = 4
 
 MAX_CPU_USAGE = 32
 

@@ -41,4 +41,9 @@ urlpatterns = [
         views.check_execution_status,
         name="check_execution_status",
     ),
+    path(
+        "workspace/create",
+        views.create_workspace,
+        name="create_workspace"
+    )
 ]
