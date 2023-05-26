@@ -15,7 +15,4 @@ class Migration(migrations.Migration):
             field=models.CharField(default="deprecated_workspaces", max_length=256),
             preserve_default=False,
         ),
-        migrations.DeleteModel(
-            name="BillingSetup",
-        ),
     ]
