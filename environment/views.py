@@ -325,14 +325,6 @@ def delete_environment(request):
 @require_GET
 @login_required
 @cloud_identity_required
-def is_workspace_setup_done(request):
-    workspace_setup_finished = services.is_user_workspace_setup_done(user=request.user)
-    return JsonResponse({"finished": workspace_setup_finished})
-
-
-@require_GET
-@login_required
-@cloud_identity_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
     execution_state = services.get_execution_state(
