@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("environment", "0005_workflow"),
+        ("environment", "0007_billingaccountsharinginvite"),
     ]
 
     operations = [
