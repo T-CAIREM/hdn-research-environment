@@ -30,7 +30,7 @@ def create_cloud_identity(
 @api_v2_request
 def list_billing_accounts(email: str) -> Request:
     json = {"email": email}
-    return Request("POST", url="/billing/list", json=json)
+    return Request("GET", url="/billing/list", json=json)
 
 
 @api_v2_request

@@ -1,7 +1,7 @@
 from typing import Tuple, Iterable, Optional
 from collections import defaultdict
 
-from django.db.models import Q, Model
+from django.db.models import Model
 from django.core.mail import send_mail
 from django.template import loader
 from django.conf import settings
@@ -10,9 +10,10 @@ from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
 import environment.constants as constants
+import environment.mailers as mailers
 import environment.api.v1 as api_v1
 import environment.api.v2 as api_v2
-from environment.models import CloudIdentity, Workflow
+from environment.models import CloudIdentity, Workflow, BillingAccountSharingInvite
 from environment.exceptions import (
     IdentityProvisioningFailed,
     StopEnvironmentFailed,
@@ -93,20 +94,48 @@ def create_cloud_identity(
 def get_billing_accounts_list(user: User):
     response = api_v2.list_billing_accounts(user.cloud_identity.email)
     if not response.ok:
-        error_message = response.json()["message"]
-        raise GetBillingAccountsListFailed(error_message)
+        error_message = None
+        try:
+            error_message = response.json()
+        finally:
+            raise GetBillingAccountsListFailed(error_message)
 
     return response.json()
 
 
-def share_billing_account(owner: User, user: User, billing_account_resource_name: str):
-    owner_email = owner.cloud_identity.email
-    user_email = user.cloud_identity.email
+def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
+    return owner.owner_billingaccountsharinginvite_set.filter(
+        billing_account_id=billing_account_id
+    )
 
+
+def invite_user_to_shared_billing_account(
+    request, owner: User, user_email: str, billing_account_id: str
+) -> BillingAccountSharingInvite:
+    invite = BillingAccountSharingInvite.objects.create(
+        owner=owner,
+        billing_account_id=billing_account_id,
+        user_contact_email=user_email,
+    )
+    mailers.send_billing_sharing_confirmation(request=request, invite=invite)
+    return invite
+
+
+def consume_billing_account_sharing_token(
+    user: User, token: str
+) -> BillingAccountSharingInvite:
+    invite = BillingAccountSharingInvite.objects.get(token=token)
+    invite.user = user
+    invite.save()
+
+    return invite
+
+
+def share_billing_account(owner_email: str, user_email: str, billing_account_id: str):
     response = api_v2.share_billing_account(
         owner_email=owner_email,
         user_email=user_email,
-        resource_name=billing_account_resource_name,
+        billing_account_id=billing_account_id,
     )
     if not response.ok:
         error_message = response.json()

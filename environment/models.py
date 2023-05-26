@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.core.validators import EmailValidator
 
@@ -14,6 +16,26 @@ class CloudIdentity(models.Model):
         max_length=255, unique=True, validators=[EmailValidator()]
     )
     initial_workspace_setup_done = models.BooleanField(default=False)
+
+
+class BillingAccountSharingInvite(models.Model):
+    owner = models.ForeignKey(
+        "user.User",
+        related_name="owner_billingaccountsharinginvite_set",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        "user.User",
+        related_name="user_billingaccountsharinginvite_set",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    user_contact_email = models.EmailField()
+    billing_account_id = models.CharField(
+        max_length=32, validators=[gcp_billing_account_id_validator]
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_consumed = models.BooleanField(default=False)
 
 
 class Workflow(models.Model):

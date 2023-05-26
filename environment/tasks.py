@@ -4,6 +4,7 @@ from datetime import timedelta
 from background_task import background
 from django.contrib.auth import get_user_model
 from django.apps import apps
+from django.db import transaction
 from django.utils import timezone
 
 from environment.services import (
@@ -11,7 +12,9 @@ from environment.services import (
     stop_running_environment,
     delete_environment,
     send_environment_access_expired_email,
+    share_billing_account,
 )
+from environment.models import BillingAccountSharingInvite
 
 
 User = get_user_model()
@@ -21,6 +24,17 @@ Event = apps.get_model("events", "Event")
 
 def _expired_environment_termination_schedule():
     return timezone.now() + timedelta(days=14)
+
+
+@background
+@transaction.atomic
+def give_user_permission_to_access_billing_account(
+    invite_id: int, owner_email: str, user_email: str, billing_account_id: str
+):
+    invite = BillingAccountSharingInvite.objects.get(pk=invite_id)
+    invite.is_consumed = True
+    invite.save()
+    share_billing_account(owner_email, user_email, billing_account_id)
 
 
 @background

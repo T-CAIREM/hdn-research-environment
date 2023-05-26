@@ -1,10 +1,8 @@
-from django import forms
 from typing import Iterable
 
-from environment.validators import gcp_billing_account_id_validator
-from environment.entities import (
-    ResearchWorkspace,
-)
+from django import forms
+
+from environment.entities import ResearchWorkspace
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -21,14 +19,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
         if password != confirm_password:
             raise forms.ValidationError("The passwords don't match")
-
-
-class BillingAccountIdForm(forms.Form):
-    billing_account_id = forms.CharField(
-        label="Billing Account ID",
-        max_length=20,
-        validators=[gcp_billing_account_id_validator],
-    )
 
 
 class CreateWorkspaceForm(forms.Form):
@@ -101,3 +91,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
         gpu_accelerator = None if gpu_accelerator == "" else gpu_accelerator
         return gpu_accelerator
+
+
+class ShareBillingAccountForm(forms.Form):
+    user_email = forms.EmailField(label="User E-Mail")
