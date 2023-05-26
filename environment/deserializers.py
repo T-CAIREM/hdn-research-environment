@@ -51,4 +51,7 @@ def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
 
 
 def deserialize_workspaces(data: dict) -> Iterable[ResearchWorkspace]:
-    return [deserialize_workspace_details(workspace_data) for workspace_data in data["workspace-list"]]
+    return [
+        deserialize_workspace_details(workspace_data)
+        for workspace_data in data["workspace-list"]
+    ]

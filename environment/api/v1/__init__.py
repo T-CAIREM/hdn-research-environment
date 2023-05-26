@@ -34,8 +34,8 @@ def get_user_info(gcp_user_id: str) -> Request:
 
 
 @api_v1_request
-def get_workspace_details(gcp_user_id: str, region: str) -> Request:
-    return Request("GET", url=f"/workspace/{gcp_user_id}/{region}")
+def get_workspace_details(gcp_user_id: str, gcp_project_id: str) -> Request:
+    return Request("GET", url=f"/workspace/{gcp_user_id}/{gcp_project_id}")
 
 
 @api_v1_request
@@ -44,33 +44,59 @@ def get_workspace_list(gcp_user_id: str) -> Request:
 
 
 @api_v1_request
-def stop_workbench(gcp_user_id: str, workbench_id: str, region: str) -> Request:
-    params = {"userid": gcp_user_id, "id": workbench_id, "region": region}
-    return Request("PUT", url="/workbench/stop", params=params)
-
-
-@api_v1_request
-def start_workbench(gcp_user_id: str, workbench_id: str, region: str) -> Request:
-    params = {"userid": gcp_user_id, "id": workbench_id, "region": region}
-    return Request("PUT", url="/workbench/start", params=params)
-
-
-@api_v1_request
-def change_workbench_instance_type(
-    gcp_user_id: str, workbench_id: str, region: str, new_instance_type: str
+def stop_workbench(
+    gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
 ) -> Request:
     params = {
         "userid": gcp_user_id,
         "id": workbench_id,
         "region": region,
+        "gcp_project_id": gcp_project_id,
+    }
+    return Request("PUT", url="/workbench/stop", params=params)
+
+
+@api_v1_request
+def start_workbench(
+    gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
+) -> Request:
+    params = {
+        "userid": gcp_user_id,
+        "id": workbench_id,
+        "region": region,
+        "gcp_project_id": gcp_project_id,
+    }
+    return Request("PUT", url="/workbench/start", params=params)
+
+
+@api_v1_request
+def change_workbench_instance_type(
+    gcp_user_id: str,
+    workbench_id: str,
+    region: str,
+    new_instance_type: str,
+    gcp_project_id: str,
+) -> Request:
+    params = {
+        "userid": gcp_user_id,
+        "id": workbench_id,
+        "region": region,
+        "gcp_project_id": gcp_project_id,
         "machinetype": new_instance_type,
     }
     return Request("PUT", url="/workbench/update", params=params)
 
 
 @api_v1_request
-def delete_workbench(gcp_user_id: str, workbench_id: str, region: str) -> Request:
-    params = {"userid": gcp_user_id, "id": workbench_id, "region": region}
+def delete_workbench(
+    gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
+) -> Request:
+    params = {
+        "userid": gcp_user_id,
+        "id": workbench_id,
+        "region": region,
+        "gcp_project_id": gcp_project_id,
+    }
     return Request("DELETE", url="/workbench", params=params)
 
 
@@ -83,6 +109,7 @@ def create_workbench(
     group_granting_data_access: str,
     persistent_disk: str,
     bucket_name: str,
+    gcp_project_id: str,
     vm_image: Optional[str] = None,
     gpu_accelerator: Optional[str] = None,
 ):
@@ -93,6 +120,7 @@ def create_workbench(
         "machinetype": instance_type,
         "group_granting_data_access": group_granting_data_access,
         "bucketname": bucket_name,
+        "gcp_project_id": gcp_project_id,
         "persistentdisk": persistent_disk,
         "vmimage": vm_image,
         "gpu_accelerator": gpu_accelerator,

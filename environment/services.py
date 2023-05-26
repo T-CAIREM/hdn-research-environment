@@ -112,25 +112,12 @@ def share_billing_account(owner: User, user: User, billing_account_resource_name
         error_message = response.json()
         raise BillingSharingFailed(error_message)
 
-#TODO: delete this
-
-# def verify_billing_and_create_workspace(user: User, billing_id: str):
-#     gcp_user_id = user.cloud_identity.gcp_user_id
-#     response = api_v1.create_workspace(
-#         gcp_user_id=gcp_user_id,
-#         billing_id=billing_id,
-#         region=DEFAULT_REGION,
-#     )
-#     if not response.ok:
-#         error_message = response.json()["error"]
-#         raise BillingVerificationFailed(error_message)
-
 
 def create_workspace(user: User, billing_account_id: str, region: str):
     response = api_v2.create_workspace(
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
-        region=region
+        region=region,
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -351,13 +338,14 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 
 
 def stop_running_environment(
-    user: User, project_id: str, workbench_id: str, region: Region
+    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
     response = api_v1.stop_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
+        gcp_project_id=gcp_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -375,13 +363,14 @@ def stop_running_environment(
 
 
 def start_stopped_environment(
-    user: User, project_id: str, workbench_id: str, region: Region
+    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
     response = api_v1.start_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
+        gcp_project_id=gcp_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -403,6 +392,7 @@ def change_environment_instance_type(
     project_id: str,
     workbench_id: str,
     region: Region,
+    gcp_project_id: str,
     new_instance_type: InstanceType,
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
@@ -411,6 +401,7 @@ def change_environment_instance_type(
         workbench_id=workbench_id,
         region=region.value,
         new_instance_type=new_instance_type.value,
+        gcp_project_id=gcp_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -428,13 +419,14 @@ def change_environment_instance_type(
 
 
 def delete_environment(
-    user: User, project_id: str, workbench_id: str, region: Region
+    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
 ) -> str:
     gcp_user_id = user.cloud_identity.gcp_user_id
     response = api_v1.delete_workbench(
         gcp_user_id=gcp_user_id,
         workbench_id=workbench_id,
         region=region.value,
+        gcp_project_id=gcp_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
