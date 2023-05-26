@@ -1,10 +1,8 @@
+from typing import Iterable
+
 from django import forms
-from django.contrib.auth import get_user_model
 
-from environment.validators import gcp_billing_account_id_validator
-
-
-User = get_user_model()
+from environment.entities import ResearchWorkspace
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -23,13 +21,24 @@ class CloudIdentityPasswordForm(forms.Form):
             raise forms.ValidationError("The passwords don't match")
 
 
-class CreateResearchEnvironmentForm(forms.Form):
+class CreateWorkspaceForm(forms.Form):
     AVAILABLE_REGIONS = [
         ("us-central1", "us-central1"),
         ("northamerica-northeast1", "northamerica-northeast1"),
         ("europe-west3", "europe-west3"),
         ("australia-southeast1", "australia-southeast1"),
     ]
+    billing_account_id = forms.ChoiceField(label="Billing Account")
+    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
+
+    def __init__(self, *args, billing_id_list: Iterable[str], **kwargs):
+        super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
+        self.fields["billing_account_id"].choices = [
+            (billing_id, billing_id) for billing_id in billing_id_list
+        ]
+
+
+class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_INSTANCE_TYPES = [
         ("n1-standard-1", "1 CPU, 3.75GB RAM"),
         ("n1-standard-2", "2 CPU, 7.5GB RAM"),
@@ -46,7 +55,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
-    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
+    workspace_id = forms.ChoiceField(label="Workspace")
     instance_type = forms.ChoiceField(
         label="Instance type",
         choices=AVAILABLE_INSTANCE_TYPES,
@@ -70,6 +79,13 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"}),
         required=False,
     )
+
+    def __init__(self, *args, workspace_list: Iterable[ResearchWorkspace], **kwargs):
+        super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
+        self.fields["workspace_id"].choices = [
+            (workspace.gcp_project_id, workspace.gcp_project_id)
+            for workspace in workspace_list
+        ]
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")

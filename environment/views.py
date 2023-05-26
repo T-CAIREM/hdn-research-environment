@@ -13,6 +13,7 @@ import environment.constants as constants
 from environment.forms import (
     CreateResearchEnvironmentForm,
     CloudIdentityPasswordForm,
+    CreateWorkspaceForm,
     ShareBillingAccountForm,
 )
 from environment.decorators import (
@@ -55,6 +56,7 @@ def identity_provisioning(request):
 @login_required
 @cloud_identity_required
 def research_environments(request):
+    workspaces_list = services.get_workspaces_list(request.user)
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user
     )
@@ -74,11 +76,17 @@ def research_environments(request):
         projects_with_environments_being_created + environment_project_workflow_triplets
     )
 
+    sorted_environments_project_workflow_triplets_dict = (
+        services.sort_environments_per_workspace(
+            environment_projects_pairs_with_creating, workspaces_list
+        )
+    )
+
     billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
+        "available_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
         "billing_accounts_list": billing_accounts_list,
     }
 
@@ -121,13 +129,42 @@ def research_environments_partial(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
+def create_workspace(request):
+    billing_accounts_list = services.get_billing_accounts_list(request.user)
+
+    if request.method == "POST":
+        form = CreateWorkspaceForm(request.POST, billing_id_list=billing_accounts_list)
+        if form.is_valid():
+            services.create_workspace(
+                user=request.user,
+                billing_account_id=form.cleaned_data["billing_account_id"],
+                region=form.cleaned_data["region"],
+            )
+            return redirect("research_environments")
+    else:
+        form = CreateWorkspaceForm(billing_id_list=billing_accounts_list)
+
+    exceeded_quotas = services.exceeded_quotas(request.user)
+    context = {
+        "form": form,
+        "exceeded_quotas": exceeded_quotas,
+    }
+    return render(request, "environment/create_workspace.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
 def create_research_environment(request, project_slug, project_version):
+    workspaces_list = services.get_workspaces_list(request.user)
     project = services.get_available_projects(request.user).get(
         slug=project_slug, version=project_version
     )
 
     if request.method == "POST":
-        form = CreateResearchEnvironmentForm(request.POST)
+        form = CreateResearchEnvironmentForm(
+            request.POST, workspace_list=workspaces_list
+        )
         if form.is_valid():
             cpu_usage = services.cpu_usage(
                 value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
@@ -150,7 +187,7 @@ def create_research_environment(request, project_slug, project_version):
                     f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
-        form = CreateResearchEnvironmentForm()
+        form = CreateResearchEnvironmentForm(workspace_id_list=workspaces_list)
 
     exceeded_quotas = services.exceeded_quotas(request.user)
     context = {
@@ -222,6 +259,7 @@ def stop_running_environment(request):
         project_id=data["project_id"],
         workbench_id=data["workbench_id"],
         region=Region(data["region"]),
+        gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
@@ -236,6 +274,7 @@ def start_stopped_environment(request):
         project_id=data["project_id"],
         workbench_id=data["workbench_id"],
         region=Region(data["region"]),
+        gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
@@ -251,6 +290,7 @@ def change_environment_instance_type(request):
         workbench_id=data["workbench_id"],
         region=Region(data["region"]),
         new_instance_type=InstanceType(data["instance_type"]),
+        gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
@@ -265,6 +305,7 @@ def delete_environment(request):
         project_id=data["project_id"],
         workbench_id=data["workbench_id"],
         region=Region(data["region"]),
+        gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
