@@ -2,6 +2,9 @@ from django import forms
 from typing import Iterable
 
 from environment.validators import gcp_billing_account_id_validator
+from environment.entities import (
+    ResearchWorkspace,
+)
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -40,7 +43,9 @@ class CreateWorkspaceForm(forms.Form):
 
     def __init__(self, *args, billing_id_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
-        self.fields["billing_account_id"].choices = [(billing_id, billing_id) for billing_id in billing_id_list]
+        self.fields["billing_account_id"].choices = [
+            (billing_id, billing_id) for billing_id in billing_id_list
+        ]
 
 
 class CreateResearchEnvironmentForm(forms.Form):
@@ -85,9 +90,12 @@ class CreateResearchEnvironmentForm(forms.Form):
         required=False,
     )
 
-    def __init__(self, *args, workspace_id_list: Iterable[str], **kwargs):
+    def __init__(self, *args, workspace_list: Iterable[ResearchWorkspace], **kwargs):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
-        self.fields["workspace_id"].choices = [(workspace_id, workspace_id) for workspace_id in workspace_id_list]
+        self.fields["workspace_id"].choices = [
+            (workspace.gcp_project_id, workspace.gcp_project_id)
+            for workspace in workspace_list
+        ]
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")

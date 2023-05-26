@@ -104,6 +104,7 @@ def environment_action_button(
         "workbench_id": environment.id,
         "project_id": project.pk,
         "region": environment.region.value,
+        "gcp_project_id": environment.workspace_name,
     }
 
     result_data = {

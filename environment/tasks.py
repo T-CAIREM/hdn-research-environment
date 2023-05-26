@@ -38,7 +38,9 @@ def stop_environments_with_expired_access(user_id: int):
     environments, projects = zip(*expired_pairs)
     for environment in environments:
         if environment.is_running:
-            stop_running_environment(user, environment.id, environment.region)
+            stop_running_environment(
+                user, environment.id, environment.region, environment.workspace_name
+            )
     send_environment_access_expired_email(user, projects)
     if len(environments) > 0:
         environment_ids = [environment.id for environment in environments]
@@ -57,4 +59,6 @@ def terminate_environments_if_access_still_expired(
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
     for environment, _ in expired_pairs:
         if environment.id in previously_stopped_environment_ids:
-            delete_environment(user, environment.id, environment.region)
+            delete_environment(
+                user, environment.id, environment.region, environment.workspace_name
+            )
