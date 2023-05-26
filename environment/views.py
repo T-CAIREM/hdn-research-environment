@@ -12,6 +12,7 @@ import environment.constants as constants
 from environment.forms import (
     CreateResearchEnvironmentForm,
     CloudIdentityPasswordForm,
+    CreateWorkspaceForm
 )
 from environment.decorators import (
     cloud_identity_required,
@@ -53,6 +54,7 @@ def identity_provisioning(request):
 @login_required
 @cloud_identity_required
 def research_environments(request):
+    workspaces_list = services.get_workspaces_list(request.user)
     environment_project_workflow_triplets = services.get_environments_with_projects(
         request.user
     )
@@ -72,11 +74,17 @@ def research_environments(request):
         projects_with_environments_being_created + environment_project_workflow_triplets
     )
 
+    sorted_environments_project_workflow_triplets_dict = (
+        services.sort_environments_per_workspace(
+            environment_projects_pairs_with_creating, workspaces_list
+        )
+    )
+
     billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
+        "available_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
         "billing_accounts_list": billing_accounts_list,
     }
 
@@ -114,6 +122,32 @@ def research_environments_partial(request):
         "environment/_available_environments_list.html",
         context,
     )
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+def create_workspace(request):
+    billing_accounts_list = services.get_billing_accounts_list(request.user)
+
+    if request.method == "POST":
+        form = CreateWorkspaceForm(request.POST, billing_id_list=billing_accounts_list)
+        if form.is_valid():
+            services.create_workspace(
+                user=request.user,
+                billing_account_id=form.cleaned_data["billing_account_id"],
+                region=form.cleaned_data["region"]
+            )
+            return redirect("research_environments")
+    else:
+        form = CreateWorkspaceForm(billing_id_list=billing_accounts_list)
+
+    exceeded_quotas = services.exceeded_quotas(request.user)
+    context = {
+        "form": form,
+        "exceeded_quotas": exceeded_quotas,
+    }
+    return render(request, "environment/create_workspace.html", context)
 
 
 @require_http_methods(["GET", "POST"])

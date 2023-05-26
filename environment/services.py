@@ -1,4 +1,5 @@
 from typing import Tuple, Iterable, Optional
+from collections import defaultdict
 
 from django.db.models import Q, Model
 from django.core.mail import send_mail
@@ -18,16 +19,18 @@ from environment.exceptions import (
     StartEnvironmentFailed,
     DeleteEnvironmentFailed,
     ChangeEnvironmentInstanceTypeFailed,
-    BillingVerificationFailed,
     BillingSharingFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
     GetBillingAccountsListFailed,
+    GetWorkspacesListFailed,
+    CreateWorkspaceFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspace_details,
+    deserialize_workspaces,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -109,17 +112,29 @@ def share_billing_account(owner: User, user: User, billing_account_resource_name
         error_message = response.json()
         raise BillingSharingFailed(error_message)
 
+#TODO: delete this
 
-def verify_billing_and_create_workspace(user: User, billing_id: str):
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.create_workspace(
-        gcp_user_id=gcp_user_id,
-        billing_id=billing_id,
-        region=DEFAULT_REGION,
+# def verify_billing_and_create_workspace(user: User, billing_id: str):
+#     gcp_user_id = user.cloud_identity.gcp_user_id
+#     response = api_v1.create_workspace(
+#         gcp_user_id=gcp_user_id,
+#         billing_id=billing_id,
+#         region=DEFAULT_REGION,
+#     )
+#     if not response.ok:
+#         error_message = response.json()["error"]
+#         raise BillingVerificationFailed(error_message)
+
+
+def create_workspace(user: User, billing_account_id: str, region: str):
+    response = api_v2.create_workspace(
+        email=user.cloud_identity.email,
+        billing_account_id=billing_account_id,
+        region=region
     )
     if not response.ok:
         error_message = response.json()["error"]
-        raise BillingVerificationFailed(error_message)
+        raise CreateWorkspaceFailed(error_message)
 
 
 def _create_workbench_kwargs(
@@ -305,6 +320,36 @@ def get_environment_project_pairs_with_expired_access(
     ]
 
 
+def sort_environments_per_workspace(
+    environment_project_workflow_triplets: Iterable[
+        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
+    ],
+    workspaces: Iterable[ResearchWorkspace],
+):
+    sorted_environments_project_workflow_triplets = defaultdict(
+        list, {workspace.gcp_project_id: [] for workspace in workspaces}
+    )
+    for environment, project, workflows in environment_project_workflow_triplets:
+        if environment:
+            sorted_environments_project_workflow_triplets[
+                environment.workspace_name
+            ].append((environment, project, workflows))
+        else:
+            sorted_environments_project_workflow_triplets[
+                workflows.last().project_name
+            ].append((environment, project, workflows))
+    return dict(sorted_environments_project_workflow_triplets)
+
+
+def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
+    gcp_user_id = user.cloud_identity.gcp_user_id
+    response = api_v1.get_workspace_list(gcp_user_id)
+    if not response.ok:
+        error_message = response.json()["error"]
+        raise GetWorkspacesListFailed(error_message)
+    return deserialize_workspaces(response.json())
+
+
 def stop_running_environment(
     user: User, project_id: str, workbench_id: str, region: Region
 ) -> str:
@@ -461,10 +506,10 @@ def cpu_usage(value, user) -> int:
 def exceeded_quotas(user) -> Iterable[str]:
     quotas_exceeded = []
     # Check if user has exceeded MAX_RUNNING_ENVIRONMENTS
-    running_environments = get_active_environments(user)
-    if len(running_environments) >= constants.MAX_RUNNING_ENVIRONMENTS:
+    running_workspaces = get_workspaces_list(user)
+    if len(running_workspaces) >= constants.MAX_RUNNING_WORKSPACES:
         quotas_exceeded.append(
-            f"You can only have {constants.MAX_RUNNING_ENVIRONMENTS} running environments."
+            f"You can only have {constants.MAX_RUNNING_WORKSPACES} running workspaces."
         )
 
     return quotas_exceeded
