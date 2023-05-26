@@ -133,7 +133,9 @@ def create_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     if request.method == "POST":
-        form = CreateWorkspaceForm(request.POST, billing_id_list=billing_accounts_list)
+        form = CreateWorkspaceForm(
+            request.POST, billing_accounts_list=billing_accounts_list
+        )
         if form.is_valid():
             services.create_workspace(
                 user=request.user,
@@ -142,7 +144,7 @@ def create_workspace(request):
             )
             return redirect("research_environments")
     else:
-        form = CreateWorkspaceForm(billing_id_list=billing_accounts_list)
+        form = CreateWorkspaceForm(billing_accounts_list=billing_accounts_list)
 
     exceeded_quotas = services.exceeded_quotas(request.user)
     context = {
