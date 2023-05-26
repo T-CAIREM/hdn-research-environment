@@ -1,4 +1,5 @@
 import json
+import concurrent
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
@@ -56,10 +57,21 @@ def identity_provisioning(request):
 @login_required
 @cloud_identity_required
 def research_environments(request):
-    workspaces_list = services.get_workspaces_list(request.user)
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        request.user
-    )
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        workspaces_list_future = executor.submit(
+            services.get_workspaces_list, request.user
+        )
+        billing_accounts_list_future = executor.submit(
+            services.get_billing_accounts_list, request.user
+        )
+        environment_project_workflow_future = executor.submit(
+            services.get_environments_with_projects, request.user
+        )
+
+    workspaces_list = workspaces_list_future.result()
+    environment_project_workflow_triplets = environment_project_workflow_future.result()
+    billing_accounts_list = billing_accounts_list_future.result()
+
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
         services.get_available_projects_with_environments(
@@ -81,8 +93,6 @@ def research_environments(request):
             environment_projects_pairs_with_creating, workspaces_list
         )
     )
-
-    billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
