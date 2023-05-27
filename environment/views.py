@@ -219,19 +219,23 @@ def create_research_environment(request, project_slug, project_version):
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
     owner = request.user
+    billing_account_sharing_form = ShareBillingAccountForm()
 
     if request.method == "POST":
-        form = ShareBillingAccountForm(request.POST)
-        if form.is_valid():
-            services.invite_user_to_shared_billing_account(
-                request=request,
-                owner=owner,
-                user_email=form.cleaned_data["user_email"],
-                billing_account_id=billing_account_id,
-            )
+        form_action = request.POST["action"]
+        if form_action == "share_account":
+            billing_account_sharing_form = ShareBillingAccountForm(request.POST)
+            if billing_account_sharing_form.is_valid():
+                services.invite_user_to_shared_billing_account(
+                    request=request,
+                    owner=owner,
+                    user_email=billing_account_sharing_form.cleaned_data["user_email"],
+                    billing_account_id=billing_account_id,
+                )
+                return redirect(request.path)
+        elif form_action == "revoke_access":
+            services.revoke_billing_account_access(request.POST["share_id"])
             return redirect(request.path)
-    else:
-        form = ShareBillingAccountForm()
 
     billing_account_shares = services.get_owned_shares_of_billing_account(
         owner=owner, billing_account_id=billing_account_id
@@ -242,7 +246,7 @@ def manage_billing_account(request, billing_account_id):
     consumed_shares = [share for share in billing_account_shares if share.is_consumed]
 
     context = {
-        "form": form,
+        "billing_account_sharing_form": billing_account_sharing_form,
         "billing_account_id": billing_account_id,
         "pending_shares": pending_shares,
         "consumed_shares": consumed_shares,

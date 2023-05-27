@@ -30,16 +30,17 @@
             </div>
         </div>
 
-        <div class="card" style="width: 100%;">
-            <div class="card-body">
-                <div id="new-share-card">
-                    <h5 class="card-title">
-                        New Share
-                    </h5>
+            <div class="card" style="width: 100%;">
+                <div class="card-body">
+                    <div id="new-share-card">
+                        <h5 class="card-title">
+                            New Share
+                        </h5>
 
                     <form action="{% url 'manage_billing_account' billing_account_id=billing_account_id %}" method="post" style="width: 24rem;">
                         {% csrf_token %}
-                        {{ form }}
+                        <input type="hidden" name="action" value="share_account">
+                        {{ billing_account_sharing_form }}
                         <button class="btn btn-sm btn-primary mt-3" type="submit">
                             Share
                         </button>
@@ -72,9 +73,14 @@
                                     {{ share.user_contact_email }}
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="" class="btn btn-sm btn-danger disabled">
-                                        Revoke
-                                    </a>
+                                    <form action="{% url 'manage_billing_account' billing_account_id=billing_account_id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="revoke_access">
+                                        <input type="hidden" name="share_id" value="{{ share.id }}">
+                                        <button class="btn btn-sm btn-danger" type="submit">
+                                            Revoke
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </li>

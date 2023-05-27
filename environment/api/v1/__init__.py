@@ -1,7 +1,7 @@
 from typing import Optional
 from functools import partial
-
 from requests import Request
+
 from django.conf import settings
 
 from environment.api.decorators import api_request

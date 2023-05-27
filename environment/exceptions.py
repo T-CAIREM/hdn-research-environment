@@ -30,6 +30,10 @@ class BillingSharingFailed(Exception):
     pass
 
 
+class BillingAccessRevokationFailed(Exception):
+    pass
+
+
 class GetAvailableEnvironmentsFailed(Exception):
     pass
 

@@ -21,6 +21,7 @@ from environment.exceptions import (
     DeleteEnvironmentFailed,
     ChangeEnvironmentInstanceTypeFailed,
     BillingSharingFailed,
+    BillingAccessRevokationFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetWorkspaceDetailsFailed,
@@ -105,7 +106,7 @@ def get_billing_accounts_list(user: User):
 
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
     return owner.owner_billingaccountsharinginvite_set.filter(
-        billing_account_id=billing_account_id
+        billing_account_id=billing_account_id, is_revoked=False
     )
 
 
@@ -124,7 +125,7 @@ def invite_user_to_shared_billing_account(
 def consume_billing_account_sharing_token(
     user: User, token: str
 ) -> BillingAccountSharingInvite:
-    invite = BillingAccountSharingInvite.objects.get(token=token)
+    invite = BillingAccountSharingInvite.objects.get(token=token, is_revoked=False)
     invite.user = user
     invite.save()
 
@@ -140,6 +141,34 @@ def share_billing_account(owner_email: str, user_email: str, billing_account_id:
     if not response.ok:
         error_message = response.json()
         raise BillingSharingFailed(error_message)
+
+
+def revoke_billing_account_access(billing_account_sharing_invite_id: int):
+    billing_account_sharing_invite = BillingAccountSharingInvite.objects.select_related(
+        "owner__cloud_identity", "user__cloud_identity"
+    ).get(pk=billing_account_sharing_invite_id)
+    billing_account_sharing_invite.is_revoked = True
+    billing_account_sharing_invite.save()
+
+    if billing_account_sharing_invite.is_consumed:
+        _revoke_consumed_billing_account_access(billing_account_sharing_invite)
+
+
+def _revoke_consumed_billing_account_access(
+    billing_account_sharing_invite: BillingAccountSharingInvite,
+):
+    owner_email = billing_account_sharing_invite.owner.cloud_identity.email
+    user_email = billing_account_sharing_invite.user.cloud_identity.email
+    billing_account_id = billing_account_sharing_invite.billing_account_id
+
+    response = api_v2.revoke_billing_account_access(
+        owner_email=owner_email,
+        user_email=user_email,
+        billing_account_id=billing_account_id,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise BillingAccessRevokationFailed(error_message)
 
 
 def create_workspace(user: User, billing_account_id: str, region: str):

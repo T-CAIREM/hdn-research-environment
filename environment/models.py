@@ -36,6 +36,7 @@ class BillingAccountSharingInvite(models.Model):
     )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     is_consumed = models.BooleanField(default=False)
+    is_revoked = models.BooleanField(default=False)
 
 
 class Workflow(models.Model):

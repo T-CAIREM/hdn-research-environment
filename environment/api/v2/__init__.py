@@ -48,6 +48,20 @@ def share_billing_account(
 
 
 @api_v2_request
+def revoke_billing_account_access(
+    owner_email: str,
+    user_email: str,
+    billing_account_id: str,
+) -> Request:
+    json = {
+        "owner_email": owner_email,
+        "user_email": user_email,
+        "billing_account_id": billing_account_id,
+    }
+    return Request("POST", url="/billing/revoke_access", json=json)
+
+
+@api_v2_request
 def create_workspace(email: str, billing_account_id: str, region: str) -> Request:
     json = {
         "email": email,
