@@ -112,12 +112,42 @@ def research_environments(request):
 @login_required
 @cloud_identity_required
 def research_environments_partial(request):
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        request.user
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        workspaces_list_future = executor.submit(
+            services.get_workspaces_list, request.user
+        )
+        environment_project_workflow_future = executor.submit(
+            services.get_environments_with_projects, request.user
+        )
+
+    workspaces_list = workspaces_list_future.result()
+    environment_project_workflow_triplets = environment_project_workflow_future.result()
+
+    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
+    available_project_environment_workflow_triplets = (
+        services.get_available_projects_with_environments(
+            request.user,
+            environments,
+        )
+    )
+    projects_with_environments_being_created = (
+        services.get_projects_with_environment_being_created(
+            available_project_environment_workflow_triplets
+        )
+    )
+    environment_projects_pairs_with_creating = (
+        projects_with_environments_being_created + environment_project_workflow_triplets
+    )
+
+    sorted_environments_project_workflow_triplets_dict = (
+        services.sort_environments_per_workspace(
+            environment_projects_pairs_with_creating, workspaces_list
+        )
     )
 
     context = {
         "environment_project_workflow_triplets": environment_project_workflow_triplets,
+        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
