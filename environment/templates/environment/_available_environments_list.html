@@ -22,7 +22,7 @@
 <hr>
 
 <div id="accordion">
-    {% for workspace_name, environments_project_workflow_triplets in available_project_environment_workflow_triplets_dict.items %}
+    {% for workspace_name, environments_project_workflow_triplets in workspace_project_environment_workflow_triplets_dict.items %}
         {% with collapse="collapse-"|add:workspace_name heading="heading-"|add:workspace_name %}
             <div class="card">
                 <div class="card-header" id="{{ heading }}">
