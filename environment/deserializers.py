@@ -32,7 +32,7 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
             bucket_name=workbench.get("bucket-name"),
             type=EnvironmentType.from_string_or_none(workbench["type"]),
             status=EnvironmentStatus(workbench["workbench-setup-status"]),
-            workspace_name=workbench.get("gcp-project-id"),
+            workspace_name=workspace.get("gcp-project-id"),
         )
         for workspace in data["workspace-list"]
         for workbench in workspace["workbench-list"]
