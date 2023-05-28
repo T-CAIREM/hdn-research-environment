@@ -248,6 +248,7 @@ def create_research_environment(
         execution_resource_name=execution_resource_name,
         project_id=project.pk,
         type=Workflow.CREATE,
+        workspace_name=workspace_name,
     )
 
     return response.json()
@@ -518,11 +519,16 @@ def send_environment_access_expired_email(
 
 
 def persist_workflow(
-    user: User, execution_resource_name: str, project_id: int, type: int
+    user: User,
+    execution_resource_name: str,
+    project_id: int,
+    type: int,
+    workspace_name: str,
 ) -> Workflow:
     return Workflow.objects.create(
         user=user,
         execution_resource_name=execution_resource_name,
+        workspace_name=workspace_name,
         project_id=project_id,
         type=type,
         status=Workflow.INPROGRESS,
