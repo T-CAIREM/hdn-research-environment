@@ -200,7 +200,7 @@ def create_research_environment(request, project_slug, project_version):
                     f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
-        form = CreateResearchEnvironmentForm(workspace_id_list=workspaces_list)
+        form = CreateResearchEnvironmentForm(workspace_list=workspaces_list)
 
     exceeded_quotas = services.exceeded_quotas(request.user)
     context = {
