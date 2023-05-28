@@ -187,7 +187,7 @@ def create_research_environment(request, project_slug, project_version):
                 services.create_research_environment(
                     user=request.user,
                     project=project,
-                    region=form.cleaned_data["region"],
+                    workspace_name=form.cleaned_data["workspace_id"],
                     instance_type=form.cleaned_data["instance_type"],
                     environment_type=form.cleaned_data["environment_type"],
                     persistent_disk=form.cleaned_data.get("persistent_disk"),
@@ -341,4 +341,9 @@ def check_execution_status(request):
             execution_resource_name=execution_resource_name,
             execution_state=execution_state,
         )
+    # finished=True
+    # services.mark_workflow_as_finished(
+    #     execution_resource_name=execution_resource_name,
+    #     execution_state=None,
+    # )
     return JsonResponse({"finished": finished})

@@ -185,7 +185,7 @@ def create_workspace(user: User, billing_account_id: str, region: str):
 def _create_workbench_kwargs(
     user: User,
     project: PublishedProject,
-    region: str,
+    workspace_name: str,
     instance_type: str,
     environment_type: str,
     persistent_disk: int,
@@ -195,7 +195,7 @@ def _create_workbench_kwargs(
 
     common = {
         "gcp_user_id": gcp_user_id,
-        "region": region,
+        "gcp_project_id": workspace_name,
         "environment_type": environment_type,
         "instance_type": instance_type,
         "group_granting_data_access": _project_data_group(project),
@@ -220,7 +220,7 @@ def _create_workbench_kwargs(
 def create_research_environment(
     user: User,
     project: PublishedProject,
-    region: str,
+    workspace_name: str,
     instance_type: str,
     environment_type: str,
     persistent_disk: int,
@@ -229,7 +229,7 @@ def create_research_environment(
     kwargs = _create_workbench_kwargs(
         user,
         project,
-        region,
+        workspace_name,
         instance_type,
         environment_type,
         persistent_disk,
@@ -381,7 +381,7 @@ def sort_environments_per_workspace(
             ].append((environment, project, workflows))
         else:
             sorted_environments_project_workflow_triplets[
-                workflows.last().project_name
+                workflows.last().workspace_name
             ].append((environment, project, workflows))
     return dict(sorted_environments_project_workflow_triplets)
 
@@ -539,6 +539,7 @@ def mark_workflow_as_finished(
     execution_resource_name: str, execution_state: executions.Execution.State
 ):
     workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
+    # workflow.status = Workflow.SUCCESS
     if execution_state == executions.Execution.State.SUCCEEDED:
         workflow.status = Workflow.SUCCESS
     else:

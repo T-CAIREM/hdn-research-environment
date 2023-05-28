@@ -103,7 +103,6 @@ def delete_workbench(
 @api_v1_request
 def create_workbench(
     gcp_user_id: str,
-    region: str,
     environment_type: str,
     instance_type: str,
     group_granting_data_access: str,
@@ -115,7 +114,6 @@ def create_workbench(
 ):
     json = {
         "userid": gcp_user_id,
-        "region": region,
         "type": environment_type,
         "machinetype": instance_type,
         "group_granting_data_access": group_granting_data_access,
