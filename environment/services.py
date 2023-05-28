@@ -416,6 +416,7 @@ def stop_running_environment(
         execution_resource_name=execution_resource_name,
         project_id=project_id,
         type=Workflow.PAUSE,
+        workspace_name=gcp_project_id,
     )
 
     return response.json()
@@ -441,6 +442,7 @@ def start_stopped_environment(
         execution_resource_name=execution_resource_name,
         project_id=project_id,
         type=Workflow.START,
+        workspace_name=gcp_project_id,
     )
 
     return response.json()
@@ -472,6 +474,7 @@ def change_environment_instance_type(
         execution_resource_name=execution_resource_name,
         project_id=project_id,
         type=Workflow.CHANGE,
+        workspace_name=gcp_project_id,
     )
 
     return response.json()
@@ -497,6 +500,7 @@ def delete_environment(
         execution_resource_name=execution_resource_name,
         project_id=project_id,
         type=Workflow.DESTROY,
+        workspace_name=gcp_project_id,
     )
 
     return response.json()
