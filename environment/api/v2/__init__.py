@@ -1,12 +1,6 @@
-from functools import partial
-
 from requests import Request
-from django.conf import settings
 
-from environment.api.decorators import api_request
-
-
-api_v2_request = partial(api_request, settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_URL)
+from environment.api.decorators import api_v2_request
 
 
 @api_v2_request
@@ -29,8 +23,7 @@ def create_cloud_identity(
 
 @api_v2_request
 def list_billing_accounts(email: str) -> Request:
-    json = {"email": email}
-    return Request("GET", url="/billing/list", json=json)
+    return Request("GET", url=f"/billing/{email}")
 
 
 @api_v2_request

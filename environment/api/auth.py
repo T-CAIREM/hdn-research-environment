@@ -5,16 +5,13 @@ from django.conf import settings
 from requests import Request
 
 
-def _generate_credentials() -> jwt.Credentials:
+def _credentials_apply_closure(
+    jwt_path: str, jwt_audience: str
+) -> Callable[[Request], None]:
     credentials = jwt.Credentials.from_service_account_file(
-        settings.CLOUD_RESEARCH_ENVIRONMENTS_API_JWT_SERVICE_ACCOUNT_PATH,
-        audience=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_JWT_AUDIENCE,
+        jwt_path,
+        audience=jwt_audience,
     )
-    return credentials
-
-
-def _credentials_apply_closure() -> Callable[[Request], None]:
-    credentials = _generate_credentials()
 
     def apply_api_credentials(request: Request) -> None:
         credentials.before_request(None, request.method, request.url, request.headers)
@@ -22,4 +19,12 @@ def _credentials_apply_closure() -> Callable[[Request], None]:
     return apply_api_credentials
 
 
-apply_api_credentials = _credentials_apply_closure()
+apply_api_v1_credentials = _credentials_apply_closure(
+    jwt_path=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V1_JWT_SERVICE_ACCOUNT_PATH,
+    jwt_audience=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V1_JWT_AUDIENCE,
+)
+
+apply_api_v2_credentials = _credentials_apply_closure(
+    jwt_path=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_JWT_SERVICE_ACCOUNT_PATH,
+    jwt_audience=settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_JWT_AUDIENCE,
+)

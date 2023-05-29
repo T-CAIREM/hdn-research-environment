@@ -1,13 +1,7 @@
 from typing import Optional
-from functools import partial
 from requests import Request
 
-from django.conf import settings
-
-from environment.api.decorators import api_request
-
-
-api_v1_request = partial(api_request, settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V1_URL)
+from environment.api.decorators import api_v1_request
 
 
 @api_v1_request
