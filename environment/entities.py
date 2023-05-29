@@ -11,6 +11,7 @@ class Region(Enum):
 
 
 class InstanceType(Enum):
+    N1_STANDARD_1 = "n1-standard-1"
     N1_STANDARD_2 = "n1-standard-2"
     N1_STANDARD_4 = "n1-standard-4"
     N1_STANDARD_8 = "n1-standard-8"
@@ -18,6 +19,7 @@ class InstanceType(Enum):
 
     def cpus(self):
         INSTANCE_TO_CPU_MAP = {
+            InstanceType.N1_STANDARD_1: 1,
             InstanceType.N1_STANDARD_2: 2,
             InstanceType.N1_STANDARD_4: 4,
             InstanceType.N1_STANDARD_8: 8,
