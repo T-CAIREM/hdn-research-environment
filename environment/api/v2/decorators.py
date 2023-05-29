@@ -1,37 +1,32 @@
 from typing import Callable
-from functools import wraps, partial
+from functools import wraps
 from requests import Request, Response, Session
 
+import google.oauth2.id_token
 from django.conf import settings
 
-from environment.api.auth import apply_api_v1_credentials, apply_api_v2_credentials
+
+def _apply_api_credentials(request: Request, audience: str):
+    auth_request = google.auth.transport.requests.Request()
+    id_token = google.oauth2.id_token.fetch_id_token(auth_request, audience)
+
+    request.headers["Authorization"] = f"Bearer {id_token}"
 
 
 def api_request(
-    credentials_application_callable: Callable[[Request], None],
-    api_url: str,
     request_creator_callable: Callable[..., Request],
 ) -> Callable:
+    api_url = settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_URL
+
     @wraps(request_creator_callable)
     def wrapper(*args, **kwargs) -> Response:
         session = Session()
         request = request_creator_callable(*args, **kwargs)
         request.url = f"{api_url}{request.url}"
         prepped = request.prepare()
-        credentials_application_callable(prepped)
+        _apply_api_credentials(prepped, api_url)
+
         return session.send(prepped)
 
     return wrapper
 
-
-api_v1_request = partial(
-    api_request,
-    apply_api_v1_credentials,
-    settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V1_URL,
-)
-
-api_v2_request = partial(
-    api_request,
-    apply_api_v2_credentials,
-    settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_URL,
-)

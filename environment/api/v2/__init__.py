@@ -1,9 +1,9 @@
 from requests import Request
 
-from environment.api.decorators import api_v2_request
+from environment.api.v2.decorators import api_request
 
 
-@api_v2_request
+@api_request
 def create_cloud_identity(
     gcp_user_id: str,
     given_name: str,
@@ -21,12 +21,12 @@ def create_cloud_identity(
     return Request("POST", url="/identity/create", json=json)
 
 
-@api_v2_request
+@api_request
 def list_billing_accounts(email: str) -> Request:
     return Request("GET", url=f"/billing/{email}")
 
 
-@api_v2_request
+@api_request
 def share_billing_account(
     owner_email: str,
     user_email: str,
@@ -40,7 +40,7 @@ def share_billing_account(
     return Request("POST", url="/billing/share", json=json)
 
 
-@api_v2_request
+@api_request
 def revoke_billing_account_access(
     owner_email: str,
     user_email: str,
@@ -54,7 +54,7 @@ def revoke_billing_account_access(
     return Request("POST", url="/billing/revoke_access", json=json)
 
 
-@api_v2_request
+@api_request
 def create_workspace(email: str, billing_account_id: str, region: str) -> Request:
     json = {
         "email": email,

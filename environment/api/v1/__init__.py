@@ -1,10 +1,10 @@
 from typing import Optional
 from requests import Request
 
-from environment.api.decorators import api_v1_request
+from environment.api.v1.decorators import api_request
 
 
-@api_v1_request
+@api_request
 def create_cloud_identity(
     gcp_user_id: str,
     given_name: str,
@@ -22,22 +22,22 @@ def create_cloud_identity(
     return Request("POST", url="/user", json=json)
 
 
-@api_v1_request
+@api_request
 def get_user_info(gcp_user_id: str) -> Request:
     return Request("GET", url=f"/user/{gcp_user_id}")
 
 
-@api_v1_request
+@api_request
 def get_workspace_details(gcp_user_id: str, gcp_project_id: str) -> Request:
     return Request("GET", url=f"/workspace/{gcp_user_id}/{gcp_project_id}")
 
 
-@api_v1_request
+@api_request
 def get_workspace_list(gcp_user_id: str) -> Request:
     return Request("GET", url=f"/workspace/list/{gcp_user_id}")
 
 
-@api_v1_request
+@api_request
 def stop_workbench(
     gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
 ) -> Request:
@@ -50,7 +50,7 @@ def stop_workbench(
     return Request("PUT", url="/workbench/stop", params=params)
 
 
-@api_v1_request
+@api_request
 def start_workbench(
     gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
 ) -> Request:
@@ -63,7 +63,7 @@ def start_workbench(
     return Request("PUT", url="/workbench/start", params=params)
 
 
-@api_v1_request
+@api_request
 def change_workbench_instance_type(
     gcp_user_id: str,
     workbench_id: str,
@@ -81,7 +81,7 @@ def change_workbench_instance_type(
     return Request("PUT", url="/workbench/update", params=params)
 
 
-@api_v1_request
+@api_request
 def delete_workbench(
     gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
 ) -> Request:
@@ -94,7 +94,7 @@ def delete_workbench(
     return Request("DELETE", url="/workbench", params=params)
 
 
-@api_v1_request
+@api_request
 def create_workbench(
     gcp_user_id: str,
     environment_type: str,
