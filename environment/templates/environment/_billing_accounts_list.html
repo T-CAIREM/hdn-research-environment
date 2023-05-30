@@ -1,34 +1,43 @@
-<ul class="list-group list-group-flush">
-    <li class="list-group-item">
-        <div class="row">
-            <div class="col-md-8">
-                <strong>
-                    ID
-                </strong>
-            </div>
-            <div class="col-md-4">
-                <strong>
-                    Actions
-                </strong>
-            </div>
-        </div>
-    </li>
-    {% for billing_account in billing_accounts_list %}
+{% if billing_accounts_list|length %}
+    <ul class="list-group list-group-flush">
         <li class="list-group-item">
             <div class="row">
                 <div class="col-md-8">
-                    <a href="{{ billing_account.cloud_link }}" target="_blank">
-                        {{ billing_account.id }}
-                    </a>
+                    <strong>
+                        ID
+                    </strong>
                 </div>
                 <div class="col-md-4">
-                {% if billing_account.is_owner %}
-                    <a href="{% url 'manage_billing_account' billing_account_id=billing_account.id %}" class="btn btn-sm btn-primary">
-                        Manage
-                    </a>
-                {% endif %}
+                    <strong>
+                        Actions
+                    </strong>
                 </div>
             </div>
         </li>
-    {% endfor %}
-</ul>
+        {% for billing_account in billing_accounts_list %}
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-md-8">
+                        <a href="{{ billing_account.cloud_link }}" target="_blank">
+                            {{ billing_account.id }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                    {% if billing_account.is_owner %}
+                        <a href="{% url 'manage_billing_account' billing_account_id=billing_account.id %}" class="btn btn-sm btn-primary">
+                            Manage
+                        </a>
+                    {% endif %}
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <div class="container text-center">
+        You don't have any billing accounts.<br>
+        <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901">
+            Create one using the Google Cloud Platform console.
+        </a>
+    </div>
+{% endif %}
