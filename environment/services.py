@@ -549,7 +549,6 @@ def mark_workflow_as_finished(
     execution_resource_name: str, execution_state: executions.Execution.State
 ):
     workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
-    # workflow.status = Workflow.SUCCESS
     if execution_state == executions.Execution.State.SUCCEEDED:
         workflow.status = Workflow.SUCCESS
     else:

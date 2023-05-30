@@ -371,9 +371,4 @@ def check_execution_status(request):
             execution_resource_name=execution_resource_name,
             execution_state=execution_state,
         )
-    # finished=True
-    # services.mark_workflow_as_finished(
-    #     execution_resource_name=execution_resource_name,
-    #     execution_state=None,
-    # )
     return JsonResponse({"finished": finished})
