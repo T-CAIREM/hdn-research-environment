@@ -1,4 +1,10 @@
 {% if billing_accounts_list|length %}
+    <div class="d-flex flex-column align-items-end px-4 mb-3">
+        <a class="btn btn-primary btn-sm" href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
+          + Billing Account
+        </a>
+    </div>
+
     <ul class="list-group list-group-flush">
         <li class="list-group-item">
             <div class="row">
@@ -36,7 +42,7 @@
 {% else %}
     <div class="container text-center">
         You don't have any billing accounts.<br>
-        <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901">
+        <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
             Create one using the Google Cloud Platform console.
         </a>
     </div>

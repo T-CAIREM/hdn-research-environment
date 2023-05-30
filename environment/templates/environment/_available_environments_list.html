@@ -12,14 +12,11 @@
     {% endif %}
 {% endif %}
 
-<div class="d-flex justify-content-between mb-3 px-4 container">
-    <h6 class="text-center"><strong>Workspace Name</strong></h6>
+<div class="d-flex flex-column align-items-end px-4 mb-3">
     <a class="btn btn-primary btn-sm" href="{% url 'create_workspace' %}">
       + Workspace
     </a>
 </div>
-
-<hr>
 
 <div id="accordion">
     {% for workspace_name, environments_project_workflow_triplets in workspace_project_environment_workflow_triplets_dict.items %}
