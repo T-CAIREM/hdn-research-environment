@@ -29,4 +29,3 @@ def api_request(
         return session.send(prepped)
 
     return wrapper
-
