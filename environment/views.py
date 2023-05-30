@@ -84,8 +84,11 @@ def research_environments(request):
             available_project_environment_workflow_triplets
         )
     )
+    workspaces_being_created_dict = services.get_workspaces_being_created(request.user)
     environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created + environment_project_workflow_triplets
+        projects_with_environments_being_created
+        + environment_project_workflow_triplets
+        + workspaces_being_created_dict.values()
     )
 
     sorted_environments_project_workflow_triplets_dict = (
@@ -94,10 +97,14 @@ def research_environments(request):
         )
     )
 
+    sorted_environments_project_workflow_triplets_with_creating_dict = {
+        **sorted_environments_project_workflow_triplets_dict,
+        **workspaces_being_created_dict,
+    }
+
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
+        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_with_creating_dict,
         "billing_accounts_list": billing_accounts_list,
     }
 
