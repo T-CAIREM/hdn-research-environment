@@ -43,14 +43,17 @@ class Workflow(models.Model):
     objects = WorkflowManager()
 
     project = models.ForeignKey(
-        "project.PublishedProject", related_name="workflows", on_delete=models.CASCADE
+        "project.PublishedProject",
+        related_name="workflows",
+        on_delete=models.CASCADE,
+        null=True,
     )
     user = models.ForeignKey(
         "user.User", related_name="workflows", on_delete=models.CASCADE
     )
     execution_resource_name = models.CharField(max_length=256, unique=True)
 
-    workspace_name = models.CharField(max_length=256)
+    workspace_name = models.CharField(max_length=256, null=True)
 
     INPROGRESS = 0
     SUCCESS = 1
@@ -67,11 +70,15 @@ class Workflow(models.Model):
     START = 2
     PAUSE = 3
     CHANGE = 4
+    WORKSPACE_CREATE = 5
+    WORKSPACE_DESTROY = 6
     TYPE_CHOICES = [
         (CREATE, "Creating"),
         (DESTROY, "Destroying"),
         (START, "Starting"),
         (PAUSE, "Pausing"),
         (CHANGE, "Changing"),
+        (WORKSPACE_CREATE, "Creating Workspace"),
+        (WORKSPACE_DESTROY, "Destroying Workspace"),
     ]
     type = models.PositiveSmallIntegerField(choices=TYPE_CHOICES)

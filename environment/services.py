@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, Optional
+from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
 
 from django.db.models import Model
@@ -180,6 +180,12 @@ def create_workspace(user: User, billing_account_id: str, region: str):
     if not response.ok:
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
+    execution_resource_name = response.json()["execution-name"]
+    persist_workflow(
+        user=user,
+        execution_resource_name=execution_resource_name,
+        type=Workflow.WORKSPACE_CREATE,
+    )
 
 
 def _create_workbench_kwargs(
@@ -355,6 +361,16 @@ def get_projects_with_environment_being_created(
     ]
 
 
+def get_workspaces_being_created(user: User) -> Dict[str, Tuple[None, None, Workflow]]:
+    workspace_creation_workflows = Workflow.objects.filter(
+        user=user, type=Workflow.WORKSPACE_CREATE, status=Workflow.INPROGRESS
+    )
+    return {
+        workflow.get_type_display(): (None, None, workflow)
+        for workflow in workspace_creation_workflows
+    }
+
+
 def get_environment_project_pairs_with_expired_access(
     user: User,
 ) -> Iterable[Tuple[ResearchEnvironment, PublishedProject]]:
@@ -371,7 +387,7 @@ def sort_environments_per_workspace(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
-):
+) -> Dict[str, Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
     sorted_environments_project_workflow_triplets = defaultdict(
         list, {workspace.gcp_project_id: [] for workspace in workspaces}
     )
