@@ -88,7 +88,7 @@ def research_environments(request):
     environment_projects_pairs_with_creating = (
         projects_with_environments_being_created
         + environment_project_workflow_triplets
-        + workspaces_being_created_dict.values()
+        + list(workspaces_being_created_dict.values())
     )
 
     sorted_environments_project_workflow_triplets_dict = (
