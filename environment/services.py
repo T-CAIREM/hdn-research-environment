@@ -361,14 +361,10 @@ def get_projects_with_environment_being_created(
     ]
 
 
-def get_workspaces_being_created(user: User) -> Dict[str, Tuple[None, None, Workflow]]:
-    workspace_creation_workflows = Workflow.objects.filter(
+def get_workspace_creation_workflows(user: User) -> Iterable[Workflow]:
+    return Workflow.objects.filter(
         user=user, type=Workflow.WORKSPACE_CREATE, status=Workflow.INPROGRESS
     )
-    return {
-        workflow.get_type_display(): (None, None, workflow)
-        for workflow in workspace_creation_workflows
-    }
 
 
 def get_environment_project_pairs_with_expired_access(

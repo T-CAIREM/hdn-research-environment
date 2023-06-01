@@ -67,10 +67,12 @@ def research_environments(request):
         environment_project_workflow_future = executor.submit(
             services.get_environments_with_projects, request.user
         )
+        workspace_creation_workflows_future = executor.submit(services.get_workspace_creation_workflows, request.user)
 
     workspaces_list = workspaces_list_future.result()
     environment_project_workflow_triplets = environment_project_workflow_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
+    workspace_creation_workflows = workspace_creation_workflows_future.result()
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -84,11 +86,8 @@ def research_environments(request):
             available_project_environment_workflow_triplets
         )
     )
-    workspaces_being_created_dict = services.get_workspaces_being_created(request.user)
     environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created
-        + environment_project_workflow_triplets
-        + list(workspaces_being_created_dict.values())
+        projects_with_environments_being_created + environment_project_workflow_triplets
     )
 
     sorted_environments_project_workflow_triplets_dict = (
@@ -97,14 +96,10 @@ def research_environments(request):
         )
     )
 
-    sorted_environments_project_workflow_triplets_with_creating_dict = {
-        **sorted_environments_project_workflow_triplets_dict,
-        **workspaces_being_created_dict,
-    }
-
     context = {
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_with_creating_dict,
+        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
+        "workspace_creation_workflows": workspace_creation_workflows,
         "billing_accounts_list": billing_accounts_list,
     }
 
