@@ -541,9 +541,9 @@ def send_environment_access_expired_email(
 def persist_workflow(
     user: User,
     execution_resource_name: str,
-    project_id: int,
     type: int,
-    workspace_name: str,
+    project_id: Optional[int] = None,
+    workspace_name: Optional[str] = None,
 ) -> Workflow:
     return Workflow.objects.create(
         user=user,
