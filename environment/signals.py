@@ -1,3 +1,4 @@
+from typing import Iterable
 from datetime import datetime
 
 from django.dispatch import receiver
@@ -36,10 +37,15 @@ def consume_billing_account_sharing_invites(sender, created, instance, **kwargs)
             ).filter(is_consumed=False)
         )
     else:  # BillingAccountSharingInvite
-        if not hasattr(instance.user, "cloud_identity"):
+        if (
+            not hasattr(instance.user, "cloud_identity")
+            or instance.is_revoked
+            or instance.is_consumed
+        ):
             # The user that used the invite does not have a CloudIdentity yet.
             # The invite record will be consumed after the CloudIdentity is created.
             # See the `sender is CloudIdentity` case.
+            # Or the invite was revoked/consumed, triggering the signal.
             return
         outstanding_invites = [instance]
         cloud_identity = instance.user.cloud_identity
