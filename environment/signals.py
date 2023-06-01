@@ -26,10 +26,9 @@ Event = apps.get_model("events", "Event")
 @receiver(post_save, sender=BillingAccountSharingInvite)
 @receiver(post_save, sender=CloudIdentity)
 def consume_billing_account_sharing_invites(sender, created, instance, **kwargs):
-    if not created:
-        return
-
     if sender is CloudIdentity:
+        if not created:
+            return
         cloud_identity = instance
         outstanding_invites = (
             cloud_identity.user.user_billingaccountsharinginvite_set.select_related(
