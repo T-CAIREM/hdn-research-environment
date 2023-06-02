@@ -97,6 +97,7 @@ def research_environments(request):
     )
 
     context = {
+        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
         "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
         "workspace_creation_workflows": workspace_creation_workflows,
