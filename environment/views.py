@@ -67,7 +67,9 @@ def research_environments(request):
         environment_project_workflow_future = executor.submit(
             services.get_environments_with_projects, request.user
         )
-        workspace_creation_workflows_future = executor.submit(services.get_workspace_creation_workflows, request.user)
+        workspace_creation_workflows_future = executor.submit(
+            services.get_workspace_creation_workflows, request.user
+        )
 
     workspaces_list = workspaces_list_future.result()
     environment_project_workflow_triplets = environment_project_workflow_future.result()
