@@ -77,8 +77,8 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="revoke_access">
                                         <input type="hidden" name="share_id" value="{{ share.id }}">
-                                        <button class="btn btn-sm btn-danger" type="submit">
-                                            Revoke
+                                        <button class="btn btn-sm btn-secondary" type="submit">
+                                            Cancel
                                         </button>
                                     </form>
                                 </div>
@@ -114,9 +114,14 @@
                                     {{ share.user_contact_email }}
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="" class="btn btn-sm btn-danger disabled">
-                                        Revoke
-                                    </a>
+                                    <form action="{% url 'manage_billing_account' billing_account_id=billing_account_id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="revoke_access">
+                                        <input type="hidden" name="share_id" value="{{ share.id }}">
+                                        <button class="btn btn-sm btn-danger" type="submit">
+                                            Revoke
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </li>
