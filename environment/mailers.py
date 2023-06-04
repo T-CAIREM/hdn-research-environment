@@ -1,26 +1,54 @@
+from typing import Iterable
+
+from django.apps import apps
+from django.db.models import Model
 from django.conf import settings
 from django.urls import reverse
+from django.template import loader
 from django.core.mail import send_mail
-from django.contrib.sites.shortcuts import get_current_site
 
 from environment.models import BillingAccountSharingInvite
 
 
-def url_domain(request):
-    site = get_current_site(request)
-    return f"https://{site.domain}"
+PublishedProject = apps.get_model("project", "PublishedProject")
+
+User = Model
 
 
-def send_billing_sharing_confirmation(request, invite: BillingAccountSharingInvite):
+def send_billing_sharing_confirmation(
+    site_domain: str, invite: BillingAccountSharingInvite
+):
     confirmation_path = (
         reverse("confirm_billing_account_sharing") + f"?token={invite.token}"
     )
-    confirmation_url = f"{url_domain(request)}{confirmation_path}"
+    subject = f"{settings.SITE_NAME} Billing Account Shared"
+    email_context = {
+        "site_name": settings.SITE_NAME,
+        "signature": settings.EMAIL_SIGNATURE,
+        "confirmation_url": f"https://{site_domain}{confirmation_path}",
+    }
+    body = loader.render_to_string(
+        "environment/email/billing_sharing_confirmation.html", email_context
+    )
 
     return send_mail(
-        "Billing Account Shared",
-        f"Visit: {confirmation_url}",
+        subject,
+        body,
         settings.DEFAULT_FROM_EMAIL,
         [invite.user_contact_email],
         fail_silently=False,
+    )
+
+
+def send_environment_access_expired(user: User, projects: Iterable[PublishedProject]):
+    subject = f"{settings.SITE_NAME} Environment Access Expired"
+    email_context = {
+        "signature": settings.EMAIL_SIGNATURE,
+        "projects": projects,
+    }
+    body = loader.render_to_string(
+        "environment/email/environment_access_expired.html", email_context
+    )
+    send_mail(
+        subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False
     )

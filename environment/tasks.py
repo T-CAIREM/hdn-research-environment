@@ -11,9 +11,9 @@ from environment.services import (
     get_environment_project_pairs_with_expired_access,
     stop_running_environment,
     delete_environment,
-    send_environment_access_expired_email,
     share_billing_account,
 )
+from environment.mailers import send_environment_access_expired
 from environment.models import BillingAccountSharingInvite
 
 
@@ -55,7 +55,7 @@ def stop_environments_with_expired_access(user_id: int):
             stop_running_environment(
                 user, environment.id, environment.region, environment.workspace_name
             )
-    send_environment_access_expired_email(user, projects)
+    send_environment_access_expired(user, projects)
     if len(environments) > 0:
         environment_ids = [environment.id for environment in environments]
         terminate_environments_if_access_still_expired(

@@ -1,0 +1,10 @@
+{% load i18n %}{% autoescape off %}{% filter wordwrap:70 %}
+
+A {{ site_name }} billing account was shared with you.
+
+Visit <a href="{{ confirmation_url }}">{{ site_name }}</a> to view the request.
+
+{{ signature }}
+
+{% endfilter %}{% endautoescape %}
+

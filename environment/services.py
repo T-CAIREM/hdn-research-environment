@@ -2,9 +2,7 @@ from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
 
 from django.db.models import Model
-from django.core.mail import send_mail
-from django.template import loader
-from django.conf import settings
+from django.contrib.sites.shortcuts import get_current_site
 from django.apps import apps
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
@@ -118,7 +116,8 @@ def invite_user_to_shared_billing_account(
         billing_account_id=billing_account_id,
         user_contact_email=user_email,
     )
-    mailers.send_billing_sharing_confirmation(request=request, invite=invite)
+    site_domain = get_current_site(request).domain
+    mailers.send_billing_sharing_confirmation(site_domain=site_domain, invite=invite)
     return invite
 
 
@@ -516,22 +515,6 @@ def delete_environment(
     )
 
     return response.json()
-
-
-def send_environment_access_expired_email(
-    user: User, projects: Iterable[PublishedProject]
-):
-    subject = f"{settings.SITE_NAME} Environment Access Expired"
-    email_context = {
-        "signature": settings.EMAIL_SIGNATURE,
-        "projects": projects,
-    }
-    body = loader.render_to_string(
-        "environment/email/environment_access_expired.html", email_context
-    )
-    send_mail(
-        subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False
-    )
 
 
 def persist_workflow(
