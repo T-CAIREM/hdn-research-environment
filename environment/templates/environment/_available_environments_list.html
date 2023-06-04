@@ -2,12 +2,20 @@
 
 {% if recent_workflow %}
     {% if recent_workflow_failed %}
-        <div class="alert alert-danger" role="alert">
-            {{ recent_workflow.get_type_display }} {{ recent_workflow.project }} failed! Try again later.
+    <div class="alert alert-danger" role="alert">
+            {{ recent_workflow.get_type_display }}
+            {% if recent_workflow.project %}
+                {{ recent_workflow.project }}
+            {% endif %}
+            failed! Try again later.
         </div>
     {% elif recent_workflow_succeeded %}
         <div class="alert alert-success" role="alert">
-            {{ recent_workflow.get_type_display }} {{ recent_workflow.project }} finished!
+            {{ recent_workflow.get_type_display }}
+            {% if recent_workflow.project %}
+                {{ recent_workflow.project }}
+            {% endif %}
+            finished!
         </div>
     {% endif %}
 {% endif %}
