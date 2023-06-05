@@ -33,6 +33,8 @@
                         <a href="{% url 'manage_billing_account' billing_account_id=billing_account.id %}" class="btn btn-sm btn-primary">
                             Manage
                         </a>
+                    {% else %}
+                        Shared
                     {% endif %}
                     </div>
                 </div>
