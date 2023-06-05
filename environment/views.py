@@ -237,11 +237,10 @@ def create_research_environment(request, project_slug, project_version):
     else:
         form = CreateResearchEnvironmentForm(workspace_list=workspaces_list)
 
-    exceeded_quotas = services.exceeded_quotas(request.user)
     context = {
         "form": form,
         "project": project,
-        "exceeded_quotas": exceeded_quotas,
+        "exceeded_quotas": [],
         "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
