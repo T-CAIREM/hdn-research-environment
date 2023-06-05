@@ -26,7 +26,7 @@ from environment.entities import Region, InstanceType
 from environment.utilities import (
     user_has_cloud_identity,
 )
-from environment.models import Workflow
+from environment.models import Workflow, BillingAccountSharingInvite
 
 
 @require_http_methods(["GET", "POST"])
@@ -299,7 +299,13 @@ def confirm_billing_account_sharing(request):
     else:
         token = request.GET.get("token")
         if token:
-            return render(request, "environment/manage_shared_billing_invitation.html", {"token": token})
+            invite = BillingAccountSharingInvite.objects.get(
+                token=token, is_revoked=False
+            )
+            context = {"token": token, "invitation_owner": invite.owner}
+            return render(
+                request, "environment/manage_shared_billing_invitation.html", context
+            )
 
     return redirect("research_environments")
 
