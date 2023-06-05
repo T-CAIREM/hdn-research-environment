@@ -34,11 +34,9 @@ class CreateWorkspaceForm(forms.Form):
 
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
-        billing_account_ids = [
-            billing_account["id"] for billing_account in billing_accounts_list
-        ]
         self.fields["billing_account_id"].choices = [
-            (billing_id, billing_id) for billing_id in billing_account_ids
+            (billing_account["id"], billing_account["name"])
+            for billing_account in billing_accounts_list
         ]
 
 
