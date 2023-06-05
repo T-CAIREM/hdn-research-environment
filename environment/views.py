@@ -290,12 +290,16 @@ def manage_billing_account(request, billing_account_id):
     return render(request, "environment/manage_billing_account.html", context)
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 @login_required
 def confirm_billing_account_sharing(request):
-    token = request.GET.get("token")
-    if token:
+    if request.method == "POST":
+        token = request.POST["token"]
         services.consume_billing_account_sharing_token(user=request.user, token=token)
+    else:
+        token = request.GET.get("token")
+        if token:
+            return render(request, "environment/manage_shared_billing_invitation.html", {"token": token})
 
     return redirect("research_environments")
 
