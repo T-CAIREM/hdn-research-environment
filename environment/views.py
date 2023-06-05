@@ -299,7 +299,7 @@ def confirm_billing_account_sharing(request):
     else:
         token = request.GET.get("token")
         if token:
-            invite = BillingAccountSharingInvite.objects.get(
+            invite = BillingAccountSharingInvite.objects.select_related("owner").get(
                 token=token, is_revoked=False
             )
             context = {"token": token, "invitation_owner": invite.owner}
