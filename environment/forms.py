@@ -3,6 +3,7 @@ from typing import Iterable
 from django import forms
 
 from environment.entities import ResearchWorkspace
+from environment.constants import WORKBENCH_SPECIFICATION
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -43,10 +44,10 @@ class CreateWorkspaceForm(forms.Form):
 
 class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_INSTANCE_TYPES = [
-        ("n1-standard-2", "2 CPU, 7.5GB RAM"),
-        ("n1-standard-4", "4 CPU, 15GB RAM"),
-        ("n1-standard-8", "8 CPU, 30GB RAM"),
-        ("n1-standard-16", "16 CPU, 60GB RAM"),
+        ("n1-standard-2", WORKBENCH_SPECIFICATION.N1_STANDARD_2),
+        ("n1-standard-4", WORKBENCH_SPECIFICATION.N1_STANDARD_4),
+        ("n1-standard-8", WORKBENCH_SPECIFICATION.N1_STANDARD_8),
+        ("n1-standard-16", WORKBENCH_SPECIFICATION.N1_STANDARD_16),
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
