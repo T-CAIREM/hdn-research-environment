@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Accept invitation to shared billing Account{% endblock %}
+
+{% block content %}
+<div class="card w-50 mt-3 ml-3" >
+  <div class="card-header">
+    You have been invited to use {{ invitation_owner.username }}'s billing account.
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="token" value="{{ token }}" />
+      <button class="btn btn-primary mt-3" type="submit">Accept Invitation</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
