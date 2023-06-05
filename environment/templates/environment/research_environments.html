@@ -104,7 +104,7 @@
 
         let data = request_data;
         if (button_type === "update") {
-            const instance = $("#form-select option:selected").text();
+            const instance = $("#form-select option:selected").val();
             if (instance === "") return;
 
             data = JSON.parse(data);
