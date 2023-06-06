@@ -24,21 +24,18 @@ def send_billing_sharing_confirmation(
     )
     subject = f"{settings.SITE_NAME} Billing Account Shared"
     email_context = {
-        "site_name": settings.SITE_NAME,
         "signature": settings.EMAIL_SIGNATURE,
         "confirmation_url": f"https://{site_domain}{confirmation_path}",
     }
-    html_body = loader.render_to_string(
+    body = loader.render_to_string(
         "environment/email/billing_sharing_confirmation.html", email_context
     )
-    text_body = strip_tags(html_body)
     return send_mail(
         subject,
-        text_body,
+        body,
         settings.DEFAULT_FROM_EMAIL,
         [invite.user_contact_email],
         fail_silently=False,
-        html_message=html_body,
     )
 
 
