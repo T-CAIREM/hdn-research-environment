@@ -6,6 +6,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.template import loader
 from django.core.mail import send_mail
+from django.utils.html import strip_tags
 
 from environment.models import BillingAccountSharingInvite
 
@@ -27,16 +28,17 @@ def send_billing_sharing_confirmation(
         "signature": settings.EMAIL_SIGNATURE,
         "confirmation_url": f"https://{site_domain}{confirmation_path}",
     }
-    body = loader.render_to_string(
+    html_body = loader.render_to_string(
         "environment/email/billing_sharing_confirmation.html", email_context
     )
-
+    text_body = strip_tags(html_body)
     return send_mail(
         subject,
-        body,
+        text_body,
         settings.DEFAULT_FROM_EMAIL,
         [invite.user_contact_email],
         fail_silently=False,
+        html_message=html_body,
     )
 
 
