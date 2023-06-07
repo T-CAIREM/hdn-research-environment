@@ -94,7 +94,9 @@ def research_environments(request):
 
     sorted_environments_project_workflow_triplets_dict = (
         services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating, workspaces_list
+            environment_projects_pairs_with_creating,
+            workspaces_list,
+            billing_accounts_list,
         )
     )
 
