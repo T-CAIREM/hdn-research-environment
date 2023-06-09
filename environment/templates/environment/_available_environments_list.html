@@ -47,15 +47,20 @@
     {% for workspace, environments_project_workflow_triplets in workspace_project_environment_workflow_triplets_dict.items %}
         {% with collapse="collapse-"|add:workspace.gcp_project_id heading="heading-"|add:workspace.gcp_project_id %}
             <div class="card">
-                <div class="card-header d-flex justify-content-between" id="{{ heading }}">
-                    <button class="btn btn-link" data-toggle="collapse" data-target="#{{ collapse }}" aria-expanded="true" aria-controls="{{ collapse }}">
+                <div class="card-header py-3" id="{{ heading }}">
+                    <div data-toggle="collapse" data-target="#{{ collapse }}" aria-expanded="true" aria-controls="{{ collapse }}">
                         <h6 class="mb-0">
                             {{ workspace.gcp_project_id }}
                         </h6>
-                    </button>
-                    <h6 class="mb-0" style="padding-top: 0.375rem;">
-                        Billing Account: {{ workspace.billing_name }}
-                    </h6>
+                        <small>
+                            <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
+                                Billing Account:
+                            </span>
+                            <span class="d-inline font-weight-normal">
+                                {{ workspace.billing_name }}
+                            </span>
+                        </small>
+                    </div>
                 </div>
 
                 <div id="{{ collapse }}" class="collapse show" aria-labelledby="{{ heading }}" data-parent="#accordion">
