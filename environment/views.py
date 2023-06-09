@@ -261,7 +261,7 @@ def create_research_environment(request, project_slug, project_version):
 @cloud_identity_required
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
-    #TODO: Check whether the user is the billing account's owner
+    # TODO: Check whether the user is the billing account's owner
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
 
@@ -305,18 +305,22 @@ def confirm_billing_account_sharing(request):
     if request.method == "POST":
         token = request.POST["token"]
         services.consume_billing_account_sharing_token(user=request.user, token=token)
-    else:
-        token = request.GET.get("token")
-        if token:
-            invite = BillingAccountSharingInvite.objects.select_related("owner").get(
-                token=token, is_revoked=False
-            )
-            context = {"token": token, "invitation_owner": invite.owner}
-            return render(
-                request, "environment/manage_shared_billing_invitation.html", context
-            )
+        messages.info(
+            request,
+            "You accepted the billing invitation! The account will be accessible in a few moments.",
+        )
+        return redirect("research_environments")
 
-    return redirect("research_environments")
+    token = request.GET.get("token")
+    if not token:
+        messages.error(request, "The invitation is either invalid or expired.")
+        return redirect("research_environments")
+
+    invite = BillingAccountSharingInvite.objects.select_related("owner").get(
+        token=token, is_revoked=False
+    )
+    context = {"token": token, "invitation_owner": invite.owner}
+    return render(request, "environment/manage_shared_billing_invitation.html", context)
 
 
 @require_PATCH
