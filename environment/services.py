@@ -382,9 +382,17 @@ def sort_environments_per_workspace(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
-) -> Dict[str, Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
+    billing_accounts_list: Iterable,
+) -> Dict[
+    constants.WorkspaceBillingInfo,
+    Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]],
+]:
+    billing_id_mapping = match_workspace_with_billing_id(
+        workspaces, billing_accounts_list
+    )
     sorted_environments_project_workflow_triplets = defaultdict(
-        list, {workspace.gcp_project_id: [] for workspace in workspaces}
+        list,
+        {workspace.gcp_project_id: [] for workspace in workspaces},
     )
     for environment, project, workflows in environment_project_workflow_triplets:
         if environment:
@@ -395,7 +403,27 @@ def sort_environments_per_workspace(
             sorted_environments_project_workflow_triplets[
                 workflows.last().workspace_name
             ].append((environment, project, workflows))
-    return dict(sorted_environments_project_workflow_triplets)
+
+    sorted_environments_project_workflow_triplets_with_billing_info = {
+        constants.WorkspaceBillingInfo(
+            workspace.gcp_project_id,
+            billing_id_mapping[workspace.gcp_billing_id],
+        ): sorted_environments_project_workflow_triplets[workspace.gcp_project_id]
+        for workspace in workspaces
+    }
+    return sorted_environments_project_workflow_triplets_with_billing_info
+
+
+def match_workspace_with_billing_id(
+    workspaces: Iterable[ResearchWorkspace], billing_accounts_list: Iterable
+):
+    billing_id_mapping = {
+        entry.gcp_billing_id: entry.gcp_billing_id for entry in workspaces
+    }
+    for billing_account in billing_accounts_list:
+        if billing_account["id"] in billing_id_mapping:
+            billing_id_mapping[billing_account["id"]] = billing_account["name"]
+    return billing_id_mapping
 
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:

@@ -11,6 +11,10 @@ MAX_CPU_USAGE = 32
 
 PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
 
+WorkspaceBillingInfo = namedtuple(
+    "WorkspaceBillingInfo", ["gcp_project_id", "billing_name"]
+)
+
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
