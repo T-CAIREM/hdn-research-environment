@@ -7,6 +7,7 @@
 {% block title %}Create Research Environment{% endblock %}
 
 {% block local_js_top %}
+<script src="{% static 'environment/js/forms.js' %}"></script>
 {% endblock %}
 
 {% block local_css %}
@@ -23,10 +24,13 @@
     <div class="container-body">
       <div class="card" style="width: 36rem;">
         <div class="card-body">
-          <form action="{% url 'create_workspace' %}" method="post" style="width: 24rem;">
+          <form class="single-submit-form" action="{% url 'create_workspace' %}" method="post" style="width: 24rem;">
             {% csrf_token %}
             {{ form }}
-            <button class="btn btn-primary mt-3" type="submit">
+            <button
+              class="btn btn-primary mt-3"
+              type="submit"
+            >
                 Create workspace
             </button>
           </form>
