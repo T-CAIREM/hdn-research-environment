@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, Optional, Dict, NamedTuple
+from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
 
 from django.db.models import Model
@@ -384,7 +384,7 @@ def sort_environments_per_workspace(
     workspaces: Iterable[ResearchWorkspace],
     billing_accounts_list: Iterable,
 ) -> Dict[
-    NamedTuple,
+    constants.WorkspaceBillingInfo,
     Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]],
 ]:
     billing_id_mapping = match_workspace_with_billing_id(
