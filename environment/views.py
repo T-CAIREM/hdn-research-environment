@@ -126,9 +126,13 @@ def research_environments_partial(request):
         environment_project_workflow_future = executor.submit(
             services.get_environments_with_projects, request.user
         )
+        billing_accounts_list_future = executor.submit(
+            services.get_billing_accounts_list, request.user
+        )
 
     workspaces_list = workspaces_list_future.result()
     environment_project_workflow_triplets = environment_project_workflow_future.result()
+    billing_accounts_list = billing_accounts_list_future.result()
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -148,7 +152,9 @@ def research_environments_partial(request):
 
     sorted_environments_project_workflow_triplets_dict = (
         services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating, workspaces_list
+            environment_projects_pairs_with_creating,
+            workspaces_list,
+            billing_accounts_list,
         )
     )
 
