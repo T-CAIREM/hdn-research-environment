@@ -261,6 +261,7 @@ def create_research_environment(request, project_slug, project_version):
 @cloud_identity_required
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
+    #TODO: Check whether the user is the billing account's owner
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
 
