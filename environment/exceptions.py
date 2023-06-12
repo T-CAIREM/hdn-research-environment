@@ -96,3 +96,7 @@ class CreateSharedBucketDirectoryFailed(Exception):
 
 class DeleteSharedBucketContentFailed(Exception):
     pass
+
+
+class InvitedUserIsAccountOwner(Exception):
+    pass
