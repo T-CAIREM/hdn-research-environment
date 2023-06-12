@@ -124,7 +124,7 @@
 
 <script>
     function refreshEnvironmentsCard(executionId) {
-        fetchNewEnvironmentsCard(executionId)
+        fetchNewCard(executionId, "environments")
         .then(html => $("#environments").html(html));
     }
 

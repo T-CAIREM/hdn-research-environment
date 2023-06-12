@@ -180,6 +180,40 @@ def research_environments_partial(request):
     )
 
 
+@require_GET
+@login_required
+@cloud_identity_required
+def projects_partial(request):
+    environment_project_workflow_triplets = services.get_environments_with_projects(request.user)
+    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
+    available_project_environment_workflow_triplets = (
+        services.get_available_projects_with_environments(
+            request.user,
+            environments,
+        )
+    )
+
+    context = {
+        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets
+    }
+
+    execution_resource_name = request.GET.get("execution_resource_name")
+    if execution_resource_name:
+        workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
+        workflow_state_context = {
+            "recent_workflow": workflow,
+            "recent_workflow_failed": workflow.status == Workflow.FAILED,
+            "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
+        }
+        context = {**context, **workflow_state_context}
+
+    return render(
+        request,
+        "environment/_available_projects_list.html",
+        context,
+    )
+
+
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required

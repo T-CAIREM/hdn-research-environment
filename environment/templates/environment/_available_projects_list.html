@@ -36,3 +36,34 @@
         </li>
     {% endfor %}
 </ul>
+
+<script>
+    function refreshProjectsCard(executionId) {
+        fetchNewCard(executionId, "projects")
+        .then(html => $("#projects").html(html));
+    }
+
+    function pollProjectsExecutionStatus(executionId) {
+        const pollUrl = `{% url "check_execution_status" %}?execution_resource_name=${executionId}`;
+        fetch(pollUrl)
+        .then(response => response.json())
+        .then(({ finished }) => {
+            if (finished) {
+                refreshProjectsCard(executionId);
+            } else {
+                scheduleExecutionPolling(executionId);
+            }
+        });
+    }
+
+    function scheduleProjectsExecutionPolling(executionId, immediate=false) {
+        const timeout = immediate ? 0 : 10000;
+        setTimeout(() => pollProjectsExecutionStatus(executionId), timeout);
+    }
+
+    {% for environment, project, workflows in environment_project_workflow_triplets %}
+        {% for workflow in workflows %}
+            scheduleProjectsExecutionPolling("{{ workflow.execution_resource_name }}", true);
+        {% endfor %}
+    {% endfor %}
+</script>
