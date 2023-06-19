@@ -7,7 +7,7 @@
             {% if recent_workflow.project %}
                 {{ recent_workflow.project }}
             {% endif %}
-            failed! {{ workflow_finished_message }}
+            failed! {{ workflow_finished_message|default_if_none:"Try again later." }}
         </div>
     {% elif recent_workflow_succeeded %}
         <div class="alert alert-success" role="alert">
@@ -15,7 +15,7 @@
             {% if recent_workflow.project %}
                 {{ recent_workflow.project }}
             {% endif %}
-            finished! {{ workflow_finished_message }}
+            finished! {{ workflow_finished_message|default_if_none:"" }}
         </div>
     {% endif %}
 {% endif %}
