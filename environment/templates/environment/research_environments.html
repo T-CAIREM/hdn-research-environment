@@ -44,7 +44,10 @@
         }).then(response => response.json())
           .then(json => fetchNewCards())
           .then(html => {
-            $("#environment-tabs").html(html);
+            $(".modal").on("hidden.bs.modal", (e) => {
+              $("#environment-tabs").html(html);
+            });
+            $(".modal").modal("hide");
           })
       }
   })();

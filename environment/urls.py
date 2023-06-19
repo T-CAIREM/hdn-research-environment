@@ -52,9 +52,4 @@ urlpatterns = [
         name="check_execution_status",
     ),
     path("workspace/create", views.create_workspace, name="create_workspace"),
-    path(
-        "projects-card/",
-        views.projects_partial,
-        name="projects_partial",
-    ),
 ]
