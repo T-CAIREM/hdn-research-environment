@@ -1,52 +1,38 @@
-{% extends 'environment/base_environment_home.html' %}
-
-{% block local_js_top %}
-  {{ block.super }}
-
-  <script>
-    function fetchNewCards(executionId) {
-      const baseUrl = "{% url 'research_environments_partial' %}";
-      const fetchUrl = executionId ? `${baseUrl}?execution_resource_name=${executionId}` : baseUrl;
-      return fetch(fetchUrl).then(response => response.text())
-    }
-  </script>
-{% endblock%}
-
-{% block main_view %}
-  {% include "environment/_environment_tabs.html" %}
-{% endblock %}
-
-{% block local_js_bottom %}
-<script>
-  const sendRequest = (function() {
-    const csrfToken = getCookie("csrftoken");
-
-    return function(request_data, http_method, url, button_type) {
-        $(".inside-modal-button").prop("disabled", true);
-
-        let data = request_data;
-        if (button_type === "update") {
-            const instance = $("#form-select option:selected").val();
-            if (instance === "") return;
-
-            data = JSON.parse(data);
-            data["instance_type"] = instance;
-            data = JSON.stringify(data);
-        }
-        fetch(url, {
-            method: http_method,
-            body: data,
-            credentials: "same-origin",
-            headers: {
-                "X-CSRFToken": csrfToken,
-                "Content-Type": "application/json",
-            },
-        }).then(response => response.json())
-          .then(json => fetchNewCards())
-          .then(html => {
-            $("#environment-tabs").html(html);
-          })
-      }
-  })();
-</script>
-{% endblock %}
+<ul class="list-group list-group-flush">
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-md-8">
+                <strong>
+                    Project
+                </strong>
+            </div>
+            <div class="col-md-4">
+                <strong>
+                    Actions
+                </strong>
+            </div>
+        </div>
+    </li>
+    {% for project, environment, workflows in available_project_environment_workflow_triplets %}
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-md-8">
+                    <a href="{% url 'published_project' project.slug project.version %}" target="_blank">
+                        {{ project }}
+                    </a>
+                </div>
+                <div class="col-md-4">
+                {% if environment is None and not workflows.exists %}
+                    <a class="btn btn-sm btn-primary" href="{% url 'create_research_environment' project_slug=project.slug project_version=project.version %}">
+                        Launch Research Environment
+                    </a>
+                {% else %}
+                    <button class="btn btn-sm btn-secondary disabled">
+                        Environment Already Running
+                    </button>
+                {% endif %}
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+</ul>
