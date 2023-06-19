@@ -1,0 +1,114 @@
+<div class="card" id="environment-tabs">
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a
+          class="nav-link active"
+          id="environments-tab"
+          data-toggle="tab"
+          href="#environments"
+          role="tab"
+          aria-controls="environments"
+          aria-selected="true"
+        >
+          Running Environments
+          <span class="badge badge-pill badge-primary">
+            {{ environment_project_workflow_triplets|length }}
+          </span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          id="projects-tab"
+          data-toggle="tab"
+          href="#projects"
+          role="tab"
+          aria-controls="projects"
+          aria-selected="false"
+        >
+          Available Projects
+          <span class="badge badge-pill badge-secondary">
+            {{ available_project_environment_workflow_triplets|length }}
+          </span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          id="billing-accounts-tab"
+          data-toggle="tab"
+          href="#billing_accounts"
+          role="tab"
+          aria-controls="billing_accounts"
+          aria-selected="false"
+        >
+          Billing
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div class="tab-content">
+      <div
+        class="tab-pane fade show active"
+        id="environments"
+        role="tabpanel"
+        aria-labelledby="environments-tab"
+      >
+        {% include "environment/_available_environments_list.html" %}
+      </div>
+      <div
+        class="tab-pane fade"
+        id="projects"
+        role="tabpanel"
+        aria-labelledby="projects-tab"
+      >
+        {% include "environment/_available_projects_list.html" %}
+      </div>
+      <div
+        class="tab-pane fade"
+        id="billing_accounts"
+        role="tabpanel"
+        aria-labelledby="billing-accounts-tab"
+      >
+        {% include "environment/_billing_accounts_list.html" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    function refreshCards(executionId) {
+        fetchNewCards(executionId)
+        .then(html => $("#environment-tabs").html(html));
+    }
+
+    function pollExecutionStatus(executionId) {
+        const pollUrl = `{% url "check_execution_status" %}?execution_resource_name=${executionId}`;
+        fetch(pollUrl)
+        .then(response => response.json())
+        .then(({ finished }) => {
+            if (finished) {
+                refreshCards(executionId);
+            } else {
+                scheduleExecutionPolling(executionId);
+            }
+        });
+    }
+
+    function scheduleExecutionPolling(executionId, immediate=false) {
+        const timeout = immediate ? 0 : 30000;
+        setTimeout(() => pollExecutionStatus(executionId), timeout);
+    }
+
+    {% for environment, project, workflows in environment_project_workflow_triplets %}
+        {% for workflow in workflows %}
+            scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
+        {% endfor %}
+    {% endfor %}
+
+    {% for workflow in workspace_creation_workflows %}
+        scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
+    {% endfor %}
+</script>

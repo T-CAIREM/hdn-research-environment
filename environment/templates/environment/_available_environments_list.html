@@ -121,38 +121,3 @@
         {% endwith %}
     {% endfor %}
 </div>
-
-<script>
-    function refreshEnvironmentsCard(executionId) {
-        fetchNewCard(executionId, "environments")
-        .then(html => $("#environments").html(html));
-    }
-
-    function pollExecutionStatus(executionId) {
-        const pollUrl = `{% url "check_execution_status" %}?execution_resource_name=${executionId}`;
-        fetch(pollUrl)
-        .then(response => response.json())
-        .then(({ finished }) => {
-            if (finished) {
-                refreshEnvironmentsCard(executionId);
-            } else {
-                scheduleExecutionPolling(executionId);
-            }
-        });
-    }
-
-    function scheduleExecutionPolling(executionId, immediate=false) {
-        const timeout = immediate ? 0 : 30000;
-        setTimeout(() => pollExecutionStatus(executionId), timeout);
-    }
-
-    {% for environment, project, workflows in environment_project_workflow_triplets %}
-        {% for workflow in workflows %}
-            scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
-        {% endfor %}
-    {% endfor %}
-
-    {% for workflow in workspace_creation_workflows %}
-        scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
-    {% endfor %}
-</script>
