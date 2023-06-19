@@ -121,9 +121,13 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
+        workspace_creation_workflows_future = executor.submit(
+            services.get_workspace_creation_workflows, request.user
+        )
 
     workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
+    workspace_creation_workflows = workspace_creation_workflows_future.result()
 
     environment_project_workflow_triplets = services.get_environments_with_projects(user=request.user)
 
@@ -152,8 +156,11 @@ def research_environments_partial(request):
     )
 
     context = {
-        "environment_project_workflow_triplets": environment_project_workflow_triplets,
+        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
+        "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
         "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
+        "workspace_creation_workflows": workspace_creation_workflows,
+        "billing_accounts_list": billing_accounts_list,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -168,7 +175,7 @@ def research_environments_partial(request):
 
     return render(
         request,
-        "environment/_available_environments_list.html",
+        "environment/_environment_tabs.html",
         context,
     )
 
