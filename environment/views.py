@@ -170,6 +170,7 @@ def research_environments_partial(request):
             "recent_workflow": workflow,
             "recent_workflow_failed": workflow.status == Workflow.FAILED,
             "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
+            "workflow_finished_message": services.workflow_finished_message(workflow=workflow)
         }
         context = {**context, **workflow_state_context}
 

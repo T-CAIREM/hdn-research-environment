@@ -596,3 +596,15 @@ def exceeded_quotas(user) -> Iterable[str]:
         )
 
     return quotas_exceeded
+
+
+def workflow_finished_message(workflow: Workflow) -> Optional[str]:
+    if workflow.status == Workflow.SUCCESS:
+        return None
+
+    workflow_type_failure_messages = {
+        Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
+        Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
+    }
+
+    return workflow_type_failure_messages.get(workflow.type)
