@@ -249,7 +249,6 @@ def create_research_environment(request, project_slug, project_version):
     context = {
         "form": form,
         "project": project,
-        "exceeded_quotas": [],
         "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
