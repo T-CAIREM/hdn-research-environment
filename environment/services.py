@@ -102,6 +102,18 @@ def get_billing_accounts_list(user: User):
     return response.json()
 
 
+def is_billing_account_owner(user: User, billing_account_id: str):
+    billing_account_list = get_billing_accounts_list(user)
+    for billing_account in billing_account_list:
+        if (
+            billing_account["id"] == billing_account_id
+            and billing_account["is_owner"] is True
+        ):
+            return True
+
+    return False
+
+
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
     return owner.owner_billingaccountsharinginvite_set.filter(
         billing_account_id=billing_account_id, is_revoked=False

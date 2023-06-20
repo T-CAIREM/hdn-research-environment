@@ -261,7 +261,14 @@ def create_research_environment(request, project_slug, project_version):
 @cloud_identity_required
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
-    # TODO: Check whether the user is the billing account's owner
+    if not services.is_billing_account_owner(request.user, billing_account_id):
+        messages.error(
+            request,
+            f"It seems that billing_account: "
+            f"{billing_account_id} does not belong to you. If you want to access it contact the owner.",
+        )
+        return redirect("research_environments")
+
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
 
