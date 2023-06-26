@@ -1,7 +1,7 @@
 from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
 
-from django.db.models import Model
+from django.db.models import Model, Q
 from django.contrib.sites.shortcuts import get_current_site
 from django.apps import apps
 from google.cloud.workflows import executions_v1beta
@@ -26,6 +26,7 @@ from environment.exceptions import (
     GetBillingAccountsListFailed,
     GetWorkspacesListFailed,
     CreateWorkspaceFailed,
+    DeleteWorkspaceFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
@@ -179,11 +180,30 @@ def create_workspace(user: User, billing_account_id: str, region: str):
     if not response.ok:
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
+
     execution_resource_name = response.json()["execution-name"]
     persist_workflow(
         user=user,
         execution_resource_name=execution_resource_name,
         type=Workflow.WORKSPACE_CREATE,
+    )
+
+
+def delete_workspace(user: User, gcp_project_id: str):
+    response = api_v2.delete_workspace(
+        email=user.cloud_identity.email,
+        gcp_project_id=gcp_project_id,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        raise DeleteWorkspaceFailed(error_message)
+
+    execution_resource_name = response.json()["execution-name"]
+    persist_workflow(
+        user=user,
+        execution_resource_name=execution_resource_name,
+        type=Workflow.WORKSPACE_DESTROY,
+        workspace_name=gcp_project_id,
     )
 
 
@@ -360,9 +380,10 @@ def get_projects_with_environment_being_created(
     ]
 
 
-def get_workspace_creation_workflows(user: User) -> Iterable[Workflow]:
+def get_workspace_workflows(user: User) -> Iterable[Workflow]:
     return Workflow.objects.filter(
-        user=user, type=Workflow.WORKSPACE_CREATE, status=Workflow.INPROGRESS
+        (Q(type=Workflow.WORKSPACE_CREATE) | Q(type=Workflow.WORKSPACE_DESTROY))
+        & Q(user=user, status=Workflow.INPROGRESS)
     )
 
 

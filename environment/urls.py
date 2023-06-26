@@ -52,4 +52,5 @@ urlpatterns = [
         name="check_execution_status",
     ),
     path("workspace/create", views.create_workspace, name="create_workspace"),
+    path("workspace/delete", views.delete_workspace, name="delete_workspace"),
 ]

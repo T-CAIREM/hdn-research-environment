@@ -62,3 +62,8 @@ def create_workspace(email: str, billing_account_id: str, region: str) -> Reques
         "region": region,
     }
     return Request("POST", url="/workspace/create", json=json)
+
+
+@api_request
+def delete_workspace(email: str, gcp_project_id: str) -> Request:
+    return Request("DELETE", url=f"/workspace/{email}/{gcp_project_id}")

@@ -68,8 +68,10 @@ def research_environments(request):
     workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(user=request.user)
-    workspace_creation_workflows = services.get_workspace_creation_workflows(user=request.user)
+    environment_project_workflow_triplets = services.get_environments_with_projects(
+        user=request.user
+    )
+    workspace_workflows = services.get_workspace_workflows(user=request.user)
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -95,11 +97,22 @@ def research_environments(request):
         )
     )
 
+    inprogress_workspaces = [
+        workflow.workspace_name
+        for workflow in workspace_workflows
+        if workflow.workspace_name
+    ]
+    triplets_without_inprogress_workspaces = {
+        workspace: workbenches
+        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
+        if workspace.gcp_project_id not in inprogress_workspaces
+    }
+
     context = {
         "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
-        "workspace_creation_workflows": workspace_creation_workflows,
+        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
+        "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
     }
 
@@ -121,15 +134,17 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
-        workspace_creation_workflows_future = executor.submit(
-            services.get_workspace_creation_workflows, request.user
+        workspace_workflows_future = executor.submit(
+            services.get_workspace_workflows, request.user
         )
 
     workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
-    workspace_creation_workflows = workspace_creation_workflows_future.result()
+    workspace_workflows = workspace_workflows_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(user=request.user)
+    environment_project_workflow_triplets = services.get_environments_with_projects(
+        user=request.user
+    )
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -155,11 +170,22 @@ def research_environments_partial(request):
         )
     )
 
+    inprogress_workspaces = [
+        workflow.workspace_name
+        for workflow in workspace_workflows
+        if workflow.workspace_name
+    ]
+    triplets_without_inprogress_workspaces = {
+        workspace: workbenches
+        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
+        if workspace.gcp_project_id not in inprogress_workspaces
+    }
+
     context = {
         "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
         "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
-        "workspace_creation_workflows": workspace_creation_workflows,
+        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
+        "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
     }
 
@@ -170,7 +196,9 @@ def research_environments_partial(request):
             "recent_workflow": workflow,
             "recent_workflow_failed": workflow.status == Workflow.FAILED,
             "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
-            "workflow_finished_message": services.workflow_finished_message(workflow=workflow)
+            "workflow_finished_message": services.workflow_finished_message(
+                workflow=workflow
+            ),
         }
         context = {**context, **workflow_state_context}
 
@@ -380,6 +408,18 @@ def delete_environment(request):
         project_id=data["project_id"],
         workbench_id=data["workbench_id"],
         region=Region(data["region"]),
+        gcp_project_id=data["gcp_project_id"],
+    )
+    return JsonResponse({})
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_workspace(request):
+    data = json.loads(request.body)
+    services.delete_workspace(
+        user=request.user,
         gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
