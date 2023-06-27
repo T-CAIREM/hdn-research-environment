@@ -68,8 +68,12 @@ def research_environments(request):
     workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(user=request.user)
-    workspace_creation_workflows = services.get_workspace_creation_workflows(user=request.user)
+    environment_project_workflow_triplets = services.get_environments_with_projects(
+        user=request.user
+    )
+    workspace_creation_workflows = services.get_workspace_creation_workflows(
+        user=request.user
+    )
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -101,6 +105,7 @@ def research_environments(request):
         "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
         "workspace_creation_workflows": workspace_creation_workflows,
         "billing_accounts_list": billing_accounts_list,
+        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
     }
 
     return render(
@@ -129,7 +134,9 @@ def research_environments_partial(request):
     billing_accounts_list = billing_accounts_list_future.result()
     workspace_creation_workflows = workspace_creation_workflows_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(user=request.user)
+    environment_project_workflow_triplets = services.get_environments_with_projects(
+        user=request.user
+    )
 
     environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
     available_project_environment_workflow_triplets = (
@@ -161,6 +168,7 @@ def research_environments_partial(request):
         "workspace_project_environment_workflow_triplets_dict": sorted_environments_project_workflow_triplets_dict,
         "workspace_creation_workflows": workspace_creation_workflows,
         "billing_accounts_list": billing_accounts_list,
+        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -170,7 +178,9 @@ def research_environments_partial(request):
             "recent_workflow": workflow,
             "recent_workflow_failed": workflow.status == Workflow.FAILED,
             "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
-            "workflow_finished_message": services.workflow_finished_message(workflow=workflow)
+            "workflow_finished_message": services.workflow_finished_message(
+                workflow=workflow
+            ),
         }
         context = {**context, **workflow_state_context}
 
