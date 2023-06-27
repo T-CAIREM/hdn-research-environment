@@ -399,9 +399,9 @@ def delete_environment(request):
 @cloud_identity_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
-    execution_state = services.get_execution_state(
+    execution_state = services.get_execution(
         execution_resource_name=execution_resource_name
-    )
+    ).state
     finished = execution_state != Execution.State.ACTIVE
     if finished:
         services.mark_workflow_as_finished(

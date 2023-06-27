@@ -6,6 +6,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.apps import apps
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
+import json
 
 import environment.constants as constants
 import environment.mailers as mailers
@@ -562,10 +563,16 @@ def persist_workflow(
     )
 
 
-def get_execution_state(execution_resource_name) -> executions.Execution.State:
+def get_execution(execution_resource_name) -> executions.Execution.State:
     client = executions_v1beta.ExecutionsClient()
     execution = client.get_execution(request={"name": execution_resource_name})
-    return execution.state
+    return execution
+
+
+def get_execution_failure_info(execution: executions.Execution) -> str:
+    if execution.state == executions.Execution.State.FAILED:
+        error_payload = json.loads(execution.error.payload)
+        return error_payload["body"]["failure_info"]
 
 
 def mark_workflow_as_finished(
@@ -602,9 +609,12 @@ def workflow_finished_message(workflow: Workflow) -> Optional[str]:
     if workflow.status == Workflow.SUCCESS:
         return None
 
+    execution = get_execution(workflow.execution_resource_name)
+    failure_info = get_execution_failure_info(execution)
+
     workflow_type_failure_messages = {
         Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
-        Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
+        Workflow.CREATE: failure_info,
     }
 
     return workflow_type_failure_messages.get(workflow.type)
