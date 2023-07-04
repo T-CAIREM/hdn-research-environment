@@ -196,6 +196,12 @@ def research_environments_partial(request):
 @cloud_identity_required
 def create_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
+    if not billing_accounts_list:
+        messages.info(
+            request,
+            "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
+        )
+        return redirect("research_environments")
 
     if request.method == "POST":
         form = CreateWorkspaceForm(
@@ -224,6 +230,13 @@ def create_workspace(request):
 @cloud_identity_required
 def create_research_environment(request, project_slug, project_version):
     workspaces_list = services.get_workspaces_list(request.user)
+    if not workspaces_list:
+        messages.info(
+            request,
+            "You have to have at least one workspace in order to create a research environment. You can create one using the form below.",
+        )
+        return redirect("create_workspace")
+
     project = services.get_available_projects(request.user).get(
         slug=project_slug, version=project_version
     )
