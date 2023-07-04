@@ -189,7 +189,7 @@ def create_workspace(request):
     if not billing_accounts_list:
         messages.info(
             request,
-            "Cannot create workspace without billing account. Create billing account first or get permissions to shared one",
+            "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
         )
         return redirect("research_environments")
 
@@ -223,7 +223,7 @@ def create_research_environment(request, project_slug, project_version):
     if not workspaces_list:
         messages.info(
             request,
-            "Before creating Research Environment create Workspace. Redirected to workspace creation",
+            "You have to have at least one workspace in order to create a research environment. You can create one using the form below.",
         )
         return redirect("create_workspace")
 
