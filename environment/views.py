@@ -2,7 +2,7 @@ import json
 import concurrent
 
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -262,12 +262,7 @@ def create_research_environment(request, project_slug, project_version):
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
     if not services.is_billing_account_owner(request.user, billing_account_id):
-        messages.error(
-            request,
-            f"It seems that billing_account: "
-            f"{billing_account_id} does not belong to you. If you want to access it contact the owner.",
-        )
-        return redirect("research_environments")
+        raise Http404()
 
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
