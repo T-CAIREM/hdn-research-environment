@@ -83,7 +83,7 @@
                                     <div class="col-md-3">
                                         <small>
                                             <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
-                                            <i>Instance type:</i> {{ environment.instance_type.value }}<br>
+                                            <i>Instance specification:</i> {{ instance_type_specification_dict|get_dict_value:environment.instance_type }}<br>
                                             <i>Region:</i> {{ environment.region.value }}
                                         </small>
                                     </div>

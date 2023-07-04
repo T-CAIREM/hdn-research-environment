@@ -2,7 +2,7 @@ import json
 import concurrent
 
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -114,6 +114,7 @@ def research_environments(request):
         "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
         "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
+        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
     }
 
     return render(
@@ -187,6 +188,7 @@ def research_environments_partial(request):
         "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
         "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
+        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -214,6 +216,12 @@ def research_environments_partial(request):
 @cloud_identity_required
 def create_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
+    if not billing_accounts_list:
+        messages.info(
+            request,
+            "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
+        )
+        return redirect("research_environments")
 
     if request.method == "POST":
         form = CreateWorkspaceForm(
@@ -242,6 +250,13 @@ def create_workspace(request):
 @cloud_identity_required
 def create_research_environment(request, project_slug, project_version):
     workspaces_list = services.get_workspaces_list(request.user)
+    if not workspaces_list:
+        messages.info(
+            request,
+            "You have to have at least one workspace in order to create a research environment. You can create one using the form below.",
+        )
+        return redirect("create_workspace")
+
     project = services.get_available_projects(request.user).get(
         slug=project_slug, version=project_version
     )
@@ -289,7 +304,9 @@ def create_research_environment(request, project_slug, project_version):
 @cloud_identity_required
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
-    # TODO: Check whether the user is the billing account's owner
+    if not services.is_billing_account_owner(request.user, billing_account_id):
+        raise Http404()
+
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
 
