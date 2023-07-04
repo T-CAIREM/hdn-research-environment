@@ -1,11 +1,13 @@
 import json
+from typing import Iterable, Tuple
 
 from django import template
 from django.urls import reverse
 from django.db.models import Model
 
-from environment.entities import ResearchEnvironment
+from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.models import Workflow
 
 
 PublishedProject = Model
@@ -114,5 +116,26 @@ def environment_action_button(
         "url": reverse(data["url_name"]),
         "http_method": data["http_method"],
         "request_data": json.dumps(request_data),
+    }
+    return result_data
+
+
+@register.inclusion_tag("tag/workspace_destroy_modal_button.html")
+def workspace_destroy_modal_button(
+    workspace: ResearchWorkspace,
+    environments_project_workflow_triplets: Iterable[
+        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
+    ],
+) -> dict:
+    print(environments_project_workflow_triplets)
+    request_data = {"gcp_project_id": workspace.gcp_project_id}
+    result_data = {
+        "workspace": workspace,
+        "modal_id": f"workspace-delete-{workspace.gcp_project_id}",
+        "button_type": "workspace_delete",
+        "request_url": reverse("delete_workspace"),
+        "request_method": "DELETE",
+        "request_data": json.dumps(request_data),
+        "disabled": len(environments_project_workflow_triplets) > 0,
     }
     return result_data

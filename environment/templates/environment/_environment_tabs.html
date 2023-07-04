@@ -108,7 +108,7 @@
         {% endfor %}
     {% endfor %}
 
-    {% for workflow in workspace_creation_workflows %}
+    {% for workflow in workspace_workflows %}
         scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
     {% endfor %}
 </script>

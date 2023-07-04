@@ -27,16 +27,20 @@
 </div>
 
 <div id="accordion">
-    {% for workflow in workspace_creation_workflows %}
+    {% for workflow in workspace_workflows %}
         <div class="card">
             <div class="card-header""{{ heading }}">
                 <div>
                     <h6 class="mb-0">
-                        <div class="d-flex align-items-center">
-                            <div style="margin-right: 1.5rem">
-                                Provisioning
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                {% if workflow.type == 5 %}
+                                    Creating Workspace...
+                                {% else %}
+                                    Destroying {{ workflow.workspace_name }}...
+                                {% endif %}
                             </div>
-                            <div class="loader" style="font-size: 3.5px; margin: 0;">Loading...</div>
+                            <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                         </div>
                     </h6>
                 </div>
@@ -45,10 +49,10 @@
     {% endfor %}
 
     {% for workspace, environments_project_workflow_triplets in workspace_project_environment_workflow_triplets_dict.items %}
-        {% with collapse="collapse-"|add:workspace.gcp_project_id heading="heading-"|add:workspace.gcp_project_id %}
-            <div class="card">
-                <div class="card-header py-3" id="{{ heading }}">
-                    <div data-toggle="collapse" data-target="#{{ collapse }}" aria-expanded="true" aria-controls="{{ collapse }}">
+        <div class="card">
+            <div class="card-header py-3" id="{{ heading }}">
+                <div class="d-flex justify-content-between">
+                    <div>
                         <h6 class="mb-0">
                             {{ workspace.gcp_project_id }}
                         </h6>
@@ -61,63 +65,62 @@
                             </span>
                         </small>
                     </div>
-                </div>
-
-                <div id="{{ collapse }}" class="collapse show" aria-labelledby="{{ heading }}" data-parent="#accordion">
-                    <div class="card-body">
-                        {% if environments_project_workflow_triplets|length %}
-                            <ul class="list-group list-group-flush">
-                                {% for environment, project, workflows in environments_project_workflow_triplets %}
-                                    <li class="list-group-item">
-                                        <div class="row">
-                                            <div class="col-md-3">
-                                                <a href="{% url 'published_project' project.slug project.version %}" target="_blank">
-                                                    {{ project }}
-                                                </a>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small>
-                                                    <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
-                                                    <i>Instance specification:</i> {{ instance_type_specification_dict|get_dict_value:environment.instance_type }}<br>
-                                                    <i>Region:</i> {{ environment.region.value }}
-                                                </small>
-                                            </div>
-                                            <div class="col-md-2">
-                                                {% if workflows.exists %}
-                                                    {{ workflows.first.get_type_display }}
-                                                {% else %}
-                                                    {{ environment.status.value|capfirst }}
-                                                {% endif %}
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="d-flex flex-wrap">
-                                                    {% if workflows.exists %}
-                                                        <div class="loader" style="margin: 18px; font-size: 5px">Loading...</div>
-                                                    {% elif environment.is_running or environment.is_paused %}
-                                                        {% if environment.is_running %}
-                                                            <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
-                                                            {% environment_modal_button environment=environment project=project button_type="modal_pause" %}
-                                                        {% else %}
-                                                            {% environment_modal_button environment=environment project=project button_type="modal_start" %}
-                                                        {% endif %}
-                                                        {% environment_modal_button environment=environment project=project button_type="modal_instance" %}
-                                                        {% environment_modal_button environment=environment project=project button_type="modal_destroy" %}
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <div class="text-center">
-                                You don't have any workbenches in this workspace.<br>
-                                Create one in the "Projects" tab.
-                            </div>
-                        {% endif %}
-                    </div>
+                    {% workspace_destroy_modal_button workspace=workspace environments_project_workflow_triplets=environments_project_workflow_triplets %}
                 </div>
             </div>
-        {% endwith %}
+
+            <div class="card-body">
+                {% if environments_project_workflow_triplets|length %}
+                    <ul class="list-group list-group-flush">
+                        {% for environment, project, workflows in environments_project_workflow_triplets %}
+                            <li class="list-group-item">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <a href="{% url 'published_project' project.slug project.version %}" target="_blank">
+                                            {{ project }}
+                                        </a>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small>
+                                            <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
+                                            <i>Instance specification:</i> {{ instance_type_specification_dict|get_dict_value:environment.instance_type }}<br>
+                                            <i>Region:</i> {{ environment.region.value }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        {% if workflows.exists %}
+                                            {{ workflows.first.get_type_display }}
+                                        {% else %}
+                                            {{ environment.status.value|capfirst }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="d-flex flex-wrap">
+                                            {% if workflows.exists %}
+                                                <div class="loader" style="margin: 18px; font-size: 5px">Loading...</div>
+                                            {% elif environment.is_running or environment.is_paused %}
+                                                {% if environment.is_running %}
+                                                    <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
+                                                    {% environment_modal_button environment=environment project=project button_type="modal_pause" %}
+                                                {% else %}
+                                                    {% environment_modal_button environment=environment project=project button_type="modal_start" %}
+                                                {% endif %}
+                                                {% environment_modal_button environment=environment project=project button_type="modal_instance" %}
+                                                {% environment_modal_button environment=environment project=project button_type="modal_destroy" %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center">
+                        You don't have any workbenches in this workspace.<br>
+                        Create one in the "Projects" tab.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
     {% endfor %}
 </div>

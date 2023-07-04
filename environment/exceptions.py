@@ -56,3 +56,7 @@ class GetWorkspacesListFailed(Exception):
 
 class CreateWorkspaceFailed(Exception):
     pass
+
+
+class DeleteWorkspaceFailed(Exception):
+    pass
