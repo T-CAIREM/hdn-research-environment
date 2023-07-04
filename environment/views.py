@@ -2,7 +2,7 @@ import json
 import concurrent
 
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -271,7 +271,9 @@ def create_research_environment(request, project_slug, project_version):
 @cloud_identity_required
 @transaction.atomic
 def manage_billing_account(request, billing_account_id):
-    # TODO: Check whether the user is the billing account's owner
+    if not services.is_billing_account_owner(request.user, billing_account_id):
+        raise Http404()
+
     owner = request.user
     billing_account_sharing_form = ShareBillingAccountForm()
 
