@@ -97,14 +97,12 @@ def environment_modal_button(
 @register.inclusion_tag("tag/environment_action_button.html")
 def environment_action_button(
     environment: ResearchEnvironment,
-    project: PublishedProject,
     button_type: str,
 ) -> dict:
     data = button_types[button_type]
     request_data = {
-        "workbench_id": environment.gcp_identifier,
-        "project_id": project.pk,
-        "region": environment.region.value,
+        "instance_name": environment.name,
+        "workbench_id": environment.id,
         "gcp_project_id": environment.workspace_name,
     }
 

@@ -429,27 +429,16 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 
 
 def stop_running_environment(
-    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
+    instance_name: str, workbench_id: str, gcp_project_id: str
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.stop_workbench(
-        gcp_user_id=gcp_user_id,
+    response = api_v2.stop_workbench(
+        instance_name=instance_name,
         workbench_id=workbench_id,
-        region=region.value,
         gcp_project_id=gcp_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
         raise StopEnvironmentFailed(error_message)
-
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.PAUSE,
-        workspace_name=gcp_project_id,
-    )
 
     return response.json()
 

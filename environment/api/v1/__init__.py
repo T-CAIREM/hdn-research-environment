@@ -59,32 +59,3 @@ def delete_workbench(
         "gcp_project_id": gcp_project_id,
     }
     return Request("DELETE", url="/workbench", params=params)
-
-
-@api_request
-def create_workbench(
-    gcp_user_id: str,
-    environment_type: str,
-    instance_type: str,
-    group_granting_data_access: str,
-    persistent_disk: str,
-    bucket_name: str,
-    gcp_project_id: str,
-    vm_image: Optional[str] = None,
-    gpu_accelerator: Optional[str] = None,
-):
-    json = {
-        "userid": gcp_user_id,
-        "type": environment_type,
-        "machinetype": instance_type,
-        "group_granting_data_access": group_granting_data_access,
-        "bucketname": bucket_name,
-        "gcp_project_id": gcp_project_id,
-        "persistentdisk": persistent_disk,
-        "vmimage": vm_image,
-        "gpu_accelerator": gpu_accelerator,
-    }
-    json_without_empty_values = {
-        key: val for key, val in json.items() if val is not None
-    }
-    return Request("POST", url="/workbench", json=json_without_empty_values)

@@ -109,3 +109,15 @@ def create_workbench(
         return Request("POST", url="/create/rstudio", json=json_without_empty_values)
 
     return Request("POST", url="/create/jupyter", json=json_without_empty_values)
+
+
+@api_request
+def stop_workbench(
+    instance_name: str, workbench_id: str, gcp_project_id: str
+) -> Request:
+    params = {
+        "instance_name": instance_name,
+        "gcp_workbench_identifier": workbench_id,
+        "user_project": gcp_project_id,
+    }
+    return Request("PUT", url="/workbench/stop", params=params)
