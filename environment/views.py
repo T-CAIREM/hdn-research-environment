@@ -274,6 +274,7 @@ def create_research_environment(request, project_slug, project_version):
                     project=project,
                     workspace_name=form.cleaned_data["workspace_id"],
                     instance_type=form.cleaned_data["instance_type"],
+                    region=form.cleaned_data["region"],
                     environment_type=form.cleaned_data["environment_type"],
                     persistent_disk=form.cleaned_data.get("persistent_disk"),
                     gpu_accelerator=form.cleaned_data.get("gpu_accelerator"),

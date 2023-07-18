@@ -220,17 +220,19 @@ def _create_workbench_kwargs(
     project: PublishedProject,
     workspace_name: str,
     instance_type: str,
+    region: str,
     environment_type: str,
     persistent_disk: int,
     gpu_accelerator: Optional[str] = None,
 ) -> dict:
-    gcp_user_id = user.cloud_identity.gcp_user_id
+    gcp_user_email_id = user.cloud_identity.email
 
     common = {
-        "gcp_user_id": gcp_user_id,
+        "gcp_user_email_id": gcp_user_email_id,
         "gcp_project_id": workspace_name,
         "environment_type": environment_type,
         "instance_type": instance_type,
+        "region": region,
         "group_granting_data_access": _project_data_group(project),
         "persistent_disk": str(persistent_disk),
         "bucket_name": project.project_file_root(),
@@ -255,6 +257,7 @@ def create_research_environment(
     project: PublishedProject,
     workspace_name: str,
     instance_type: str,
+    region: str,
     environment_type: str,
     persistent_disk: int,
     gpu_accelerator: Optional[str] = None,
@@ -264,25 +267,17 @@ def create_research_environment(
         project,
         workspace_name,
         instance_type,
+        region,
         environment_type,
         persistent_disk,
         gpu_accelerator,
     )
-    response = api_v1.create_workbench(**kwargs)
+    response = api_v2.create_workbench(**kwargs)
     if not response.ok:
         error_message = response.json()[
             "error"
         ]  # TODO: Check all uses of "error"/"message"
         raise EnvironmentCreationFailed(error_message)
-
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project.pk,
-        type=Workflow.CREATE,
-        workspace_name=workspace_name,
-    )
 
     return response.json()
 
