@@ -15,6 +15,13 @@ WorkspaceBillingInfo = namedtuple(
     "WorkspaceBillingInfo", ["gcp_project_id", "billing_name"]
 )
 
+AVAILABLE_REGIONS = [
+    ("us-central1", "us-central1"),
+    ("northamerica-northeast1", "northamerica-northeast1"),
+    ("europe-west3", "europe-west3"),
+    ("australia-southeast1", "australia-southeast1"),
+]
+
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [

@@ -3,7 +3,7 @@ from typing import Iterable
 from django import forms
 
 from environment.entities import ResearchWorkspace, InstanceType
-from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.constants import INSTANCE_TYPE_SPECIFICATION, AVAILABLE_REGIONS
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -23,12 +23,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
 
 class CreateWorkspaceForm(forms.Form):
-    AVAILABLE_REGIONS = [
-        ("us-central1", "us-central1"),
-        ("northamerica-northeast1", "northamerica-northeast1"),
-        ("europe-west3", "europe-west3"),
-        ("australia-southeast1", "australia-southeast1"),
-    ]
     billing_account_id = forms.ChoiceField(label="Billing Account")
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
@@ -57,6 +51,11 @@ class CreateResearchEnvironmentForm(forms.Form):
     ]
 
     workspace_id = forms.ChoiceField(label="Workspace")
+    region = forms.ChoiceField(
+        label="Region",
+        choices=AVAILABLE_REGIONS,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
     instance_type = forms.ChoiceField(
         label="Instance type",
         choices=AVAILABLE_INSTANCE_TYPES,
