@@ -34,8 +34,8 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
             status=EnvironmentStatus(workbench["workbench-setup-status"]),
             workspace_name=workspace.get("gcp-project-id"),
         )
-        for workspace in data["workspace-list"]
-        for workbench in workspace["workbench-list"]
+        for workspace in data
+        for workbench in workspace["workbenches"]
     ]
 
 
@@ -53,5 +53,5 @@ def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
 def deserialize_workspaces(data: dict) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data)
-        for workspace_data in data["workspace-list"]
+        for workspace_data in data
     ]

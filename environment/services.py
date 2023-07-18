@@ -291,34 +291,6 @@ def create_research_environment(
     return response.json()
 
 
-def get_workspace_details(user: User, region: Region) -> ResearchWorkspace:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_details(
-        gcp_user_id=gcp_user_id,
-        region=region.value,
-    )
-    if not response.ok:
-        error_message = response.json()["error"]
-        raise GetWorkspaceDetailsFailed(error_message)
-
-    research_workspace = deserialize_workspace_details(response.json())
-    return research_workspace
-
-
-def is_user_workspace_setup_done(user: User) -> bool:
-    try:
-        workspace = get_workspace_details(user, Region(DEFAULT_REGION))
-        return workspace.setup_finished
-    except GetWorkspaceDetailsFailed:
-        return False
-
-
-def mark_user_workspace_setup_as_done(user: User):
-    cloud_identity = user.cloud_identity
-    cloud_identity.initial_workspace_setup_done = True
-    cloud_identity.save()
-
-
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
     return PublishedProject.objects.accessible_by(user).prefetch_related("workflows")
 
@@ -338,8 +310,8 @@ def _get_projects_for_environments(
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_list(gcp_user_id)
+    email = user.cloud_identity.email
+    response = api_v2.get_workspace_list(email)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetAvailableEnvironmentsFailed(error_message)
@@ -460,8 +432,8 @@ def match_workspace_with_billing_id(
 
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_list(gcp_user_id)
+    email = user.cloud_identity.email
+    response = api_v2.get_workspace_list(email)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetWorkspacesListFailed(error_message)
