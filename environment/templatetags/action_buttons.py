@@ -127,7 +127,6 @@ def workspace_destroy_modal_button(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
 ) -> dict:
-    print(environments_project_workflow_triplets)
     request_data = {"gcp_project_id": workspace.gcp_project_id}
     result_data = {
         "workspace": workspace,
