@@ -105,13 +105,6 @@ class ResearchEnvironment:
 
 @dataclass
 class ResearchWorkspace:
-    user_id: str
     region: Region
     gcp_project_id: str
     gcp_billing_id: str
-    email_id: str
-    workspace_setup_status: WorkspaceStatus
-
-    @property
-    def setup_finished(self):
-        return self.workspace_setup_status == WorkspaceStatus.DONE

@@ -22,15 +22,12 @@ from environment.exceptions import (
     BillingAccessRevokationFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
-    GetWorkspaceDetailsFailed,
     GetBillingAccountsListFailed,
-    GetWorkspacesListFailed,
     CreateWorkspaceFailed,
     DeleteWorkspaceFailed,
 )
 from environment.deserializers import (
     deserialize_research_environments,
-    deserialize_workspace_details,
     deserialize_workspaces,
 )
 from environment.entities import (
@@ -434,9 +431,6 @@ def match_workspace_with_billing_id(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     response = api_v2.get_workspace_list(email)
-    if not response.ok:
-        error_message = response.json()["error"]
-        raise GetWorkspacesListFailed(error_message)
     return deserialize_workspaces(response.json())
 
 

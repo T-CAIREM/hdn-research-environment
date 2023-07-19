@@ -7,7 +7,6 @@ from environment.entities import (
     Region,
     InstanceType,
     ResearchWorkspace,
-    WorkspaceStatus,
 )
 
 
@@ -41,12 +40,9 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
 
 def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
     return ResearchWorkspace(
-        user_id=data["user-id"],
         region=data["region"],
-        gcp_project_id=data["gcp-project-id"],
-        gcp_billing_id=data["gcp-billing-id"],
-        email_id=data["email-id"],
-        workspace_setup_status=WorkspaceStatus(data["workspace-setup-status"]),
+        gcp_project_id=data["gcp_project_id"],
+        gcp_billing_id=data["billing_account_id"],
     )
 
 
