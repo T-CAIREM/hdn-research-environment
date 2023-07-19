@@ -86,11 +86,11 @@ def create_workbench(
     persistent_disk: str,
     bucket_name: str,
     gcp_project_id: str,
-    vm_image: Optional[str] = None,
     gpu_accelerator: Optional[str] = None,
 ):
 
     json = {
+        "workbench_type": environment_type,
         "machine_type": instance_type,
         "user_project_id": gcp_project_id,
         "dataset": group_granting_data_access,
@@ -98,17 +98,10 @@ def create_workbench(
         "bucket_name": bucket_name,
         "region": region,
         "persistent_disk": persistent_disk,
-        "vm_image": vm_image,
         "gpu_accelerator": gpu_accelerator,
     }
-    json_without_empty_values = {
-        key: val for key, val in json.items() if val is not None
-    }
 
-    if environment_type == "rstudio":
-        return Request("POST", url="/create/rstudio", json=json_without_empty_values)
-
-    return Request("POST", url="/create/jupyter", json=json_without_empty_values)
+    return Request("POST", url="/workbench/create", json=json)
 
 
 @api_request

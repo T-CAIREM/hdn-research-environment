@@ -238,13 +238,7 @@ def _create_workbench_kwargs(
         "bucket_name": project.project_file_root(),
     }
     if environment_type == "jupyter":
-        vm_image = (
-            "common-cu110-notebooks"
-            if gpu_accelerator
-            else "r-4-2-cpu-experimental-notebooks"
-        )
         jupyter_kwargs = {
-            "vm_image": vm_image,
             "gpu_accelerator": gpu_accelerator,
         }
         return {**common, **jupyter_kwargs}
