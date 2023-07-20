@@ -1,43 +1,42 @@
-from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
+from typing import Dict, Iterable, Optional, Tuple
 
-from django.db.models import Model, Q
-from django.contrib.sites.shortcuts import get_current_site
 from django.apps import apps
+from django.contrib.sites.shortcuts import get_current_site
+from django.db.models import Model, Q
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-import environment.constants as constants
-import environment.mailers as mailers
 import environment.api.v1 as api_v1
 import environment.api.v2 as api_v2
-from environment.models import CloudIdentity, Workflow, BillingAccountSharingInvite
-from environment.exceptions import (
-    IdentityProvisioningFailed,
-    StopEnvironmentFailed,
-    StartEnvironmentFailed,
-    DeleteEnvironmentFailed,
-    ChangeEnvironmentInstanceTypeFailed,
-    BillingSharingFailed,
-    BillingAccessRevokationFailed,
-    EnvironmentCreationFailed,
-    GetAvailableEnvironmentsFailed,
-    GetBillingAccountsListFailed,
-    CreateWorkspaceFailed,
-    DeleteWorkspaceFailed,
-)
+import environment.constants as constants
+import environment.mailers as mailers
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
 )
 from environment.entities import (
-    ResearchEnvironment,
     InstanceType,
     Region,
+    ResearchEnvironment,
     ResearchWorkspace,
 )
-from environment.utilities import left_join_iterators, inner_join_iterators
-
+from environment.exceptions import (
+    BillingAccessRevokationFailed,
+    BillingSharingFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    CreateWorkspaceFailed,
+    DeleteEnvironmentFailed,
+    DeleteWorkspaceFailed,
+    EnvironmentCreationFailed,
+    GetAvailableEnvironmentsFailed,
+    GetBillingAccountsListFailed,
+    IdentityProvisioningFailed,
+    StartEnvironmentFailed,
+    StopEnvironmentFailed,
+)
+from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
+from environment.utilities import inner_join_iterators, left_join_iterators
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -61,7 +60,7 @@ def _project_data_group(project: PublishedProject) -> str:
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
-    return environment.group_granting_data_access
+    return environment.dataset_identifier
 
 
 def create_cloud_identity(
@@ -295,14 +294,14 @@ def get_available_projects(user: User) -> Iterable[PublishedProject]:
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[PublishedProject]:
-    group_granting_data_accesses = list(map(_environment_data_group, environments))
+    dataset_identifiers = list(map(_environment_data_group, environments))
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
     # calculate the group name for each of them.
     return [
         project
         for project in PublishedProject.objects.all()
-        if _project_data_group(project) in group_granting_data_accesses
+        if _project_data_group(project) in dataset_identifiers
     ]
 
 

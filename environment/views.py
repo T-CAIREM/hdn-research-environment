@@ -1,32 +1,30 @@
-import json
 import concurrent
+import json
 
-from django.shortcuts import render, redirect
-from django.http import JsonResponse, Http404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.views.decorators.http import require_http_methods, require_GET
+from django.http import Http404, JsonResponse
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_GET, require_http_methods
 from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
-import environment.services as services
 import environment.constants as constants
-from environment.forms import (
-    CreateResearchEnvironmentForm,
-    CloudIdentityPasswordForm,
-    CreateWorkspaceForm,
-    ShareBillingAccountForm,
-)
+import environment.services as services
 from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
 )
-from environment.entities import Region, InstanceType
-from environment.utilities import (
-    user_has_cloud_identity,
+from environment.entities import InstanceType, Region
+from environment.forms import (
+    CloudIdentityPasswordForm,
+    CreateResearchEnvironmentForm,
+    CreateWorkspaceForm,
+    ShareBillingAccountForm,
 )
-from environment.models import Workflow, BillingAccountSharingInvite
+from environment.models import BillingAccountSharingInvite, Workflow
+from environment.utilities import user_has_cloud_identity
 
 
 @require_http_methods(["GET", "POST"])
