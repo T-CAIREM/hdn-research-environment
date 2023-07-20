@@ -1,19 +1,18 @@
-from typing import Iterable
 from datetime import datetime
+from typing import Iterable
 
-from django.dispatch import receiver
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.db.models.signals import post_init, post_save
+from django.dispatch import receiver
+from django.utils import timezone
 
+from environment.models import BillingAccountSharingInvite, CloudIdentity
 from environment.tasks import (
+    give_user_permission_to_access_billing_account,
     stop_environments_with_expired_access,
     stop_event_participants_environments_with_expired_access,
 )
-from environment.models import CloudIdentity, BillingAccountSharingInvite
-from environment.tasks import give_user_permission_to_access_billing_account
-
 
 User = get_user_model()
 

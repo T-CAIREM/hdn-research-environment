@@ -1,8 +1,8 @@
-from typing import Callable
 from functools import wraps
-from requests import Request, Response, Session
+from typing import Callable
 
 from django.conf import settings
+from requests import Request, Response, Session
 
 from environment.api.v1.auth import apply_api_credentials
 

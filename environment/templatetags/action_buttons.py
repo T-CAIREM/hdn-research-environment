@@ -2,13 +2,12 @@ import json
 from typing import Iterable, Tuple
 
 from django import template
-from django.urls import reverse
 from django.db.models import Model
+from django.urls import reverse
 
-from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.models import Workflow
-
 
 PublishedProject = Model
 

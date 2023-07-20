@@ -1,15 +1,15 @@
 from unittest import skipIf
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
-from django.conf import settings
 
-from environment.tests.helpers import (
-    create_user_without_cloud_identity,
-    create_user_with_cloud_identity,
-)
 from environment.exceptions import BillingVerificationFailed
+from environment.tests.helpers import (
+    create_user_with_cloud_identity,
+    create_user_without_cloud_identity,
+)
 
 
 @skipIf(

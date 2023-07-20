@@ -1,11 +1,11 @@
 from typing import Iterable, Optional
 
 from environment.entities import (
-    ResearchEnvironment,
     EnvironmentStatus,
     EnvironmentType,
-    Region,
     InstanceType,
+    Region,
+    ResearchEnvironment,
     ResearchWorkspace,
     WorkspaceStatus,
 )

@@ -1,15 +1,12 @@
-from typing import Callable
 from functools import wraps
+from typing import Callable
 
-from django.shortcuts import redirect
-from django.http import HttpRequest, HttpResponse
-from django.views.decorators.http import require_http_methods
 from django.db.models import Model
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import redirect
+from django.views.decorators.http import require_http_methods
 
-from environment.utilities import (
-    user_has_cloud_identity,
-)
-
+from environment.utilities import user_has_cloud_identity
 
 View = Callable[[HttpRequest], HttpResponse]
 

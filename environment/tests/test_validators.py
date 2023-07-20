@@ -1,8 +1,8 @@
 from unittest import skipIf
 
+from django.conf import settings
 from django.forms import ValidationError
 from django.test import TestCase
-from django.conf import settings
 
 from environment.validators import gcp_billing_account_id_validator
 

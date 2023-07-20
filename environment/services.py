@@ -1,46 +1,45 @@
-from typing import Tuple, Iterable, Optional, Dict
 from collections import defaultdict
+from typing import Dict, Iterable, Optional, Tuple
 
-from django.db.models import Model, Q
-from django.contrib.sites.shortcuts import get_current_site
 from django.apps import apps
+from django.contrib.sites.shortcuts import get_current_site
+from django.db.models import Model, Q
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-import environment.constants as constants
-import environment.mailers as mailers
 import environment.api.v1 as api_v1
 import environment.api.v2 as api_v2
-from environment.models import CloudIdentity, Workflow, BillingAccountSharingInvite
-from environment.exceptions import (
-    IdentityProvisioningFailed,
-    StopEnvironmentFailed,
-    StartEnvironmentFailed,
-    DeleteEnvironmentFailed,
-    ChangeEnvironmentInstanceTypeFailed,
-    BillingSharingFailed,
-    BillingAccessRevokationFailed,
-    EnvironmentCreationFailed,
-    GetAvailableEnvironmentsFailed,
-    GetWorkspaceDetailsFailed,
-    GetBillingAccountsListFailed,
-    GetWorkspacesListFailed,
-    CreateWorkspaceFailed,
-    DeleteWorkspaceFailed,
-)
+import environment.constants as constants
+import environment.mailers as mailers
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspace_details,
     deserialize_workspaces,
 )
 from environment.entities import (
-    ResearchEnvironment,
     InstanceType,
     Region,
+    ResearchEnvironment,
     ResearchWorkspace,
 )
-from environment.utilities import left_join_iterators, inner_join_iterators
-
+from environment.exceptions import (
+    BillingAccessRevokationFailed,
+    BillingSharingFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    CreateWorkspaceFailed,
+    DeleteEnvironmentFailed,
+    DeleteWorkspaceFailed,
+    EnvironmentCreationFailed,
+    GetAvailableEnvironmentsFailed,
+    GetBillingAccountsListFailed,
+    GetWorkspaceDetailsFailed,
+    GetWorkspacesListFailed,
+    IdentityProvisioningFailed,
+    StartEnvironmentFailed,
+    StopEnvironmentFailed,
+)
+from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
+from environment.utilities import inner_join_iterators, left_join_iterators
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 

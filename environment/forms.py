@@ -2,8 +2,8 @@ from typing import Iterable
 
 from django import forms
 
-from environment.entities import ResearchWorkspace, InstanceType
 from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.entities import InstanceType, ResearchWorkspace
 
 
 class CloudIdentityPasswordForm(forms.Form):

@@ -1,9 +1,9 @@
-from typing import Callable
 from functools import wraps
-from requests import Request, Response, Session
+from typing import Callable
 
 import google.oauth2.id_token
 from django.conf import settings
+from requests import Request, Response, Session
 
 
 def _apply_api_credentials(request: Request, audience: str):
