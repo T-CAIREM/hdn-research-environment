@@ -373,6 +373,7 @@ def confirm_billing_account_sharing(request):
 def stop_running_environment(request):
     data = json.loads(request.body)
     services.stop_running_environment(
+        invoker_username=request.user.username,
         instance_name=data["instance_name"],
         workbench_id=data["workbench_id"],
         gcp_project_id=data["gcp_project_id"],

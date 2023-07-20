@@ -228,6 +228,7 @@ def _create_workbench_kwargs(
     gcp_user_email_id = user.cloud_identity.email
 
     common = {
+        "invoker_username": user.username,
         "gcp_user_email_id": gcp_user_email_id,
         "gcp_project_id": workspace_name,
         "environment_type": environment_type,
@@ -423,9 +424,10 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 
 
 def stop_running_environment(
-    instance_name: str, workbench_id: str, gcp_project_id: str
+    invoker_username: str, instance_name: str, workbench_id: str, gcp_project_id: str
 ) -> str:
     response = api_v2.stop_workbench(
+        invoker_username=invoker_username,
         instance_name=instance_name,
         workbench_id=workbench_id,
         gcp_project_id=gcp_project_id,

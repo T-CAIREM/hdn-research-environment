@@ -78,6 +78,7 @@ def get_workspace_list(email: str) -> Request:
 
 @api_request
 def create_workbench(
+    invoker_username: str,
     gcp_user_email_id: str,
     environment_type: str,
     instance_type: str,
@@ -88,8 +89,8 @@ def create_workbench(
     gcp_project_id: str,
     gpu_accelerator: Optional[str] = None,
 ):
-
     json = {
+        "invoker_username": invoker_username,
         "workbench_type": environment_type,
         "machine_type": instance_type,
         "user_project_id": gcp_project_id,
@@ -106,9 +107,10 @@ def create_workbench(
 
 @api_request
 def stop_workbench(
-    instance_name: str, workbench_id: str, gcp_project_id: str
+    invoker_username: str, instance_name: str, workbench_id: str, gcp_project_id: str
 ) -> Request:
     params = {
+        "invoker_username": invoker_username,
         "instance_name": instance_name,
         "gcp_workbench_identifier": workbench_id,
         "user_project": gcp_project_id,
