@@ -70,15 +70,15 @@ class WorkspaceStatus(Enum):
 
 @dataclass
 class ResearchEnvironment:
-    id: str
-    group_granting_data_access: str
-    region: Region
-    type: EnvironmentType
-    instance_type: InstanceType
-    status: EnvironmentStatus
-    bucket_name: Optional[str]
+    gcp_identifier: str
+    dataset_identifier: str
     url: Optional[str]
     workspace_name: str
+    status: EnvironmentStatus
+    cpu: float
+    memory: float
+    region: Region
+    type: EnvironmentType
 
     @property
     def is_running(self):
@@ -105,13 +105,6 @@ class ResearchEnvironment:
 
 @dataclass
 class ResearchWorkspace:
-    user_id: str
     region: Region
     gcp_project_id: str
     gcp_billing_id: str
-    email_id: str
-    workspace_setup_status: WorkspaceStatus
-
-    @property
-    def setup_finished(self):
-        return self.workspace_setup_status == WorkspaceStatus.DONE
