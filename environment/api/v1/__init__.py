@@ -6,39 +6,6 @@ from environment.api.v1.decorators import api_request
 
 
 @api_request
-def create_cloud_identity(
-    gcp_user_id: str,
-    given_name: str,
-    family_name: str,
-    password: str,
-    recovery_email: str,
-) -> Request:
-    json = {
-        "userid": gcp_user_id,
-        "givenName": given_name,
-        "familyName": family_name,
-        "password": password,
-        "recoveryEmail": recovery_email,
-    }
-    return Request("POST", url="/user", json=json)
-
-
-@api_request
-def get_user_info(gcp_user_id: str) -> Request:
-    return Request("GET", url=f"/user/{gcp_user_id}")
-
-
-@api_request
-def get_workspace_details(gcp_user_id: str, gcp_project_id: str) -> Request:
-    return Request("GET", url=f"/workspace/{gcp_user_id}/{gcp_project_id}")
-
-
-@api_request
-def get_workspace_list(gcp_user_id: str) -> Request:
-    return Request("GET", url=f"/workspace/list/{gcp_user_id}")
-
-
-@api_request
 def stop_workbench(
     gcp_user_id: str, workbench_id: str, region: str, gcp_project_id: str
 ) -> Request:

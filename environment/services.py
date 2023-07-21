@@ -13,7 +13,6 @@ import environment.constants as constants
 import environment.mailers as mailers
 from environment.deserializers import (
     deserialize_research_environments,
-    deserialize_workspace_details,
     deserialize_workspaces,
 )
 from environment.entities import (
@@ -32,8 +31,6 @@ from environment.exceptions import (
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetBillingAccountsListFailed,
-    GetWorkspaceDetailsFailed,
-    GetWorkspacesListFailed,
     IdentityProvisioningFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
@@ -63,7 +60,7 @@ def _project_data_group(project: PublishedProject) -> str:
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
-    return environment.group_granting_data_access
+    return environment.dataset_identifier
 
 
 def create_cloud_identity(
@@ -290,34 +287,6 @@ def create_research_environment(
     return response.json()
 
 
-def get_workspace_details(user: User, region: Region) -> ResearchWorkspace:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_details(
-        gcp_user_id=gcp_user_id,
-        region=region.value,
-    )
-    if not response.ok:
-        error_message = response.json()["error"]
-        raise GetWorkspaceDetailsFailed(error_message)
-
-    research_workspace = deserialize_workspace_details(response.json())
-    return research_workspace
-
-
-def is_user_workspace_setup_done(user: User) -> bool:
-    try:
-        workspace = get_workspace_details(user, Region(DEFAULT_REGION))
-        return workspace.setup_finished
-    except GetWorkspaceDetailsFailed:
-        return False
-
-
-def mark_user_workspace_setup_as_done(user: User):
-    cloud_identity = user.cloud_identity
-    cloud_identity.initial_workspace_setup_done = True
-    cloud_identity.save()
-
-
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
     return PublishedProject.objects.accessible_by(user).prefetch_related("workflows")
 
@@ -325,20 +294,20 @@ def get_available_projects(user: User) -> Iterable[PublishedProject]:
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[PublishedProject]:
-    group_granting_data_accesses = list(map(_environment_data_group, environments))
+    dataset_identifiers = list(map(_environment_data_group, environments))
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
     # calculate the group name for each of them.
     return [
         project
         for project in PublishedProject.objects.all()
-        if _project_data_group(project) in group_granting_data_accesses
+        if _project_data_group(project) in dataset_identifiers
     ]
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_list(gcp_user_id)
+    email = user.cloud_identity.email
+    response = api_v2.get_workspace_list(email)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetAvailableEnvironmentsFailed(error_message)
@@ -459,11 +428,8 @@ def match_workspace_with_billing_id(
 
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.get_workspace_list(gcp_user_id)
-    if not response.ok:
-        error_message = response.json()["error"]
-        raise GetWorkspacesListFailed(error_message)
+    email = user.cloud_identity.email
+    response = api_v2.get_workspace_list(email)
     return deserialize_workspaces(response.json())
 
 

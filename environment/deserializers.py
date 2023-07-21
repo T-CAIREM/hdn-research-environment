@@ -1,57 +1,39 @@
-from typing import Iterable, Optional
+from typing import Iterable
 
 from environment.entities import (
     EnvironmentStatus,
     EnvironmentType,
-    InstanceType,
     Region,
     ResearchEnvironment,
     ResearchWorkspace,
-    WorkspaceStatus,
 )
-
-
-def _ensure_schema_in_url(
-    url: Optional[str], schema: str = "https://"
-) -> Optional[str]:
-    if url is None or url.startswith(schema):
-        return url
-    return f"{schema}{url}"
 
 
 def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironment]:
     return [
         ResearchEnvironment(
-            id=workbench["id"],
-            group_granting_data_access=workbench.get("group-granting-data-access"),
-            url=_ensure_schema_in_url(
-                workbench.get("url") or workbench.get("version-url")
-            ),  # RStudio sends version-url
-            instance_type=InstanceType(workbench["machine-type"]),
-            region=Region(workbench["region"]),
-            bucket_name=workbench.get("bucket-name"),
-            type=EnvironmentType.from_string_or_none(workbench["type"]),
-            status=EnvironmentStatus(workbench["workbench-setup-status"]),
-            workspace_name=workspace.get("gcp-project-id"),
+            gcp_identifier=workbench["gcp_identifier"],
+            dataset_identifier=workbench["dataset_identifier"],
+            url=workbench.get("url"),
+            workspace_name=workspace["gcp_project_id"],
+            status=EnvironmentStatus(workbench["status"]),
+            cpu=workbench["cpu"],
+            memory=workbench["memory"],
+            region=Region(workspace["region"]),
+            type=EnvironmentType(workbench["type"]),
         )
-        for workspace in data["workspace-list"]
-        for workbench in workspace["workbench-list"]
+        for workspace in data
+        for workbench in workspace["workbenches"]
     ]
 
 
 def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
     return ResearchWorkspace(
-        user_id=data["user-id"],
         region=data["region"],
-        gcp_project_id=data["gcp-project-id"],
-        gcp_billing_id=data["gcp-billing-id"],
-        email_id=data["email-id"],
-        workspace_setup_status=WorkspaceStatus(data["workspace-setup-status"]),
+        gcp_project_id=data["gcp_project_id"],
+        gcp_billing_id=data["billing_account_id"],
     )
 
 
 def deserialize_workspaces(data: dict) -> Iterable[ResearchWorkspace]:
-    return [
-        deserialize_workspace_details(workspace_data)
-        for workspace_data in data["workspace-list"]
-    ]
+    return [deserialize_workspace_details(workspace_data) for workspace_data in data]

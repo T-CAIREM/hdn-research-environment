@@ -85,7 +85,7 @@ def environment_modal_button(
         "button_class": data["button_class"],
         "modal_title": data["modal_title"],
         "modal_body": data["modal_body"],
-        "modal_id": f"{data['action_button_type']}-{environment.id}",
+        "modal_id": f"{data['action_button_type']}-{environment.gcp_identifier}",
         "action_button_type": data["action_button_type"],
     }
     if button_type == "modal_instance":
@@ -102,7 +102,7 @@ def environment_action_button(
 ) -> dict:
     data = button_types[button_type]
     request_data = {
-        "workbench_id": environment.id,
+        "workbench_id": environment.gcp_identifier,
         "project_id": project.pk,
         "region": environment.region.value,
         "gcp_project_id": environment.workspace_name,
