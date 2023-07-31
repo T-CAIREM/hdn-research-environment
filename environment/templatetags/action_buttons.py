@@ -101,9 +101,12 @@ def environment_action_button(
 ) -> dict:
     data = button_types[button_type]
     request_data = {
-        "instance_name": environment.name,
-        "workbench_id": environment.id,
+        "dataset_identifier": environment.dataset_identifier,
         "gcp_project_id": environment.workspace_name,
+        "region": environment.region.value,
+        "bucket_name": environment.bucket_name,
+        "instance_name": environment.gcp_identifier,
+        "environment_type": environment.type,
     }
 
     result_data = {
@@ -124,7 +127,11 @@ def workspace_destroy_modal_button(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
 ) -> dict:
-    request_data = {"gcp_project_id": workspace.gcp_project_id}
+    request_data = {
+        "gcp_project_id": workspace.gcp_project_id,
+        "region": workspace.region.value,
+        "billing_account_id": workspace.gcp_billing_id,
+    }
     result_data = {
         "workspace": workspace,
         "modal_id": f"workspace-delete-{workspace.gcp_project_id}",

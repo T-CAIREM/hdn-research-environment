@@ -53,7 +53,10 @@ def stop_environments_with_expired_access(user_id: int):
     for environment in environments:
         if environment.is_running:
             stop_running_environment(
-                user, environment.id, environment.region, environment.workspace_name
+                environment_type=environment.type,
+                instance_name=environment.instance_name,
+                gcp_user_email_id=user.cloud_identity.email,
+                gcp_project_id=environment.workspace_name,
             )
     send_environment_access_expired(user, projects)
     if len(environments) > 0:

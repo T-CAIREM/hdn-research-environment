@@ -373,9 +373,9 @@ def confirm_billing_account_sharing(request):
 def stop_running_environment(request):
     data = json.loads(request.body)
     services.stop_running_environment(
-        invoker_username=request.user.username,
+        environment_type=data["environment_type"],
         instance_name=data["instance_name"],
-        workbench_id=data["workbench_id"],
+        gcp_user_email_id=request.user.cloud_identity.email,
         gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
@@ -387,10 +387,9 @@ def stop_running_environment(request):
 def start_stopped_environment(request):
     data = json.loads(request.body)
     services.start_stopped_environment(
-        user=request.user,
-        project_id=data["project_id"],
-        workbench_id=data["workbench_id"],
-        region=Region(data["region"]),
+        gcp_user_email_id=request.user.cloud_identity.email,
+        environment_type=data["environment_type"],
+        instance_name=data["instance_name"],
         gcp_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
@@ -402,12 +401,15 @@ def start_stopped_environment(request):
 def change_environment_instance_type(request):
     data = json.loads(request.body)
     services.change_environment_instance_type(
-        user=request.user,
-        project_id=data["project_id"],
-        workbench_id=data["workbench_id"],
-        region=Region(data["region"]),
-        new_instance_type=InstanceType(data["instance_type"]),
-        gcp_project_id=data["gcp_project_id"],
+        gcp_user_email_id=request.user.cloud_identity.email,
+        gcp_identifier=data["gcp_identifier"],
+        workspace_name=data["gcp_project_id"],
+        region=data["region"],
+        bucket_name=data["bucket_name"],
+        instance_type=data["instance_type"],
+        environment_type=data["environment_type"],
+        persistent_disk=data["persistent_disk"],
+        gpu_accelerator=data["gpu_accelerator"]
     )
     return JsonResponse({})
 
@@ -435,6 +437,8 @@ def delete_workspace(request):
     services.delete_workspace(
         user=request.user,
         gcp_project_id=data["gcp_project_id"],
+        billing_account_id=data["billing_account_id"],
+        region=data["region"],
     )
     return JsonResponse({})
 
