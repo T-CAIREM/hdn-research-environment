@@ -90,7 +90,7 @@ def create_workbench(
     environment_type: str,
     instance_type: str,
     region: str,
-    gcp_identifier: str,
+    dataset_identifier: str,
     persistent_disk: str,
     bucket_name: str,
     gcp_project_id: str,
@@ -100,7 +100,7 @@ def create_workbench(
         "workbench_type": environment_type,
         "machine_type": instance_type,
         "workspace_project_id": gcp_project_id,
-        "dataset_identifier": gcp_identifier,
+        "dataset_identifier": dataset_identifier,
         "user_email": gcp_user_email_id,
         "bucket_name": bucket_name,
         "region": region,
@@ -147,23 +147,23 @@ def start_workbench(
 def change_workbench_instance_type(
     environment_type: str,
     instance_type: str,
-    gcp_identifier: str,
+    dataset_identifier: str,
     gcp_user_email_id: str,
     bucket_name: str,
     region: str,
     persistent_disk: str,
     gcp_project_id: str,
-    gpu_accelerator: Optional[str] = None
+    gpu_accelerator_type: Optional[str] = None
 ) -> Request:
     json = {
         "workbench_type": environment_type,
         "machine_type": instance_type,
         "workspace_project_id": gcp_project_id,
-        "dataset_identifier": gcp_identifier,
+        "dataset_identifier": dataset_identifier,
         "user_email": gcp_user_email_id,
         "bucket_name": bucket_name,
         "region": region,
         "persistent_disk": persistent_disk,
-        "gpu_accelerator_type": gpu_accelerator,
+        "gpu_accelerator_type": gpu_accelerator_type,
     }
     return Request("POST", url="/workbench/update", json=json)

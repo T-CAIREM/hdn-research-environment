@@ -402,14 +402,14 @@ def change_environment_instance_type(request):
     data = json.loads(request.body)
     services.change_environment_instance_type(
         gcp_user_email_id=request.user.cloud_identity.email,
-        gcp_identifier=data["gcp_identifier"],
+        dataset_identifier=data["dataset_identifier"],
         workspace_name=data["gcp_project_id"],
         region=data["region"],
         bucket_name=data["bucket_name"],
         instance_type=data["instance_type"],
         environment_type=data["environment_type"],
         persistent_disk=data["persistent_disk"],
-        gpu_accelerator=data["gpu_accelerator"]
+        gpu_accelerator_type=data["gpu_accelerator_type"]
     )
     return JsonResponse({})
 

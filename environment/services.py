@@ -237,7 +237,7 @@ def _create_workbench_kwargs(
         "environment_type": environment_type,
         "instance_type": instance_type,
         "region": region,
-        "gcp_identifier": _project_data_group(project),
+        "dataset_identifier": _project_data_group(project),
         "persistent_disk": str(persistent_disk),
         "bucket_name": project.project_file_root(),
     }
@@ -466,25 +466,25 @@ def start_stopped_environment(
 
 def change_environment_instance_type(
     gcp_user_email_id: str,
-    gcp_identifier: str,
+    dataset_identifier: str,
     workspace_name: str,
     instance_type: str,
     region: str,
     environment_type: str,
     bucket_name: str,
     persistent_disk: int,
-    gpu_accelerator: Optional[str] = None,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     response = api_v2.change_workbench_instance_type(
         environment_type=environment_type,
         instance_type=instance_type,
-        gcp_identifier=gcp_identifier,
+        dataset_identifier=dataset_identifier,
         gcp_user_email_id=gcp_user_email_id,
         bucket_name=bucket_name,
         region=region,
         persistent_disk=str(persistent_disk),
         gcp_project_id=workspace_name,
-        gpu_accelerator=gpu_accelerator
+        gpu_accelerator_type=gpu_accelerator_type
     )
     if not response.ok:
         error_message = response.json()["message"]

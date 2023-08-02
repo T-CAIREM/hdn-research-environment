@@ -1,15 +1,15 @@
 import json
 from typing import Iterable, Tuple
 
+from django.apps import apps
 from django import template
-from django.db.models import Model
 from django.urls import reverse
 
 from environment.constants import INSTANCE_TYPE_SPECIFICATION
 from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.models import Workflow
 
-PublishedProject = Model
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 register = template.Library()
@@ -97,6 +97,7 @@ def environment_modal_button(
 @register.inclusion_tag("tag/environment_action_button.html")
 def environment_action_button(
     environment: ResearchEnvironment,
+    project: PublishedProject,
     button_type: str,
 ) -> dict:
     data = button_types[button_type]
@@ -104,9 +105,11 @@ def environment_action_button(
         "dataset_identifier": environment.dataset_identifier,
         "gcp_project_id": environment.workspace_name,
         "region": environment.region.value,
-        "bucket_name": environment.bucket_name,
+        "bucket_name": project.project_file_root(),
         "instance_name": environment.gcp_identifier,
         "environment_type": environment.type,
+        "persistent_disk": environment.disk_size,
+        "gpu_accelerator_type": environment.gpu_accelerator_type
     }
 
     result_data = {
