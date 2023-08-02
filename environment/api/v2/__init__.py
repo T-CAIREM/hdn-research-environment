@@ -83,7 +83,6 @@ def get_workspace_list(email: str) -> Request:
     return Request("GET", url=f"/workspace/{email}")
 
 
-
 @api_request
 def create_workbench(
     gcp_user_email_id: str,
@@ -153,7 +152,7 @@ def change_workbench_instance_type(
     region: str,
     persistent_disk: str,
     gcp_project_id: str,
-    gpu_accelerator_type: Optional[str] = None
+    gpu_accelerator_type: Optional[str] = None,
 ) -> Request:
     json = {
         "workbench_type": environment_type,
@@ -167,3 +166,29 @@ def change_workbench_instance_type(
         "gpu_accelerator_type": gpu_accelerator_type,
     }
     return Request("POST", url="/workbench/update", json=json)
+
+
+@api_request
+def delete_workbench(
+    environment_type: str,
+    instance_type: str,
+    dataset_identifier: str,
+    gcp_user_email_id: str,
+    bucket_name: str,
+    region: str,
+    persistent_disk: str,
+    gcp_project_id: str,
+    gpu_accelerator_type: Optional[str] = None,
+) -> Request:
+    json = {
+        "workbench_type": environment_type,
+        "machine_type": instance_type,
+        "workspace_project_id": gcp_project_id,
+        "dataset_identifier": dataset_identifier,
+        "user_email": gcp_user_email_id,
+        "bucket_name": bucket_name,
+        "region": region,
+        "persistent_disk": persistent_disk,
+        "gpu_accelerator_type": gpu_accelerator_type,
+    }
+    return Request("DESTROY", url="/workbench/destroy", json=json)

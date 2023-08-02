@@ -74,8 +74,16 @@ def terminate_environments_if_access_still_expired(
 ):
     user = User.objects.get(pk=user_id)
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
-    for environment, _ in expired_pairs:
+    for environment, project in expired_pairs:
         if environment.id in previously_stopped_environment_ids:
             delete_environment(
-                user, environment.id, environment.region, environment.workspace_name
+                gcp_user_email_id=user.cloud_identity.email,
+                dataset_identifier=environment.dataset_identifier,
+                workspace_name=environment.workspace_name,
+                region=environment.region.value,
+                bucket_name=project.project_file_root(),
+                instance_type=environment.instance_type,
+                environment_type=environment.type.value,
+                persistent_disk=environment.disk_size,
+                gpu_accelerator_type=environment.gpu_accelerator_type,
             )

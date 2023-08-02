@@ -189,13 +189,6 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        type=Workflow.WORKSPACE_CREATE,
-    )
-
 
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
@@ -209,14 +202,6 @@ def delete_workspace(
     if not response.ok:
         error_message = response.json()["error"]
         raise DeleteWorkspaceFailed(error_message)
-
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        type=Workflow.WORKSPACE_DESTROY,
-        workspace_name=gcp_project_id,
-    )
 
 
 def _create_workbench_kwargs(
@@ -484,7 +469,7 @@ def change_environment_instance_type(
         region=region,
         persistent_disk=str(persistent_disk),
         gcp_project_id=workspace_name,
-        gpu_accelerator_type=gpu_accelerator_type
+        gpu_accelerator_type=gpu_accelerator_type,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -494,46 +479,32 @@ def change_environment_instance_type(
 
 
 def delete_environment(
-    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
+    gcp_user_email_id: str,
+    dataset_identifier: str,
+    workspace_name: str,
+    instance_type: str,
+    region: str,
+    environment_type: str,
+    bucket_name: str,
+    persistent_disk: int,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.delete_workbench(
-        gcp_user_id=gcp_user_id,
-        workbench_id=workbench_id,
-        region=region.value,
-        gcp_project_id=gcp_project_id,
+    response = api_v2.delete_workbench(
+        environment_type=environment_type,
+        instance_type=instance_type,
+        dataset_identifier=dataset_identifier,
+        gcp_user_email_id=gcp_user_email_id,
+        bucket_name=bucket_name,
+        region=region,
+        persistent_disk=str(persistent_disk),
+        gcp_project_id=workspace_name,
+        gpu_accelerator_type=gpu_accelerator_type,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise DeleteEnvironmentFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.DESTROY,
-        workspace_name=gcp_project_id,
-    )
-
     return response.json()
-
-
-def persist_workflow(
-    user: User,
-    execution_resource_name: str,
-    type: int,
-    project_id: Optional[int] = None,
-    workspace_name: Optional[str] = None,
-) -> Workflow:
-    return Workflow.objects.create(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        workspace_name=workspace_name,
-        project_id=project_id,
-        type=type,
-        status=Workflow.INPROGRESS,
-    )
 
 
 def get_execution_state(execution_resource_name) -> executions.Execution.State:

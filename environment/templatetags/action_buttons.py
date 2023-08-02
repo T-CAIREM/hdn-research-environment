@@ -107,9 +107,10 @@ def environment_action_button(
         "region": environment.region.value,
         "bucket_name": project.project_file_root(),
         "instance_name": environment.gcp_identifier,
+        "instance_type": environment.instance_type,
         "environment_type": environment.type,
         "persistent_disk": environment.disk_size,
-        "gpu_accelerator_type": environment.gpu_accelerator_type
+        "gpu_accelerator_type": environment.gpu_accelerator_type,
     }
 
     result_data = {
