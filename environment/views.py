@@ -272,12 +272,12 @@ def create_research_environment(request, project_slug, project_version):
                 services.create_research_environment(
                     user=request.user,
                     project=project,
-                    workspace_name=form.cleaned_data["workspace"].gcp_project_id,
-                    instance_type=form.cleaned_data["instance_type"],
+                    workspace_project_id=form.cleaned_data["workspace"].gcp_project_id,
+                    machine_type=form.cleaned_data["instance_type"],
                     region=form.cleaned_data["workspace"].region.value,
-                    environment_type=form.cleaned_data["environment_type"],
+                    workbench_type=form.cleaned_data["environment_type"],
                     persistent_disk=form.cleaned_data.get("persistent_disk"),
-                    gpu_accelerator=form.cleaned_data.get("gpu_accelerator"),
+                    gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
                 )
                 return redirect("research_environments")
             else:
@@ -373,10 +373,10 @@ def confirm_billing_account_sharing(request):
 def stop_running_environment(request):
     data = json.loads(request.body)
     services.stop_running_environment(
-        environment_type=data["environment_type"],
-        instance_name=data["instance_name"],
-        gcp_user_email_id=request.user.cloud_identity.email,
-        gcp_project_id=data["gcp_project_id"],
+        workbench_type=data["environment_type"],
+        workbench_resource_id=data["instance_name"],
+        user_email=request.user.cloud_identity.email,
+        workspace_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
@@ -387,10 +387,10 @@ def stop_running_environment(request):
 def start_stopped_environment(request):
     data = json.loads(request.body)
     services.start_stopped_environment(
-        gcp_user_email_id=request.user.cloud_identity.email,
-        environment_type=data["environment_type"],
-        instance_name=data["instance_name"],
-        gcp_project_id=data["gcp_project_id"],
+        user_email=request.user.cloud_identity.email,
+        workbench_type=data["environment_type"],
+        workbench_resource_id=data["instance_name"],
+        workspace_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
 
@@ -401,15 +401,17 @@ def start_stopped_environment(request):
 def change_environment_instance_type(request):
     data = json.loads(request.body)
     services.change_environment_instance_type(
-        gcp_user_email_id=request.user.cloud_identity.email,
+        user_email=request.user.cloud_identity.email,
         dataset_identifier=data["dataset_identifier"],
-        workspace_name=data["gcp_project_id"],
+        workspace_project_id=data["gcp_project_id"],
         region=data["region"],
         bucket_name=data["bucket_name"],
-        instance_type=data["instance_type"],
-        environment_type=data["environment_type"],
+        machine_type=data["instance_type"],
+        workbench_type=data["environment_type"],
         persistent_disk=data["persistent_disk"],
         gpu_accelerator_type=data["gpu_accelerator_type"],
+        workbench_resource_id=data["instance_name"],
+
     )
     return JsonResponse({})
 
@@ -420,15 +422,16 @@ def change_environment_instance_type(request):
 def delete_environment(request):
     data = json.loads(request.body)
     services.delete_environment(
-        gcp_user_email_id=request.user.cloud_identity.email,
+        user_email=request.user.cloud_identity.email,
         dataset_identifier=data["dataset_identifier"],
-        workspace_name=data["gcp_project_id"],
+        workspace_project_id=data["gcp_project_id"],
         region=data["region"],
         bucket_name=data["bucket_name"],
-        instance_type=data["instance_type"],
-        environment_type=data["environment_type"],
+        machine_type=data["instance_type"],
+        workbench_type=data["environment_type"],
         persistent_disk=data["persistent_disk"],
         gpu_accelerator_type=data["gpu_accelerator_type"],
+        workbench_resource_id=data["instance_name"],
     )
     return JsonResponse({})
 

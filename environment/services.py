@@ -207,28 +207,28 @@ def delete_workspace(
 def _create_workbench_kwargs(
     user: User,
     project: PublishedProject,
-    workspace_name: str,
-    instance_type: str,
+    workspace_project_id: str,
+    machine_type: str,
     region: str,
-    environment_type: str,
+    workbench_type: str,
     persistent_disk: int,
-    gpu_accelerator: Optional[str] = None,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> dict:
-    gcp_user_email_id = user.cloud_identity.email
+    user_email = user.cloud_identity.email
 
     common = {
-        "gcp_user_email_id": gcp_user_email_id,
-        "gcp_project_id": workspace_name,
-        "environment_type": environment_type,
-        "instance_type": instance_type,
+        "user_email": user_email,
+        "workspace_project_id": workspace_project_id,
+        "workbench_type": workbench_type,
+        "machine_type": machine_type,
         "region": region,
         "dataset_identifier": _project_data_group(project),
         "persistent_disk": str(persistent_disk),
         "bucket_name": project.project_file_root(),
     }
-    if environment_type == "jupyter":
+    if workbench_type == "jupyter":
         jupyter_kwargs = {
-            "gpu_accelerator": gpu_accelerator,
+            "gpu_accelerator_type": gpu_accelerator_type,
         }
         return {**common, **jupyter_kwargs}
     else:
@@ -238,22 +238,22 @@ def _create_workbench_kwargs(
 def create_research_environment(
     user: User,
     project: PublishedProject,
-    workspace_name: str,
-    instance_type: str,
+    workspace_project_id: str,
+    machine_type: str,
     region: str,
-    environment_type: str,
+    workbench_type: str,
     persistent_disk: int,
-    gpu_accelerator: Optional[str] = None,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
         project,
-        workspace_name,
-        instance_type,
+        workspace_project_id,
+        machine_type,
         region,
-        environment_type,
+        workbench_type,
         persistent_disk,
-        gpu_accelerator,
+        gpu_accelerator_type,
     )
     response = api_v2.create_workbench(**kwargs)
     if not response.ok:
@@ -412,16 +412,16 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 
 
 def stop_running_environment(
-    environment_type: str,
-    instance_name: str,
-    gcp_user_email_id: str,
-    gcp_project_id: str,
+    workbench_type: str,
+    workbench_resource_id: str,
+    user_email: str,
+    workspace_project_id: str,
 ) -> str:
     response = api_v2.stop_workbench(
-        environment_type=environment_type,
-        instance_name=instance_name,
-        gcp_user_email_id=gcp_user_email_id,
-        gcp_project_id=gcp_project_id,
+        workbench_type=workbench_type,
+        workbench_resource_id=workbench_resource_id,
+        user_email=user_email,
+        workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -431,16 +431,16 @@ def stop_running_environment(
 
 
 def start_stopped_environment(
-    gcp_user_email_id: str,
-    environment_type: str,
-    instance_name: str,
-    gcp_project_id: str,
+    workbench_type: str,
+    workbench_resource_id: str,
+    user_email: str,
+    workspace_project_id: str,
 ) -> str:
     response = api_v2.start_workbench(
-        environment_type=environment_type,
-        instance_name=instance_name,
-        gcp_user_email_id=gcp_user_email_id,
-        gcp_project_id=gcp_project_id,
+        workbench_type=workbench_type,
+        workbench_resource_id=workbench_resource_id,
+        user_email=user_email,
+        workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -450,26 +450,28 @@ def start_stopped_environment(
 
 
 def change_environment_instance_type(
-    gcp_user_email_id: str,
+    user_email: str,
     dataset_identifier: str,
-    workspace_name: str,
-    instance_type: str,
+    workspace_project_id: str,
+    machine_type: str,
     region: str,
-    environment_type: str,
+    workbench_type: str,
     bucket_name: str,
     persistent_disk: int,
+    workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     response = api_v2.change_workbench_instance_type(
-        environment_type=environment_type,
-        instance_type=instance_type,
+        workbench_type=workbench_type,
+        machine_type=machine_type,
         dataset_identifier=dataset_identifier,
-        gcp_user_email_id=gcp_user_email_id,
+        user_email=user_email,
         bucket_name=bucket_name,
         region=region,
         persistent_disk=str(persistent_disk),
-        gcp_project_id=workspace_name,
+        workspace_project_id=workspace_project_id,
         gpu_accelerator_type=gpu_accelerator_type,
+        workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -479,26 +481,28 @@ def change_environment_instance_type(
 
 
 def delete_environment(
-    gcp_user_email_id: str,
+    user_email: str,
     dataset_identifier: str,
-    workspace_name: str,
-    instance_type: str,
+    workspace_project_id: str,
+    machine_type: str,
     region: str,
-    environment_type: str,
+    workbench_type: str,
     bucket_name: str,
     persistent_disk: int,
+    workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     response = api_v2.delete_workbench(
-        environment_type=environment_type,
-        instance_type=instance_type,
+        workbench_type=workbench_type,
+        machine_type=machine_type,
         dataset_identifier=dataset_identifier,
-        gcp_user_email_id=gcp_user_email_id,
+        user_email=user_email,
         bucket_name=bucket_name,
         region=region,
         persistent_disk=str(persistent_disk),
-        gcp_project_id=workspace_name,
+        workspace_project_id=workspace_project_id,
         gpu_accelerator_type=gpu_accelerator_type,
+        workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
