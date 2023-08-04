@@ -86,5 +86,5 @@ def terminate_environments_if_access_still_expired(
                 workbench_type=environment.type.value,
                 persistent_disk=environment.disk_size,
                 gpu_accelerator_type=environment.gpu_accelerator_type,
-                workbench_resource_id=environment.gcp_identifier
+                workbench_resource_id=environment.gcp_identifier,
             )

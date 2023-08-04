@@ -411,7 +411,6 @@ def change_environment_instance_type(request):
         persistent_disk=data["persistent_disk"],
         gpu_accelerator_type=data["gpu_accelerator_type"],
         workbench_resource_id=data["instance_name"],
-
     )
     return JsonResponse({})
 
