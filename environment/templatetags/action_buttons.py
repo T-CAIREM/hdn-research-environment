@@ -1,15 +1,15 @@
 import json
 from typing import Iterable, Tuple
 
+from django.apps import apps
 from django import template
-from django.db.models import Model
 from django.urls import reverse
 
 from environment.constants import INSTANCE_TYPE_SPECIFICATION
 from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.models import Workflow
 
-PublishedProject = Model
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 register = template.Library()
@@ -102,10 +102,15 @@ def environment_action_button(
 ) -> dict:
     data = button_types[button_type]
     request_data = {
-        "workbench_id": environment.gcp_identifier,
-        "project_id": project.pk,
-        "region": environment.region.value,
+        "dataset_identifier": environment.dataset_identifier,
         "gcp_project_id": environment.workspace_name,
+        "region": environment.region.value,
+        "bucket_name": project.project_file_root(),
+        "instance_name": environment.gcp_identifier,
+        "instance_type": environment.instance_type,
+        "environment_type": environment.type,
+        "persistent_disk": environment.disk_size,
+        "gpu_accelerator_type": environment.gpu_accelerator_type,
     }
 
     result_data = {
@@ -126,7 +131,11 @@ def workspace_destroy_modal_button(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
 ) -> dict:
-    request_data = {"gcp_project_id": workspace.gcp_project_id}
+    request_data = {
+        "gcp_project_id": workspace.gcp_project_id,
+        "region": workspace.region.value,
+        "billing_account_id": workspace.gcp_billing_id,
+    }
     result_data = {
         "workspace": workspace,
         "modal_id": f"workspace-delete-{workspace.gcp_project_id}",

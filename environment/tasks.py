@@ -53,7 +53,10 @@ def stop_environments_with_expired_access(user_id: int):
     for environment in environments:
         if environment.is_running:
             stop_running_environment(
-                user, environment.id, environment.region, environment.workspace_name
+                workbench_type=environment.type,
+                workbench_resource_id=environment.instance_name,
+                user_email=user.cloud_identity.email,
+                workspace_project_id=environment.workspace_name,
             )
     send_environment_access_expired(user, projects)
     if len(environments) > 0:
@@ -71,8 +74,17 @@ def terminate_environments_if_access_still_expired(
 ):
     user = User.objects.get(pk=user_id)
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
-    for environment, _ in expired_pairs:
+    for environment, project in expired_pairs:
         if environment.id in previously_stopped_environment_ids:
             delete_environment(
-                user, environment.id, environment.region, environment.workspace_name
+                user_email=user.cloud_identity.email,
+                dataset_identifier=environment.dataset_identifier,
+                workspace_project_id=environment.workspace_name,
+                region=environment.region.value,
+                bucket_name=project.project_file_root(),
+                machine_type=environment.instance_type,
+                workbench_type=environment.type.value,
+                persistent_disk=environment.disk_size,
+                gpu_accelerator_type=environment.gpu_accelerator_type,
+                workbench_resource_id=environment.gcp_identifier,
             )

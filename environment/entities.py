@@ -79,6 +79,9 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
+    instance_type: Optional[str]
+    disk_size: Optional[int]
+    gpu_accelerator_type: Optional[str]
 
     @property
     def is_running(self):

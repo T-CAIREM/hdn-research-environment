@@ -189,61 +189,46 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        type=Workflow.WORKSPACE_CREATE,
-    )
 
-
-def delete_workspace(user: User, gcp_project_id: str):
+def delete_workspace(
+    user: User, billing_account_id: str, region: str, gcp_project_id: str
+):
     response = api_v2.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
+        billing_account_id=billing_account_id,
+        region=region,
     )
     if not response.ok:
         error_message = response.json()["error"]
         raise DeleteWorkspaceFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        type=Workflow.WORKSPACE_DESTROY,
-        workspace_name=gcp_project_id,
-    )
-
 
 def _create_workbench_kwargs(
     user: User,
     project: PublishedProject,
-    workspace_name: str,
-    instance_type: str,
-    environment_type: str,
+    workspace_project_id: str,
+    machine_type: str,
+    region: str,
+    workbench_type: str,
     persistent_disk: int,
-    gpu_accelerator: Optional[str] = None,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> dict:
-    gcp_user_id = user.cloud_identity.gcp_user_id
+    user_email = user.cloud_identity.email
 
     common = {
-        "gcp_user_id": gcp_user_id,
-        "gcp_project_id": workspace_name,
-        "environment_type": environment_type,
-        "instance_type": instance_type,
-        "group_granting_data_access": _project_data_group(project),
+        "user_email": user_email,
+        "workspace_project_id": workspace_project_id,
+        "workbench_type": workbench_type,
+        "machine_type": machine_type,
+        "region": region,
+        "dataset_identifier": _project_data_group(project),
         "persistent_disk": str(persistent_disk),
         "bucket_name": project.project_file_root(),
     }
-    if environment_type == "jupyter":
-        vm_image = (
-            "common-cu110-notebooks"
-            if gpu_accelerator
-            else "r-4-2-cpu-experimental-notebooks"
-        )
+    if workbench_type == "jupyter":
         jupyter_kwargs = {
-            "vm_image": vm_image,
-            "gpu_accelerator": gpu_accelerator,
+            "gpu_accelerator_type": gpu_accelerator_type,
         }
         return {**common, **jupyter_kwargs}
     else:
@@ -253,36 +238,29 @@ def _create_workbench_kwargs(
 def create_research_environment(
     user: User,
     project: PublishedProject,
-    workspace_name: str,
-    instance_type: str,
-    environment_type: str,
+    workspace_project_id: str,
+    machine_type: str,
+    region: str,
+    workbench_type: str,
     persistent_disk: int,
-    gpu_accelerator: Optional[str] = None,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
         project,
-        workspace_name,
-        instance_type,
-        environment_type,
+        workspace_project_id,
+        machine_type,
+        region,
+        workbench_type,
         persistent_disk,
-        gpu_accelerator,
+        gpu_accelerator_type,
     )
-    response = api_v1.create_workbench(**kwargs)
+    response = api_v2.create_workbench(**kwargs)
     if not response.ok:
         error_message = response.json()[
             "error"
         ]  # TODO: Check all uses of "error"/"message"
         raise EnvironmentCreationFailed(error_message)
-
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project.pk,
-        type=Workflow.CREATE,
-        workspace_name=workspace_name,
-    )
 
     return response.json()
 
@@ -434,130 +412,103 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 
 
 def stop_running_environment(
-    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
+    workbench_type: str,
+    workbench_resource_id: str,
+    user_email: str,
+    workspace_project_id: str,
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.stop_workbench(
-        gcp_user_id=gcp_user_id,
-        workbench_id=workbench_id,
-        region=region.value,
-        gcp_project_id=gcp_project_id,
+    response = api_v2.stop_workbench(
+        workbench_type=workbench_type,
+        workbench_resource_id=workbench_resource_id,
+        user_email=user_email,
+        workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
         raise StopEnvironmentFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.PAUSE,
-        workspace_name=gcp_project_id,
-    )
-
     return response.json()
 
 
 def start_stopped_environment(
-    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
+    workbench_type: str,
+    workbench_resource_id: str,
+    user_email: str,
+    workspace_project_id: str,
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.start_workbench(
-        gcp_user_id=gcp_user_id,
-        workbench_id=workbench_id,
-        region=region.value,
-        gcp_project_id=gcp_project_id,
+    response = api_v2.start_workbench(
+        workbench_type=workbench_type,
+        workbench_resource_id=workbench_resource_id,
+        user_email=user_email,
+        workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise StartEnvironmentFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.START,
-        workspace_name=gcp_project_id,
-    )
-
     return response.json()
 
 
 def change_environment_instance_type(
-    user: User,
-    project_id: str,
-    workbench_id: str,
-    region: Region,
-    gcp_project_id: str,
-    new_instance_type: InstanceType,
+    user_email: str,
+    dataset_identifier: str,
+    workspace_project_id: str,
+    machine_type: str,
+    region: str,
+    workbench_type: str,
+    bucket_name: str,
+    persistent_disk: int,
+    workbench_resource_id: str,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.change_workbench_instance_type(
-        gcp_user_id=gcp_user_id,
-        workbench_id=workbench_id,
-        region=region.value,
-        new_instance_type=new_instance_type.value,
-        gcp_project_id=gcp_project_id,
+    response = api_v2.change_workbench_instance_type(
+        workbench_type=workbench_type,
+        machine_type=machine_type,
+        dataset_identifier=dataset_identifier,
+        user_email=user_email,
+        bucket_name=bucket_name,
+        region=region,
+        persistent_disk=str(persistent_disk),
+        workspace_project_id=workspace_project_id,
+        gpu_accelerator_type=gpu_accelerator_type,
+        workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise ChangeEnvironmentInstanceTypeFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.CHANGE,
-        workspace_name=gcp_project_id,
-    )
-
     return response.json()
 
 
 def delete_environment(
-    user: User, project_id: str, workbench_id: str, region: Region, gcp_project_id: str
+    user_email: str,
+    dataset_identifier: str,
+    workspace_project_id: str,
+    machine_type: str,
+    region: str,
+    workbench_type: str,
+    bucket_name: str,
+    persistent_disk: int,
+    workbench_resource_id: str,
+    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
-    gcp_user_id = user.cloud_identity.gcp_user_id
-    response = api_v1.delete_workbench(
-        gcp_user_id=gcp_user_id,
-        workbench_id=workbench_id,
-        region=region.value,
-        gcp_project_id=gcp_project_id,
+    response = api_v2.delete_workbench(
+        workbench_type=workbench_type,
+        machine_type=machine_type,
+        dataset_identifier=dataset_identifier,
+        user_email=user_email,
+        bucket_name=bucket_name,
+        region=region,
+        persistent_disk=str(persistent_disk),
+        workspace_project_id=workspace_project_id,
+        gpu_accelerator_type=gpu_accelerator_type,
+        workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise DeleteEnvironmentFailed(error_message)
 
-    execution_resource_name = response.json()["execution-name"]
-    persist_workflow(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        project_id=project_id,
-        type=Workflow.DESTROY,
-        workspace_name=gcp_project_id,
-    )
-
     return response.json()
-
-
-def persist_workflow(
-    user: User,
-    execution_resource_name: str,
-    type: int,
-    project_id: Optional[int] = None,
-    workspace_name: Optional[str] = None,
-) -> Workflow:
-    return Workflow.objects.create(
-        user=user,
-        execution_resource_name=execution_resource_name,
-        workspace_name=workspace_name,
-        project_id=project_id,
-        type=type,
-        status=Workflow.INPROGRESS,
-    )
 
 
 def get_execution_state(execution_resource_name) -> executions.Execution.State:

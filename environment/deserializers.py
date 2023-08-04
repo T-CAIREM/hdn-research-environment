@@ -21,6 +21,9 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
             memory=workbench["memory"],
             region=Region(workspace["region"]),
             type=EnvironmentType(workbench["type"]),
+            instance_type=workbench.get("machine_type"),
+            disk_size=workbench.get("disk_size"),
+            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
         )
         for workspace in data
         for workbench in workspace["workbenches"]
