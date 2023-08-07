@@ -1,15 +1,14 @@
 from typing import Iterable
 
 from django.apps import apps
-from django.db.models import Model
 from django.conf import settings
-from django.urls import reverse
-from django.template import loader
 from django.core.mail import send_mail
+from django.db.models import Model
+from django.template import loader
+from django.urls import reverse
 from django.utils.html import strip_tags
 
 from environment.models import BillingAccountSharingInvite
-
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 

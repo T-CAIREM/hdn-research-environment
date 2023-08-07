@@ -1,16 +1,16 @@
 from unittest import skipIf
 
-from django.test import TestCase
 from django.conf import settings
+from django.test import TestCase
 
 from environment.tests.helpers import (
     create_user_with_cloud_identity,
     create_user_without_cloud_identity,
 )
 from environment.utilities import (
-    user_has_cloud_identity,
-    left_join_iterators,
     inner_join_iterators,
+    left_join_iterators,
+    user_has_cloud_identity,
 )
 
 

@@ -1,13 +1,12 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from unittest import skipIf
 from unittest.mock import patch
 
-
-from django.test import TestCase
 from django.conf import settings
+from django.test import TestCase
 from django.utils import timezone
 
-from environment.signals import User, DataAccessRequest, Training, Event
+from environment.signals import DataAccessRequest, Event, Training, User
 
 
 @skipIf(

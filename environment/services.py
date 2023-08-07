@@ -14,10 +14,7 @@ from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
 )
-from environment.entities import (
-    ResearchEnvironment,
-    ResearchWorkspace,
-)
+from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.exceptions import (
     BillingAccessRevokationFailed,
     BillingSharingFailed,
@@ -377,7 +374,9 @@ def sort_environments_per_workspace(
             ].append((environment, project, workflows))
 
     sorted_environments_project_workflow_triplets_with_billing_info = {
-        workspace: sorted_environments_project_workflow_triplets[workspace.gcp_project_id]
+        workspace: sorted_environments_project_workflow_triplets[
+            workspace.gcp_project_id
+        ]
         for workspace in workspaces
     }
     return sorted_environments_project_workflow_triplets_with_billing_info

@@ -1,8 +1,8 @@
 import json
 from typing import Iterable, Tuple
 
-from django.apps import apps
 from django import template
+from django.apps import apps
 from django.urls import reverse
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION

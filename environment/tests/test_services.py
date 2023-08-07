@@ -1,43 +1,42 @@
 from unittest import skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from django.conf import settings
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.apps import apps
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.test import TestCase
 
-from environment.services import (
-    create_cloud_identity,
-    create_research_environment,
-    stop_running_environment,
-    start_stopped_environment,
-    change_environment_machine_type,
-    delete_environment,
-    verify_billing_and_create_workspace,
-    get_environments_with_projects,
-)
-from environment.exceptions import (
-    IdentityProvisioningFailed,
-    EnvironmentCreationFailed,
-    StopEnvironmentFailed,
-    StartEnvironmentFailed,
-    ChangeEnvironmentInstanceTypeFailed,
-    DeleteEnvironmentFailed,
-    BillingVerificationFailed,
-    GetAvailableEnvironmentsFailed,
-)
 from environment.entities import (
-    Region,
-    InstanceType,
     EnvironmentStatus,
+    InstanceType,
+    Region,
     ResearchEnvironment,
 )
-from environment.tests.mocks import get_workspace_list_json
-from environment.tests.helpers import (
-    create_user_without_cloud_identity,
-    create_user_with_cloud_identity,
+from environment.exceptions import (
+    BillingVerificationFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    DeleteEnvironmentFailed,
+    EnvironmentCreationFailed,
+    GetAvailableEnvironmentsFailed,
+    IdentityProvisioningFailed,
+    StartEnvironmentFailed,
+    StopEnvironmentFailed,
 )
-
+from environment.services import (
+    change_environment_machine_type,
+    create_cloud_identity,
+    create_research_environment,
+    delete_environment,
+    get_environments_with_projects,
+    start_stopped_environment,
+    stop_running_environment,
+    verify_billing_and_create_workspace,
+)
+from environment.tests.helpers import (
+    create_user_with_cloud_identity,
+    create_user_without_cloud_identity,
+)
+from environment.tests.mocks import get_workspace_list_json
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 

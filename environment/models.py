@@ -1,10 +1,10 @@
 import uuid
 
-from django.db import models
 from django.core.validators import EmailValidator
+from django.db import models
 
-from environment.validators import gcp_billing_account_id_validator
 from environment.managers import WorkflowManager
+from environment.validators import gcp_billing_account_id_validator
 
 
 class CloudIdentity(models.Model):

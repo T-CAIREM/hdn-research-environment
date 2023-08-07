@@ -1,5 +1,6 @@
-from requests import Request
 from typing import Optional
+
+from requests import Request
 
 from environment.api.v2.decorators import api_request
 

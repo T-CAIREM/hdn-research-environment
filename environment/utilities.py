@@ -1,7 +1,6 @@
-from typing import Iterator, Tuple, Optional, TypeVar, Callable
+from typing import Callable, Iterator, Optional, Tuple, TypeVar
 
 from django.db.models import Model
-
 
 T = TypeVar("T")
 U = TypeVar("U")

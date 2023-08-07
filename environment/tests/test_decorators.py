@@ -1,14 +1,14 @@
 from unittest import skipIf
 from unittest.mock import Mock
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
-from django.conf import settings
 
 from environment.decorators import (
     cloud_identity_required,
-    require_PATCH,
     require_DELETE,
+    require_PATCH,
 )
 
 

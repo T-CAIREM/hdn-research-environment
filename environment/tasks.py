@@ -1,21 +1,20 @@
-from typing import Iterable
 from datetime import timedelta
+from typing import Iterable
 
 from background_task import background
-from django.contrib.auth import get_user_model
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
-from environment.services import (
-    get_environment_project_pairs_with_expired_access,
-    stop_running_environment,
-    delete_environment,
-    share_billing_account,
-)
 from environment.mailers import send_environment_access_expired
 from environment.models import BillingAccountSharingInvite
-
+from environment.services import (
+    delete_environment,
+    get_environment_project_pairs_with_expired_access,
+    share_billing_account,
+    stop_running_environment,
+)
 
 User = get_user_model()
 

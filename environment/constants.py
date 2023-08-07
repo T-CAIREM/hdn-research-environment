@@ -1,9 +1,6 @@
-from environment.entities import (
-    InstanceType,
-    Region,
-    GPUAcceleratorType,
-)
 from collections import namedtuple
+
+from environment.entities import GPUAcceleratorType, InstanceType, Region
 
 MAX_RUNNING_WORKSPACES = 4
 
