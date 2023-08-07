@@ -147,26 +147,16 @@ def start_workbench(
 def change_workbench_machine_type(
     workbench_type: str,
     machine_type: str,
-    dataset_identifier: str,
     user_email: str,
-    bucket_name: str,
-    region: str,
-    disk_size: str,
     workspace_project_id: str,
     workbench_resource_id: str,
-    gpu_accelerator_type: Optional[str] = None,
 ) -> Request:
     json = {
         "workbench_type": workbench_type,
-        "machine_type": machine_type,
         "workspace_project_id": workspace_project_id,
-        "dataset_identifier": dataset_identifier,
         "user_email": user_email,
-        "bucket_name": bucket_name,
-        "region": region,
-        "disk_size": disk_size,
-        "gpu_accelerator_type": gpu_accelerator_type,
         "workbench_resource_id": workbench_resource_id,
+        "machine_type": machine_type,
     }
     return Request("PUT", url="/workbench/update", json=json)
 
@@ -174,26 +164,14 @@ def change_workbench_machine_type(
 @api_request
 def delete_workbench(
     workbench_type: str,
-    machine_type: str,
-    dataset_identifier: str,
     user_email: str,
-    bucket_name: str,
-    region: str,
-    disk_size: str,
     workspace_project_id: str,
     workbench_resource_id: str,
-    gpu_accelerator_type: Optional[str] = None,
 ) -> Request:
     json = {
         "workbench_type": workbench_type,
-        "machine_type": machine_type,
         "workspace_project_id": workspace_project_id,
-        "dataset_identifier": dataset_identifier,
         "user_email": user_email,
-        "bucket_name": bucket_name,
-        "region": region,
-        "disk_size": disk_size,
-        "gpu_accelerator_type": gpu_accelerator_type,
         "workbench_resource_id": workbench_resource_id,
     }
     return Request("DELETE", url="/workbench/destroy", json=json)

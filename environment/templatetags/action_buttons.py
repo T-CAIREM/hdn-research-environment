@@ -97,20 +97,13 @@ def environment_modal_button(
 @register.inclusion_tag("tag/environment_action_button.html")
 def environment_action_button(
     environment: ResearchEnvironment,
-    project: PublishedProject,
     button_type: str,
 ) -> dict:
     data = button_types[button_type]
     request_data = {
-        "dataset_identifier": environment.dataset_identifier,
         "gcp_project_id": environment.workspace_name,
-        "region": environment.region.value,
-        "bucket_name": project.project_file_root(),
         "instance_name": environment.gcp_identifier,
-        "machine_type": environment.machine_type,
         "environment_type": environment.type.value,
-        "disk_size": environment.disk_size,
-        "gpu_accelerator_type": environment.gpu_accelerator_type,
     }
 
     result_data = {
