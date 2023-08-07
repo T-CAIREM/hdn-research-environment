@@ -91,7 +91,6 @@ def research_environments(request):
         services.sort_environments_per_workspace(
             environment_projects_pairs_with_creating,
             workspaces_list,
-            billing_accounts_list,
         )
     )
 
@@ -112,7 +111,7 @@ def research_environments(request):
         "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
         "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
-        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
+        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
     }
 
     return render(
@@ -165,7 +164,6 @@ def research_environments_partial(request):
         services.sort_environments_per_workspace(
             environment_projects_pairs_with_creating,
             workspaces_list,
-            billing_accounts_list,
         )
     )
 
@@ -186,7 +184,7 @@ def research_environments_partial(request):
         "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
         "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
-        "instance_type_specification_dict": constants.INSTANCE_TYPE_SPECIFICATION,
+        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -265,7 +263,7 @@ def create_research_environment(request, project_slug, project_version):
         )
         if form.is_valid():
             cpu_usage = services.cpu_usage(
-                value=InstanceType(form.cleaned_data["instance_type"]).cpus(),
+                value=InstanceType(form.cleaned_data["machine_type"]).cpus(),
                 user=request.user,
             )
             if cpu_usage <= constants.MAX_CPU_USAGE:
@@ -273,10 +271,10 @@ def create_research_environment(request, project_slug, project_version):
                     user=request.user,
                     project=project,
                     workspace_project_id=form.cleaned_data["workspace"].gcp_project_id,
-                    machine_type=form.cleaned_data["instance_type"],
+                    machine_type=form.cleaned_data["machine_type"],
                     region=form.cleaned_data["workspace"].region.value,
                     workbench_type=form.cleaned_data["environment_type"],
-                    persistent_disk=form.cleaned_data.get("persistent_disk"),
+                    disk_size=form.cleaned_data.get("disk_size"),
                     gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
                 )
                 return redirect("research_environments")
@@ -398,17 +396,17 @@ def start_stopped_environment(request):
 @require_PATCH
 @login_required
 @cloud_identity_required
-def change_environment_instance_type(request):
+def change_environment_machine_type(request):
     data = json.loads(request.body)
-    services.change_environment_instance_type(
+    services.change_environment_machine_type(
         user_email=request.user.cloud_identity.email,
         dataset_identifier=data["dataset_identifier"],
         workspace_project_id=data["gcp_project_id"],
         region=data["region"],
         bucket_name=data["bucket_name"],
-        machine_type=data["instance_type"],
+        machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
-        persistent_disk=data["persistent_disk"],
+        disk_size=data["disk_size"],
         gpu_accelerator_type=data["gpu_accelerator_type"],
         workbench_resource_id=data["instance_name"],
     )
@@ -426,9 +424,9 @@ def delete_environment(request):
         workspace_project_id=data["gcp_project_id"],
         region=data["region"],
         bucket_name=data["bucket_name"],
-        machine_type=data["instance_type"],
+        machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
-        persistent_disk=data["persistent_disk"],
+        disk_size=data["disk_size"],
         gpu_accelerator_type=data["gpu_accelerator_type"],
         workbench_resource_id=data["instance_name"],
     )

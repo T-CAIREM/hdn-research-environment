@@ -5,7 +5,7 @@ from django.apps import apps
 from django import template
 from django.urls import reverse
 
-from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.models import Workflow
 
@@ -31,7 +31,7 @@ button_types = {
     "update": {
         "button_text": "Save Instance",
         "http_method": "PATCH",
-        "url_name": "change_environment_instance_type",
+        "url_name": "change_environment_machine_type",
         "button_class": "btn btn-primary",
     },
     "destroy": {
@@ -89,7 +89,7 @@ def environment_modal_button(
         "action_button_type": data["action_button_type"],
     }
     if button_type == "modal_instance":
-        result_data["instances_dict"] = INSTANCE_TYPE_SPECIFICATION
+        result_data["instances_dict"] = MACHINE_TYPE_SPECIFICATION
 
     return result_data
 
@@ -107,9 +107,9 @@ def environment_action_button(
         "region": environment.region.value,
         "bucket_name": project.project_file_root(),
         "instance_name": environment.gcp_identifier,
-        "instance_type": environment.instance_type,
-        "environment_type": environment.type,
-        "persistent_disk": environment.disk_size,
+        "machine_type": environment.machine_type,
+        "environment_type": environment.type.value,
+        "disk_size": environment.disk_size,
         "gpu_accelerator_type": environment.gpu_accelerator_type,
     }
 

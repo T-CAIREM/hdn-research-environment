@@ -82,9 +82,9 @@ def terminate_environments_if_access_still_expired(
                 workspace_project_id=environment.workspace_name,
                 region=environment.region.value,
                 bucket_name=project.project_file_root(),
-                machine_type=environment.instance_type,
+                machine_type=environment.machine_type,
                 workbench_type=environment.type.value,
-                persistent_disk=environment.disk_size,
+                disk_size=environment.disk_size,
                 gpu_accelerator_type=environment.gpu_accelerator_type,
                 workbench_resource_id=environment.gcp_identifier,
             )

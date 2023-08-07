@@ -21,7 +21,7 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
             memory=workbench["memory"],
             region=Region(workspace["region"]),
             type=EnvironmentType(workbench["type"]),
-            instance_type=workbench.get("machine_type"),
+            machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
         )
@@ -32,7 +32,7 @@ def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironmen
 
 def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
     return ResearchWorkspace(
-        region=data["region"],
+        region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_account_id"],
     )

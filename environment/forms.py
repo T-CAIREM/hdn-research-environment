@@ -3,7 +3,7 @@ from typing import Iterable
 from django import forms
 
 from environment.entities import ResearchWorkspace, InstanceType
-from environment.constants import INSTANCE_TYPE_SPECIFICATION
+from environment.constants import MACHINE_TYPE_SPECIFICATION
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -41,11 +41,11 @@ class CreateWorkspaceForm(forms.Form):
 
 
 class CreateResearchEnvironmentForm(forms.Form):
-    AVAILABLE_INSTANCE_TYPES = [
-        ("n1-standard-2", INSTANCE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_2]),
-        ("n1-standard-4", INSTANCE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_4]),
-        ("n1-standard-8", INSTANCE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_8]),
-        ("n1-standard-16", INSTANCE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_16]),
+    AVAILABLE_MACHINE_TYPES = [
+        ("n1-standard-2", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_2]),
+        ("n1-standard-4", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_4]),
+        ("n1-standard-8", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_8]),
+        ("n1-standard-16", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_16]),
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
@@ -57,9 +57,9 @@ class CreateResearchEnvironmentForm(forms.Form):
     ]
 
     workspace = forms.ChoiceField(label="Workspace")
-    instance_type = forms.ChoiceField(
+    machine_type = forms.ChoiceField(
         label="Instance type",
-        choices=AVAILABLE_INSTANCE_TYPES,
+        choices=AVAILABLE_MACHINE_TYPES,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     environment_type = forms.ChoiceField(
@@ -67,7 +67,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         choices=AVAILABLE_ENVIRONMENT_TYPES,
         widget=forms.RadioSelect(attrs={"class": "environment-type"}),
     )
-    persistent_disk = forms.IntegerField(
+    disk_size = forms.IntegerField(
         label="Persistent data disk size [GB]",
         widget=forms.NumberInput(
             attrs={"class": "form-control", "min": 0, "max": 64000}
@@ -89,8 +89,7 @@ class CreateResearchEnvironmentForm(forms.Form):
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
-        gpu_accelerator = None if gpu_accelerator == "" else gpu_accelerator
-        return gpu_accelerator
+        return None if gpu_accelerator == "" else gpu_accelerator
 
 
 class ShareBillingAccountForm(forms.Form):

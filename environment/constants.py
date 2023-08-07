@@ -11,10 +11,6 @@ MAX_CPU_USAGE = 32
 
 PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
 
-WorkspaceBillingInfo = namedtuple(
-    "WorkspaceBillingInfo", ["gcp_project_id", "billing_name"]
-)
-
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 INSTANCE_PROJECTED_COSTS = {
     Region.US_CENTRAL: [
@@ -91,7 +87,7 @@ DATA_STORAGE_PROJECTED_COSTS = {
     Region.AUSTRALIA_SOUTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
 }
 
-INSTANCE_TYPE_SPECIFICATION = {
+MACHINE_TYPE_SPECIFICATION = {
     InstanceType.N1_STANDARD_2: "2 CPU, 7.5GB RAM",
     InstanceType.N1_STANDARD_4: "4 CPU, 15GB RAM",
     InstanceType.N1_STANDARD_8: "8 CPU, 30GB RAM",

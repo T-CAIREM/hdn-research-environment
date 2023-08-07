@@ -7,7 +7,6 @@ from django.db.models import Model, Q
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-import environment.api.v1 as api_v1
 import environment.api.v2 as api_v2
 import environment.constants as constants
 import environment.mailers as mailers
@@ -16,8 +15,6 @@ from environment.deserializers import (
     deserialize_workspaces,
 )
 from environment.entities import (
-    InstanceType,
-    Region,
     ResearchEnvironment,
     ResearchWorkspace,
 )
@@ -211,7 +208,7 @@ def _create_workbench_kwargs(
     machine_type: str,
     region: str,
     workbench_type: str,
-    persistent_disk: int,
+    disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
 ) -> dict:
     user_email = user.cloud_identity.email
@@ -223,7 +220,7 @@ def _create_workbench_kwargs(
         "machine_type": machine_type,
         "region": region,
         "dataset_identifier": _project_data_group(project),
-        "persistent_disk": str(persistent_disk),
+        "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
     }
     if workbench_type == "jupyter":
@@ -242,7 +239,7 @@ def create_research_environment(
     machine_type: str,
     region: str,
     workbench_type: str,
-    persistent_disk: int,
+    disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
@@ -252,7 +249,7 @@ def create_research_environment(
         machine_type,
         region,
         workbench_type,
-        persistent_disk,
+        disk_size,
         gpu_accelerator_type,
     )
     response = api_v2.create_workbench(**kwargs)
@@ -361,14 +358,10 @@ def sort_environments_per_workspace(
         Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
-    billing_accounts_list: Iterable,
 ) -> Dict[
-    constants.WorkspaceBillingInfo,
+    ResearchWorkspace,
     Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]],
 ]:
-    billing_id_mapping = match_workspace_with_billing_id(
-        workspaces, billing_accounts_list
-    )
     sorted_environments_project_workflow_triplets = defaultdict(
         list,
         {workspace.gcp_project_id: [] for workspace in workspaces},
@@ -384,10 +377,7 @@ def sort_environments_per_workspace(
             ].append((environment, project, workflows))
 
     sorted_environments_project_workflow_triplets_with_billing_info = {
-        constants.WorkspaceBillingInfo(
-            workspace.gcp_project_id,
-            billing_id_mapping[workspace.gcp_billing_id],
-        ): sorted_environments_project_workflow_triplets[workspace.gcp_project_id]
+        workspace: sorted_environments_project_workflow_triplets[workspace.gcp_project_id]
         for workspace in workspaces
     }
     return sorted_environments_project_workflow_triplets_with_billing_info
@@ -449,7 +439,7 @@ def start_stopped_environment(
     return response.json()
 
 
-def change_environment_instance_type(
+def change_environment_machine_type(
     user_email: str,
     dataset_identifier: str,
     workspace_project_id: str,
@@ -457,18 +447,18 @@ def change_environment_instance_type(
     region: str,
     workbench_type: str,
     bucket_name: str,
-    persistent_disk: int,
+    disk_size: int,
     workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
 ) -> str:
-    response = api_v2.change_workbench_instance_type(
+    response = api_v2.change_workbench_machine_type(
         workbench_type=workbench_type,
         machine_type=machine_type,
         dataset_identifier=dataset_identifier,
         user_email=user_email,
         bucket_name=bucket_name,
         region=region,
-        persistent_disk=str(persistent_disk),
+        disk_size=disk_size,
         workspace_project_id=workspace_project_id,
         gpu_accelerator_type=gpu_accelerator_type,
         workbench_resource_id=workbench_resource_id,
@@ -488,7 +478,7 @@ def delete_environment(
     region: str,
     workbench_type: str,
     bucket_name: str,
-    persistent_disk: int,
+    disk_size: int,
     workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
 ) -> str:
@@ -499,7 +489,7 @@ def delete_environment(
         user_email=user_email,
         bucket_name=bucket_name,
         region=region,
-        persistent_disk=str(persistent_disk),
+        disk_size=disk_size,
         workspace_project_id=workspace_project_id,
         gpu_accelerator_type=gpu_accelerator_type,
         workbench_resource_id=workbench_resource_id,
@@ -531,7 +521,7 @@ def mark_workflow_as_finished(
 
 def cpu_usage(value, user) -> int:
     running_environments = get_active_environments(user)
-    cpu = sum(environment.instance_type.cpus() for environment in running_environments)
+    cpu = sum(environment.machine_type.cpus() for environment in running_environments)
     return value + cpu
 
 
