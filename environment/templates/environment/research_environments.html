@@ -30,7 +30,7 @@
             if (instance === "") return;
 
             data = JSON.parse(data);
-            data["instance_type"] = instance;
+            data["machine_type"] = instance;
             data = JSON.stringify(data);
         }
         fetch(url, {

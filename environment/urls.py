@@ -37,8 +37,8 @@ urlpatterns = [
     ),
     path(
         "environment/update",
-        views.change_environment_instance_type,
-        name="change_environment_instance_type",
+        views.change_environment_machine_type,
+        name="change_environment_machine_type",
     ),
     path("environment/delete", views.delete_environment, name="delete_environment"),
     path(

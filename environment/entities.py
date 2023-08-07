@@ -79,7 +79,7 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
-    instance_type: Optional[str]
+    machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
 
@@ -106,7 +106,7 @@ class ResearchEnvironment:
         return self.is_running or self.is_paused or self.is_in_progress
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class ResearchWorkspace:
     region: Region
     gcp_project_id: str

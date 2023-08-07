@@ -14,8 +14,8 @@
       <div class="modal-body">
         {% if instances_dict != None %}
             <select class="form-select" id="form-select" size="5" aria-label="size 5 select example">
-              {% for instance_type, instance_specification in instances_dict.items %}
-                <option value="{{ instance_type.value }}">{{ instance_specification }}</option>
+              {% for machine_type, instance_specification in instances_dict.items %}
+                <option value="{{ machine_type.value }}">{{ instance_specification }}</option>
               {% endfor %}
             </select>
         {% else %}

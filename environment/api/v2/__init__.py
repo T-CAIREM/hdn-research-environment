@@ -90,7 +90,7 @@ def create_workbench(
     machine_type: str,
     region: str,
     dataset_identifier: str,
-    persistent_disk: str,
+    disk_size: str,
     bucket_name: str,
     workspace_project_id: str,
     gpu_accelerator_type: Optional[str] = None,
@@ -103,7 +103,7 @@ def create_workbench(
         "user_email": user_email,
         "bucket_name": bucket_name,
         "region": region,
-        "persistent_disk": persistent_disk,
+        "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
     }
 
@@ -123,7 +123,7 @@ def stop_workbench(
         "user_email": user_email,
         "workbench_resource_id": workbench_resource_id,
     }
-    return Request("POST", url="/workbench/stop", json=json)
+    return Request("PUT", url="/workbench/stop", json=json)
 
 
 @api_request
@@ -139,18 +139,18 @@ def start_workbench(
         "user_email": user_email,
         "workbench_resource_id": workbench_resource_id,
     }
-    return Request("POST", url="/workbench/start", json=json)
+    return Request("PUT", url="/workbench/start", json=json)
 
 
 @api_request
-def change_workbench_instance_type(
+def change_workbench_machine_type(
     workbench_type: str,
     machine_type: str,
     dataset_identifier: str,
     user_email: str,
     bucket_name: str,
     region: str,
-    persistent_disk: str,
+    disk_size: str,
     workspace_project_id: str,
     workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
@@ -163,36 +163,36 @@ def change_workbench_instance_type(
         "user_email": user_email,
         "bucket_name": bucket_name,
         "region": region,
-        "persistent_disk": persistent_disk,
+        "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
         "workbench_resource_id": workbench_resource_id,
     }
-    return Request("POST", url="/workbench/update", json=json)
+    return Request("PUT", url="/workbench/update", json=json)
 
 
 @api_request
 def delete_workbench(
-    environment_type: str,
-    instance_type: str,
+    workbench_type: str,
+    machine_type: str,
     dataset_identifier: str,
-    gcp_user_email_id: str,
+    user_email: str,
     bucket_name: str,
     region: str,
-    persistent_disk: str,
-    gcp_project_id: str,
+    disk_size: str,
+    workspace_project_id: str,
     workbench_resource_id: str,
     gpu_accelerator_type: Optional[str] = None,
 ) -> Request:
     json = {
-        "workbench_type": environment_type,
-        "machine_type": instance_type,
-        "workspace_project_id": gcp_project_id,
+        "workbench_type": workbench_type,
+        "machine_type": machine_type,
+        "workspace_project_id": workspace_project_id,
         "dataset_identifier": dataset_identifier,
-        "user_email": gcp_user_email_id,
+        "user_email": user_email,
         "bucket_name": bucket_name,
         "region": region,
-        "persistent_disk": persistent_disk,
+        "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
         "workbench_resource_id": workbench_resource_id,
     }
-    return Request("DESTROY", url="/workbench/destroy", json=json)
+    return Request("DELETE", url="/workbench/destroy", json=json)

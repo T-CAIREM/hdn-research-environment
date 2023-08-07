@@ -11,7 +11,7 @@ from environment.services import (
     create_research_environment,
     stop_running_environment,
     start_stopped_environment,
-    change_environment_instance_type,
+    change_environment_machine_type,
     delete_environment,
     verify_billing_and_create_workspace,
     get_environments_with_projects,
@@ -184,28 +184,28 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()
 
-    @patch("environment.api.change_workbench_instance_type")
-    def test_raises_if_request_fails(self, mock_change_workbench_instance_type):
-        mock_change_workbench_instance_type.return_value.ok = False
+    @patch("environment.api.change_workbench_machine_type")
+    def test_raises_if_request_fails(self, mock_change_workbench_machine_type):
+        mock_change_workbench_machine_type.return_value.ok = False
         self.assertRaises(
             ChangeEnvironmentInstanceTypeFailed,
-            change_environment_instance_type,
+            change_environment_machine_type,
             self.user,
             "workbench_id",
             Region.AUSTRALIA_SOUTHEAST,
             InstanceType.N1_STANDARD_2,
         )
 
-    @patch("environment.api.change_workbench_instance_type")
-    def test_raises_if_request_succeeds(self, mock_change_workbench_instance_type):
-        mock_change_workbench_instance_type.return_value.ok = True
-        result = change_environment_instance_type(
+    @patch("environment.api.change_workbench_machine_type")
+    def test_raises_if_request_succeeds(self, mock_change_workbench_machine_type):
+        mock_change_workbench_machine_type.return_value.ok = True
+        result = change_environment_machine_type(
             self.user,
             "workbench_id",
             Region.AUSTRALIA_SOUTHEAST,
             InstanceType.N1_STANDARD_2,
         )
-        self.assertEqual(result, mock_change_workbench_instance_type.return_value)
+        self.assertEqual(result, mock_change_workbench_machine_type.return_value)
 
 
 @skipIf(
