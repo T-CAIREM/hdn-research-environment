@@ -16,7 +16,7 @@ def _apply_api_credentials(request: Request, audience: str):
 def api_request(
     request_creator_callable: Callable[..., Request],
 ) -> Callable:
-    api_url = settings.CLOUD_RESEARCH_ENVIRONMENTS_API_V2_URL
+    api_url = settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL
 
     @wraps(request_creator_callable)
     def wrapper(*args, **kwargs) -> Response:
