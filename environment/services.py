@@ -440,26 +440,16 @@ def start_stopped_environment(
 
 def change_environment_machine_type(
     user_email: str,
-    dataset_identifier: str,
     workspace_project_id: str,
     machine_type: str,
-    region: str,
     workbench_type: str,
-    bucket_name: str,
-    disk_size: int,
     workbench_resource_id: str,
-    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     response = api_v2.change_workbench_machine_type(
         workbench_type=workbench_type,
         machine_type=machine_type,
-        dataset_identifier=dataset_identifier,
         user_email=user_email,
-        bucket_name=bucket_name,
-        region=region,
-        disk_size=disk_size,
         workspace_project_id=workspace_project_id,
-        gpu_accelerator_type=gpu_accelerator_type,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
@@ -471,26 +461,14 @@ def change_environment_machine_type(
 
 def delete_environment(
     user_email: str,
-    dataset_identifier: str,
     workspace_project_id: str,
-    machine_type: str,
-    region: str,
     workbench_type: str,
-    bucket_name: str,
-    disk_size: int,
     workbench_resource_id: str,
-    gpu_accelerator_type: Optional[str] = None,
 ) -> str:
     response = api_v2.delete_workbench(
         workbench_type=workbench_type,
-        machine_type=machine_type,
-        dataset_identifier=dataset_identifier,
         user_email=user_email,
-        bucket_name=bucket_name,
-        region=region,
-        disk_size=disk_size,
         workspace_project_id=workspace_project_id,
-        gpu_accelerator_type=gpu_accelerator_type,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:

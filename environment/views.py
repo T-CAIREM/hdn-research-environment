@@ -400,14 +400,9 @@ def change_environment_machine_type(request):
     data = json.loads(request.body)
     services.change_environment_machine_type(
         user_email=request.user.cloud_identity.email,
-        dataset_identifier=data["dataset_identifier"],
         workspace_project_id=data["gcp_project_id"],
-        region=data["region"],
-        bucket_name=data["bucket_name"],
         machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
-        disk_size=data["disk_size"],
-        gpu_accelerator_type=data["gpu_accelerator_type"],
         workbench_resource_id=data["instance_name"],
     )
     return JsonResponse({})
@@ -420,14 +415,8 @@ def delete_environment(request):
     data = json.loads(request.body)
     services.delete_environment(
         user_email=request.user.cloud_identity.email,
-        dataset_identifier=data["dataset_identifier"],
         workspace_project_id=data["gcp_project_id"],
-        region=data["region"],
-        bucket_name=data["bucket_name"],
-        machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
-        disk_size=data["disk_size"],
-        gpu_accelerator_type=data["gpu_accelerator_type"],
         workbench_resource_id=data["instance_name"],
     )
     return JsonResponse({})
