@@ -7,7 +7,7 @@ from django.db.models import Model, Q
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-import environment.api.v2 as api_v2
+from environment import api
 import environment.constants as constants
 import environment.mailers as mailers
 from environment.deserializers import (
@@ -61,7 +61,7 @@ def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> Tuple[str, CloudIdentity]:
     gcp_user_id = user.username
-    response = api_v2.create_cloud_identity(
+    response = api.create_cloud_identity(
         gcp_user_id,
         user.profile.first_names,
         user.profile.last_name,
@@ -82,7 +82,7 @@ def create_cloud_identity(
 
 
 def get_billing_accounts_list(user: User):
-    response = api_v2.list_billing_accounts(user.cloud_identity.email)
+    response = api.list_billing_accounts(user.cloud_identity.email)
     if not response.ok:
         error_message = None
         try:
@@ -135,7 +135,7 @@ def consume_billing_account_sharing_token(
 
 
 def share_billing_account(owner_email: str, user_email: str, billing_account_id: str):
-    response = api_v2.share_billing_account(
+    response = api.share_billing_account(
         owner_email=owner_email,
         user_email=user_email,
         billing_account_id=billing_account_id,
@@ -163,7 +163,7 @@ def _revoke_consumed_billing_account_access(
     user_email = billing_account_sharing_invite.user.cloud_identity.email
     billing_account_id = billing_account_sharing_invite.billing_account_id
 
-    response = api_v2.revoke_billing_account_access(
+    response = api.revoke_billing_account_access(
         owner_email=owner_email,
         user_email=user_email,
         billing_account_id=billing_account_id,
@@ -174,7 +174,7 @@ def _revoke_consumed_billing_account_access(
 
 
 def create_workspace(user: User, billing_account_id: str, region: str):
-    response = api_v2.create_workspace(
+    response = api.create_workspace(
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
         region=region,
@@ -187,7 +187,7 @@ def create_workspace(user: User, billing_account_id: str, region: str):
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
 ):
-    response = api_v2.delete_workspace(
+    response = api.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
@@ -249,7 +249,7 @@ def create_research_environment(
         disk_size,
         gpu_accelerator_type,
     )
-    response = api_v2.create_workbench(**kwargs)
+    response = api.create_workbench(**kwargs)
     if not response.ok:
         error_message = response.json()[
             "error"
@@ -279,7 +279,7 @@ def _get_projects_for_environments(
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
-    response = api_v2.get_workspace_list(email)
+    response = api.get_workspace_list(email)
     if not response.ok:
         error_message = response.json()["error"]
         raise GetAvailableEnvironmentsFailed(error_message)
@@ -396,7 +396,7 @@ def match_workspace_with_billing_id(
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
-    response = api_v2.get_workspace_list(email)
+    response = api.get_workspace_list(email)
     return deserialize_workspaces(response.json())
 
 
@@ -406,7 +406,7 @@ def stop_running_environment(
     user_email: str,
     workspace_project_id: str,
 ) -> str:
-    response = api_v2.stop_workbench(
+    response = api.stop_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
         user_email=user_email,
@@ -425,7 +425,7 @@ def start_stopped_environment(
     user_email: str,
     workspace_project_id: str,
 ) -> str:
-    response = api_v2.start_workbench(
+    response = api.start_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
         user_email=user_email,
@@ -445,7 +445,7 @@ def change_environment_machine_type(
     workbench_type: str,
     workbench_resource_id: str,
 ) -> str:
-    response = api_v2.change_workbench_machine_type(
+    response = api.change_workbench_machine_type(
         workbench_type=workbench_type,
         machine_type=machine_type,
         user_email=user_email,
@@ -465,7 +465,7 @@ def delete_environment(
     workbench_type: str,
     workbench_resource_id: str,
 ) -> str:
-    response = api_v2.delete_workbench(
+    response = api.delete_workbench(
         workbench_type=workbench_type,
         user_email=user_email,
         workspace_project_id=workspace_project_id,
