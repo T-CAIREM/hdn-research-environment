@@ -270,9 +270,8 @@ def create_research_environment(request, project_slug, project_version):
                 services.create_research_environment(
                     user=request.user,
                     project=project,
-                    workspace_project_id=form.cleaned_data["workspace"].gcp_project_id,
+                    workspace_project_id=form.cleaned_data["workspace_project_id"],
                     machine_type=form.cleaned_data["machine_type"],
-                    region=form.cleaned_data["workspace"].region.value,
                     workbench_type=form.cleaned_data["environment_type"],
                     disk_size=form.cleaned_data.get("disk_size"),
                     gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),

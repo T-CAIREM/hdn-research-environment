@@ -56,7 +56,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
-    workspace = forms.ChoiceField(label="Workspace")
+    workspace_project_id = forms.ChoiceField(label="Workspace")
     machine_type = forms.ChoiceField(
         label="Instance type",
         choices=AVAILABLE_MACHINE_TYPES,
@@ -83,8 +83,8 @@ class CreateResearchEnvironmentForm(forms.Form):
 
     def __init__(self, *args, workspace_list: Iterable[ResearchWorkspace], **kwargs):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
-        self.fields["workspace"].choices = [
-            (workspace, workspace.gcp_project_id) for workspace in workspace_list
+        self.fields["workspace_project_id"].choices = [
+            (workspace.gcp_project_id, workspace.gcp_project_id) for workspace in workspace_list
         ]
 
     def clean_gpu_accelerator(self):

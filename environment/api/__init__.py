@@ -89,7 +89,6 @@ def create_workbench(
     user_email: str,
     workbench_type: str,
     machine_type: str,
-    region: str,
     dataset_identifier: str,
     disk_size: str,
     bucket_name: str,
@@ -103,7 +102,6 @@ def create_workbench(
         "dataset_identifier": dataset_identifier,
         "user_email": user_email,
         "bucket_name": bucket_name,
-        "region": region,
         "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
     }
