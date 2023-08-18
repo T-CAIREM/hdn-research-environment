@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from enum import Enum
-from typing import Optional
+from enum import Enum, StrEnum
+from typing import Optional, Iterable
 
 
 class Region(Enum):
@@ -68,6 +68,20 @@ class WorkspaceStatus(Enum):
     RETRYING = "workspace-setup-retrying"
 
 
+class WorkflowStatus(StrEnum):
+    IN_PROGRESS = "in_progress"
+    FAILURE = "failure"
+    SUCCESS = "success"
+
+
+@dataclass
+class Workflow:
+    id: str
+    build_type: str
+    status: WorkflowStatus
+    error_information: str
+
+
 @dataclass
 class ResearchEnvironment:
     gcp_identifier: str
@@ -82,6 +96,7 @@ class ResearchEnvironment:
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
+    workflow_in_progress: Optional[Workflow]
 
     @property
     def is_running(self):
@@ -111,3 +126,9 @@ class ResearchWorkspace:
     region: Region
     gcp_project_id: str
     gcp_billing_id: str
+    workbenches: Iterable[ResearchEnvironment]
+
+
+@dataclass
+class EntityScaffolding:
+    gcp_project_id: str

@@ -6,27 +6,32 @@ from environment.entities import (
     Region,
     ResearchEnvironment,
     ResearchWorkspace,
+    EntityScaffolding,
 )
 
 
-def deserialize_research_environments(data: dict) -> Iterable[ResearchEnvironment]:
+def deserialize_research_environments(
+    workbenches: dict, gcp_project_id: str, region: Region
+) -> Iterable[ResearchEnvironment]:
     return [
         ResearchEnvironment(
             gcp_identifier=workbench["gcp_identifier"],
             dataset_identifier=workbench["dataset_identifier"],
             url=workbench.get("url"),
-            workspace_name=workspace["gcp_project_id"],
+            workspace_name=gcp_project_id,
             status=EnvironmentStatus(workbench["status"]),
             cpu=workbench["cpu"],
             memory=workbench["memory"],
-            region=Region(workspace["region"]),
+            region=region,
             type=EnvironmentType(workbench["type"]),
             machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+            workflow_in_progress=workbench.get("workflow_in_progress"),
         )
-        for workspace in data
-        for workbench in workspace["workbenches"]
+        if workbench.get("type") == "Workbench"
+        else deserialize_entity_scaffolding(workbench)
+        for workbench in workbenches
     ]
 
 
@@ -35,8 +40,20 @@ def deserialize_workspace_details(data: dict) -> ResearchWorkspace:
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_account_id"],
+        workbenches=deserialize_research_environments(
+            data["workbenches"], data["gcp_project_id"], Region(data["region"])
+        ),
     )
 
 
+def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
+    return EntityScaffolding(gcp_project_id=data["gcp_project_id"])
+
+
 def deserialize_workspaces(data: dict) -> Iterable[ResearchWorkspace]:
-    return [deserialize_workspace_details(workspace_data) for workspace_data in data]
+    return [
+        deserialize_workspace_details(workspace_data)
+        if data.get("type") == "Workspace"
+        else deserialize_entity_scaffolding(workspace_data)
+        for workspace_data in data
+    ]

@@ -66,44 +66,40 @@ def research_environments(request):
     workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        user=request.user
-    )
-    workspace_workflows = services.get_workspace_workflows(user=request.user)
+    environments = services.get_active_environments(user=request.user)
 
-    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    available_project_environment_workflow_triplets = (
-        services.get_available_projects_with_environments(
-            request.user,
-            environments,
-        )
-    )
-    projects_with_environments_being_created = (
-        services.get_projects_with_environment_being_created(
-            available_project_environment_workflow_triplets
-        )
-    )
-    environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created + environment_project_workflow_triplets
-    )
+    # environment_project_workflow_triplets = services.get_environments_with_projects(
+    #     user=request.user
+    # )
 
-    sorted_environments_project_workflow_triplets_dict = (
-        services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating,
-            workspaces_list,
-        )
-    )
+    # environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
+    # available_project_environment_workflow_triplets = (
+    #     services.get_available_projects_with_environments(
+    #         request.user,
+    #         environments,
+    #     )
+    # )
+    # projects_with_environments_being_created = (
+    #     services.get_projects_with_environment_being_created(
+    #         available_project_environment_workflow_triplets
+    #     )
+    # )
+    # environment_projects_pairs_with_creating = (
+    #     projects_with_environments_being_created + environment_project_workflow_triplets
+    # )
 
-    inprogress_workspaces = [
-        workflow.workspace_name
-        for workflow in workspace_workflows
-        if workflow.workspace_name
-    ]
-    triplets_without_inprogress_workspaces = {
-        workspace: workbenches
-        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-        if workspace.gcp_project_id not in inprogress_workspaces
-    }
+    # sorted_environments_project_workflow_triplets_dict = (
+    #     services.sort_environments_per_workspace(
+    #         environment_projects_pairs_with_creating,
+    #         workspaces_list,
+    #     )
+    # )
+
+    # triplets_without_inprogress_workspaces = {
+    #     workspace: workbenches
+    #     for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
+    #     if workspace.gcp_project_id not in inprogress_workspaces
+    # }
 
     context = {
         "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
@@ -136,47 +132,47 @@ def research_environments_partial(request):
             services.get_workspace_workflows, request.user
         )
 
-    workspaces_list = workspaces_list_future.result()
+    # workspaces_list = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     workspace_workflows = workspace_workflows_future.result()
 
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        user=request.user
-    )
+    # environment_project_workflow_triplets = services.get_environments_with_projects(
+    #     user=request.user
+    # )
 
-    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    available_project_environment_workflow_triplets = (
-        services.get_available_projects_with_environments(
-            request.user,
-            environments,
-        )
-    )
-    projects_with_environments_being_created = (
-        services.get_projects_with_environment_being_created(
-            available_project_environment_workflow_triplets
-        )
-    )
-    environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created + environment_project_workflow_triplets
-    )
-
-    sorted_environments_project_workflow_triplets_dict = (
-        services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating,
-            workspaces_list,
-        )
-    )
-
-    inprogress_workspaces = [
-        workflow.workspace_name
-        for workflow in workspace_workflows
-        if workflow.workspace_name
-    ]
-    triplets_without_inprogress_workspaces = {
-        workspace: workbenches
-        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-        if workspace.gcp_project_id not in inprogress_workspaces
-    }
+    # environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
+    # available_project_environment_workflow_triplets = (
+    #     services.get_available_projects_with_environments(
+    #         request.user,
+    #         environments,
+    #     )
+    # )
+    # projects_with_environments_being_created = (
+    #     services.get_projects_with_environment_being_created(
+    #         available_project_environment_workflow_triplets
+    #     )
+    # )
+    # environment_projects_pairs_with_creating = (
+    #     projects_with_environments_being_created + environment_project_workflow_triplets
+    # )
+    #
+    # sorted_environments_project_workflow_triplets_dict = (
+    #     services.sort_environments_per_workspace(
+    #         environment_projects_pairs_with_creating,
+    #         workspaces_list,
+    #     )
+    # )
+    #
+    # inprogress_workspaces = [
+    #     workflow.workspace_name
+    #     for workflow in workspace_workflows
+    #     if workflow.workspace_name
+    # ]
+    # triplets_without_inprogress_workspaces = {
+    #     workspace: workbenches
+    #     for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
+    #     if workspace.gcp_project_id not in inprogress_workspaces
+    # }
 
     context = {
         "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,

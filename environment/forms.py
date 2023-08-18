@@ -84,7 +84,8 @@ class CreateResearchEnvironmentForm(forms.Form):
     def __init__(self, *args, workspace_list: Iterable[ResearchWorkspace], **kwargs):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].choices = [
-            (workspace.gcp_project_id, workspace.gcp_project_id) for workspace in workspace_list
+            (workspace.gcp_project_id, workspace.gcp_project_id)
+            for workspace in workspace_list
         ]
 
     def clean_gpu_accelerator(self):
