@@ -7,9 +7,9 @@ from django.db.models import Model, Q
 from google.cloud.workflows import executions_v1beta
 from google.cloud.workflows.executions_v1beta.types import executions
 
-from environment import api
 import environment.constants as constants
 import environment.mailers as mailers
+from environment import api
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,

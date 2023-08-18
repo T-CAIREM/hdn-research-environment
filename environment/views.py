@@ -16,7 +16,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
 )
-from environment.entities import InstanceType, Region
+from environment.entities import InstanceType
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
