@@ -13,6 +13,7 @@ import environment.mailers as mailers
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
+    _project_data_group,
 )
 from environment.entities import ResearchEnvironment, ResearchWorkspace
 from environment.exceptions import (
@@ -39,18 +40,6 @@ User = Model
 
 
 DEFAULT_REGION = "us-central1"
-
-
-def _project_data_group(project: PublishedProject) -> str:
-    # HACK: Use the slug and version to calculate the dataset group.
-    # The result has to match the patterns for:
-    # - Service Account ID: must start with a lower case letter, followed by one or more lower case alphanumerical characters that can be separated by hyphens
-    # - Role ID: can only include letters, numbers, full stops and underscores
-    #
-    # Potential collisions may happen:
-    # { slug: some-project, version: 1.1.0 } => someproject110
-    # { slug: some-project1, version: 1.0 }  => someproject110
-    return "".join(c for c in project.slug + project.version if c.isalnum())
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
@@ -273,6 +262,17 @@ def _get_projects_for_environments(
     ]
 
 
+def _get_project_for_environment(
+    dataset_identifier: str,
+    projects: Iterable[PublishedProject],
+) -> PublishedProject:
+    return next(iter([
+        project
+        for project in projects
+        if _project_data_group(project) == dataset_identifier
+    ]))
+
+
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
     response = api.get_workspace_list(email)
@@ -392,8 +392,9 @@ def match_workspace_with_billing_id(
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
+    projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
-    return deserialize_workspaces(response.json())
+    return deserialize_workspaces(response.json(), projects)
 
 
 def stop_running_environment(

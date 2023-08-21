@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum, StrEnum
 from typing import Optional, Iterable
+from django.apps import apps
+
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 class Region(Enum):
@@ -93,6 +96,7 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
+    project: PublishedProject
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]

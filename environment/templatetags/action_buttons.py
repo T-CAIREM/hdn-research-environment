@@ -74,13 +74,12 @@ button_types = {
 @register.inclusion_tag("tag/environment_modal_button.html")
 def environment_modal_button(
     environment: ResearchEnvironment,
-    project: PublishedProject,
     button_type: str,
 ) -> dict:
     data = button_types[button_type]
     result_data = {
         "environment": environment,
-        "project": project,
+        "project": environment.project,
         "button_text": data["button_text"],
         "button_class": data["button_class"],
         "modal_title": data["modal_title"],
@@ -120,9 +119,6 @@ def environment_action_button(
 @register.inclusion_tag("tag/workspace_destroy_modal_button.html")
 def workspace_destroy_modal_button(
     workspace: ResearchWorkspace,
-    environments_project_workflow_triplets: Iterable[
-        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
-    ],
 ) -> dict:
     request_data = {
         "gcp_project_id": workspace.gcp_project_id,
@@ -136,6 +132,6 @@ def workspace_destroy_modal_button(
         "request_url": reverse("delete_workspace"),
         "request_method": "DELETE",
         "request_data": json.dumps(request_data),
-        "disabled": len(environments_project_workflow_triplets) > 0,
+        "disabled": len(workspace.workbenches) > 0,
     }
     return result_data

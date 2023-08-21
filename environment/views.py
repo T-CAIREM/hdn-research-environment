@@ -63,10 +63,10 @@ def research_environments(request):
             services.get_billing_accounts_list, request.user
         )
 
-    workspaces_list = workspaces_list_future.result()
+    workspaces_with_workbenches = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
 
-    environments = services.get_active_environments(user=request.user)
+    # environments = services.get_active_environments(user=request.user)
 
     # environment_project_workflow_triplets = services.get_environments_with_projects(
     #     user=request.user
@@ -102,12 +102,13 @@ def research_environments(request):
     # }
 
     context = {
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        "workspace_workflows": workspace_workflows,
+        "workspaces_with_workbenches": workspaces_with_workbenches,
+        # "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
+        # "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
+        # "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
+        # "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
-        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
+        # "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
     }
 
     return render(
@@ -128,13 +129,13 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
-        workspace_workflows_future = executor.submit(
-            services.get_workspace_workflows, request.user
-        )
+        # workspace_workflows_future = executor.submit(
+        #     services.get_workspace_workflows, request.user
+        # )
 
-    # workspaces_list = workspaces_list_future.result()
+    workspaces_with_workbenches = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
-    workspace_workflows = workspace_workflows_future.result()
+    # workspace_workflows = workspace_workflows_future.result()
 
     # environment_project_workflow_triplets = services.get_environments_with_projects(
     #     user=request.user
@@ -175,10 +176,11 @@ def research_environments_partial(request):
     # }
 
     context = {
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        "workspace_workflows": workspace_workflows,
+        "workspaces_with_workbenches": workspaces_with_workbenches,
+        # "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
+        # "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
+        # "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
+        # "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
         "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
     }
