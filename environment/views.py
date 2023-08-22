@@ -7,7 +7,6 @@ from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
-from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.constants as constants
 import environment.services as services
@@ -16,7 +15,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
 )
-from environment.entities import InstanceType, Region
+from environment.entities import InstanceType, WorkflowStatus
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -370,7 +369,7 @@ def stop_running_environment(request):
     services.stop_running_environment(
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
@@ -382,7 +381,7 @@ def stop_running_environment(request):
 def start_stopped_environment(request):
     data = json.loads(request.body)
     services.start_stopped_environment(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
         workspace_project_id=data["gcp_project_id"],
@@ -396,7 +395,7 @@ def start_stopped_environment(request):
 def change_environment_machine_type(request):
     data = json.loads(request.body)
     services.change_environment_machine_type(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
         machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
@@ -411,7 +410,7 @@ def change_environment_machine_type(request):
 def delete_environment(request):
     data = json.loads(request.body)
     services.delete_environment(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
@@ -438,13 +437,12 @@ def delete_workspace(request):
 @cloud_identity_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
-    execution_state = services.get_execution_state(
+    execution = services.get_execution(
         execution_resource_name=execution_resource_name
     )
-    finished = execution_state != Execution.State.ACTIVE
+    finished = execution.status != WorkflowStatus.IN_PROGRESS
     if finished:
         services.mark_workflow_as_finished(
             execution_resource_name=execution_resource_name,
-            execution_state=execution_state,
         )
     return JsonResponse({"finished": finished})

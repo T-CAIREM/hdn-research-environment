@@ -14,8 +14,9 @@ from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
     _project_data_group,
+    deserialize_workflow_details
 )
-from environment.entities import ResearchEnvironment, ResearchWorkspace
+from environment.entities import ResearchEnvironment, ResearchWorkspace, Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
     BillingSharingFailed,
@@ -29,6 +30,7 @@ from environment.exceptions import (
     IdentityProvisioningFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
+    GetWorkflowFailed,
 )
 from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
 from environment.utilities import inner_join_iterators, left_join_iterators
@@ -172,6 +174,8 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
 
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+
 
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
@@ -185,6 +189,8 @@ def delete_workspace(
     if not response.ok:
         error_message = response.json()["error"]
         raise DeleteWorkspaceFailed(error_message)
+
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
 
 def _create_workbench_kwargs(
@@ -240,6 +246,7 @@ def create_research_environment(
             "error"
         ]  # TODO: Check all uses of "error"/"message"
         raise EnvironmentCreationFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
@@ -400,18 +407,19 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 def stop_running_environment(
     workbench_type: str,
     workbench_resource_id: str,
-    user_email: str,
+    user: User,
     workspace_project_id: str,
 ) -> str:
     response = api.stop_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
         raise StopEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
@@ -419,24 +427,25 @@ def stop_running_environment(
 def start_stopped_environment(
     workbench_type: str,
     workbench_resource_id: str,
-    user_email: str,
+    user: User,
     workspace_project_id: str,
 ) -> str:
     response = api.start_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise StartEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
 def change_environment_machine_type(
-    user_email: str,
+    user: User,
     workspace_project_id: str,
     machine_type: str,
     workbench_type: str,
@@ -445,51 +454,51 @@ def change_environment_machine_type(
     response = api.change_workbench_machine_type(
         workbench_type=workbench_type,
         machine_type=machine_type,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise ChangeEnvironmentInstanceTypeFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
 def delete_environment(
-    user_email: str,
+    user: User,
     workspace_project_id: str,
     workbench_type: str,
     workbench_resource_id: str,
 ) -> str:
     response = api.delete_workbench(
         workbench_type=workbench_type,
-        user_email=user_email,
+        user=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise DeleteEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
-def get_execution_state(execution_resource_name) -> executions.Execution.State:
-    client = executions_v1beta.ExecutionsClient()
-    execution = client.get_execution(request={"name": execution_resource_name})
-    return execution.state
+def get_execution(execution_resource_name) -> ApiWorkflow:
+    response = api.get_workflow(execution_resource_name)
+    if not response.ok:
+        error_message = response.json()["message"]
+        raise GetWorkflowFailed(error_message)
+    return deserialize_workflow_details(response.json())
 
 
 def mark_workflow_as_finished(
-    execution_resource_name: str, execution_state: executions.Execution.State
+    execution_resource_name: str
 ):
     workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
-    if execution_state == executions.Execution.State.SUCCEEDED:
-        workflow.status = Workflow.SUCCESS
-    else:
-        workflow.status = Workflow.FAILED
-
+    workflow.in_progress = False
     workflow.save()
 
 
@@ -511,13 +520,21 @@ def exceeded_quotas(user) -> Iterable[str]:
     return quotas_exceeded
 
 
-def workflow_finished_message(workflow: Workflow) -> Optional[str]:
-    if workflow.status == Workflow.SUCCESS:
-        return None
+# def workflow_finished_message(workflow: Workflow) -> Optional[str]:
+#     if workflow.status == Workflow.SUCCESS:
+#         return None
+#
+#     workflow_type_failure_messages = {
+#         Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
+#         Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
+#     }
+#
+#     return workflow_type_failure_messages.get(workflow.type)
 
-    workflow_type_failure_messages = {
-        Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
-        Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
-    }
 
-    return workflow_type_failure_messages.get(workflow.type)
+def persist_workflow(user: User, workflow_id: str):
+    Workflow.objects.create(
+        user=user,
+        execution_resource_name=workflow_id,
+        in_progress=True,
+    )

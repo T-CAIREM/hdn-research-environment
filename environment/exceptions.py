@@ -60,3 +60,7 @@ class CreateWorkspaceFailed(Exception):
 
 class DeleteWorkspaceFailed(Exception):
     pass
+
+
+class GetWorkflowFailed(Exception):
+    pass

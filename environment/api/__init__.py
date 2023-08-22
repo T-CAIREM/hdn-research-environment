@@ -173,3 +173,10 @@ def delete_workbench(
         "workbench_resource_id": workbench_resource_id,
     }
     return Request("DELETE", url="/workbench/destroy", json=json)
+
+
+@api_request
+def get_workflow(
+    execution_resource_name: str
+) -> Request:
+    return Request("GET", url=f"/workflow/{execution_resource_name}")
