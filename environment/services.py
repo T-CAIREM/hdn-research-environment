@@ -4,8 +4,6 @@ from typing import Dict, Iterable, Optional, Tuple
 from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import Model, Q
-from google.cloud.workflows import executions_v1beta
-from google.cloud.workflows.executions_v1beta.types import executions
 
 from environment import api
 import environment.constants as constants
@@ -14,9 +12,13 @@ from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
     _project_data_group,
-    deserialize_workflow_details
+    deserialize_workflow_details,
 )
-from environment.entities import ResearchEnvironment, ResearchWorkspace, Workflow as ApiWorkflow
+from environment.entities import (
+    ResearchEnvironment,
+    ResearchWorkspace,
+    Workflow as ApiWorkflow,
+)
 from environment.exceptions import (
     BillingAccessRevokationFailed,
     BillingSharingFailed,
@@ -273,11 +275,15 @@ def _get_project_for_environment(
     dataset_identifier: str,
     projects: Iterable[PublishedProject],
 ) -> PublishedProject:
-    return next(iter([
-        project
-        for project in projects
-        if _project_data_group(project) == dataset_identifier
-    ]))
+    return next(
+        iter(
+            [
+                project
+                for project in projects
+                if _project_data_group(project) == dataset_identifier
+            ]
+        )
+    )
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
@@ -494,9 +500,7 @@ def get_execution(execution_resource_name) -> ApiWorkflow:
     return deserialize_workflow_details(response.json())
 
 
-def mark_workflow_as_finished(
-    execution_resource_name: str
-):
+def mark_workflow_as_finished(execution_resource_name: str):
     workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
     workflow.in_progress = False
     workflow.save()
@@ -520,21 +524,13 @@ def exceeded_quotas(user) -> Iterable[str]:
     return quotas_exceeded
 
 
-# def workflow_finished_message(workflow: Workflow) -> Optional[str]:
-#     if workflow.status == Workflow.SUCCESS:
-#         return None
-#
-#     workflow_type_failure_messages = {
-#         Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
-#         Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
-#     }
-#
-#     return workflow_type_failure_messages.get(workflow.type)
-
-
 def persist_workflow(user: User, workflow_id: str):
     Workflow.objects.create(
         user=user,
         execution_resource_name=workflow_id,
         in_progress=True,
     )
+
+
+def get_running_workflows(user: User):
+    return Workflow.objects.filter(user=user, in_progress=True)

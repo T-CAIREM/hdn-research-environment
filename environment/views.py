@@ -65,49 +65,12 @@ def research_environments(request):
     workspaces_with_workbenches = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
 
-    # environments = services.get_active_environments(user=request.user)
-
-    # environment_project_workflow_triplets = services.get_environments_with_projects(
-    #     user=request.user
-    # )
-
-    # environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    # available_project_environment_workflow_triplets = (
-    #     services.get_available_projects_with_environments(
-    #         request.user,
-    #         environments,
-    #     )
-    # )
-    # projects_with_environments_being_created = (
-    #     services.get_projects_with_environment_being_created(
-    #         available_project_environment_workflow_triplets
-    #     )
-    # )
-    # environment_projects_pairs_with_creating = (
-    #     projects_with_environments_being_created + environment_project_workflow_triplets
-    # )
-
-    # sorted_environments_project_workflow_triplets_dict = (
-    #     services.sort_environments_per_workspace(
-    #         environment_projects_pairs_with_creating,
-    #         workspaces_list,
-    #     )
-    # )
-
-    # triplets_without_inprogress_workspaces = {
-    #     workspace: workbenches
-    #     for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-    #     if workspace.gcp_project_id not in inprogress_workspaces
-    # }
+    running_workflows = services.get_running_workflows(request.user)
 
     context = {
         "workspaces_with_workbenches": workspaces_with_workbenches,
-        # "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        # "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        # "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        # "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
-        # "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
+        "workflows": running_workflows,
     }
 
     return render(
@@ -128,72 +91,25 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
-        # workspace_workflows_future = executor.submit(
-        #     services.get_workspace_workflows, request.user
-        # )
 
     workspaces_with_workbenches = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
-    # workspace_workflows = workspace_workflows_future.result()
-
-    # environment_project_workflow_triplets = services.get_environments_with_projects(
-    #     user=request.user
-    # )
-
-    # environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    # available_project_environment_workflow_triplets = (
-    #     services.get_available_projects_with_environments(
-    #         request.user,
-    #         environments,
-    #     )
-    # )
-    # projects_with_environments_being_created = (
-    #     services.get_projects_with_environment_being_created(
-    #         available_project_environment_workflow_triplets
-    #     )
-    # )
-    # environment_projects_pairs_with_creating = (
-    #     projects_with_environments_being_created + environment_project_workflow_triplets
-    # )
-    #
-    # sorted_environments_project_workflow_triplets_dict = (
-    #     services.sort_environments_per_workspace(
-    #         environment_projects_pairs_with_creating,
-    #         workspaces_list,
-    #     )
-    # )
-    #
-    # inprogress_workspaces = [
-    #     workflow.workspace_name
-    #     for workflow in workspace_workflows
-    #     if workflow.workspace_name
-    # ]
-    # triplets_without_inprogress_workspaces = {
-    #     workspace: workbenches
-    #     for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-    #     if workspace.gcp_project_id not in inprogress_workspaces
-    # }
+    running_workflows = services.get_running_workflows(request.user)
 
     context = {
         "workspaces_with_workbenches": workspaces_with_workbenches,
-        # "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        # "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        # "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        # "workspace_workflows": workspace_workflows,
         "billing_accounts_list": billing_accounts_list,
-        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
+        "workflows": running_workflows,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
     if execution_resource_name:
-        workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
+        workflow = services.get_execution(execution_resource_name)
         workflow_state_context = {
             "recent_workflow": workflow,
-            "recent_workflow_failed": workflow.status == Workflow.FAILED,
-            "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
-            "workflow_finished_message": services.workflow_finished_message(
-                workflow=workflow
-            ),
+            "recent_workflow_failed": workflow.status == WorkflowStatus.FAILURE,
+            "recent_workflow_succeeded": workflow.status == WorkflowStatus.SUCCESS,
+            "workflow_finished_message": workflow.error_information,
         }
         context = {**context, **workflow_state_context}
 
@@ -437,9 +353,7 @@ def delete_workspace(request):
 @cloud_identity_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
-    execution = services.get_execution(
-        execution_resource_name=execution_resource_name
-    )
+    execution = services.get_execution(execution_resource_name=execution_resource_name)
     finished = execution.status != WorkflowStatus.IN_PROGRESS
     if finished:
         services.mark_workflow_as_finished(

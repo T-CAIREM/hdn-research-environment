@@ -43,4 +43,4 @@ class Workflow(models.Model):
         "user.User", related_name="workflows", on_delete=models.CASCADE
     )
     execution_resource_name = models.CharField(max_length=256, unique=True)
-    in_progress = models.BooleanField()
+    in_progress = models.BooleanField(default=False)

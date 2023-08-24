@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, StrEnum
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 from django.apps import apps
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -37,19 +37,17 @@ class GPUAcceleratorType(Enum):
 
 
 class EnvironmentStatus(Enum):
-    PROVISIONING = "inprogress"
-    PROVISIONING_FAILED = "workbench-setup-failed"
+    CREATING = "crating"
 
     RUNNING = "running"
-    STARTING = "running-inprogress"
+    STARTING = "starting"
 
-    UPDATING = "updating-inprogress"
+    UPDATING = "updating"
 
     STOPPED = "stopped"
-    STOPPING = "stopping-inprogress"
+    STOPPING = "stopping"
 
-    DESTROYING = "destroying-inprogress"
-    DESTROYED = "workbench-destroy-done"
+    DESTROYING = "destroying"
 
 
 class EnvironmentType(Enum):
@@ -65,10 +63,9 @@ class EnvironmentType(Enum):
 
 
 class WorkspaceStatus(Enum):
-    DONE = "workspace-setup-done"
-    INPROGRESS = "workspace-setup-inprogress"
-    PENDING = "workspace-setup-pending"
-    RETRYING = "workspace-setup-retrying"
+    RUNNING = "running"
+    CREATING = "creating"
+    DESTROYING = "destroying"
 
 
 class WorkflowStatus(StrEnum):
@@ -100,7 +97,6 @@ class ResearchEnvironment:
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
-    workflow_in_progress: Optional[Workflow]
 
     @property
     def is_running(self):
@@ -113,7 +109,7 @@ class ResearchEnvironment:
     @property
     def is_in_progress(self):
         return self.status in [
-            EnvironmentStatus.PROVISIONING,
+            EnvironmentStatus.CREATING,
             EnvironmentStatus.STARTING,
             EnvironmentStatus.STOPPING,
             EnvironmentStatus.UPDATING,
@@ -130,9 +126,15 @@ class ResearchWorkspace:
     region: Region
     gcp_project_id: str
     gcp_billing_id: str
+    status: WorkspaceStatus
     workbenches: Iterable[ResearchEnvironment]
 
 
 @dataclass
 class EntityScaffolding:
+    status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+
+    @property
+    def is_scaffolding(self):
+        return True
