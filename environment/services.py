@@ -5,9 +5,9 @@ from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import Model, Q
 
-from environment import api
 import environment.constants as constants
 import environment.mailers as mailers
+from environment import api
 from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workspaces,
