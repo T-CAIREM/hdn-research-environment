@@ -277,11 +277,9 @@ def _get_project_for_environment(
 ) -> PublishedProject:
     return next(
         iter(
-            [
-                project
-                for project in projects
-                if _project_data_group(project) == dataset_identifier
-            ]
+            project
+            for project in projects
+            if _project_data_group(project) == dataset_identifier
         )
     )
 
@@ -497,7 +495,8 @@ def get_execution(execution_resource_name) -> ApiWorkflow:
     if not response.ok:
         error_message = response.json()["message"]
         raise GetWorkflowFailed(error_message)
-    return deserialize_workflow_details(response.json())
+    if response.json():
+        return deserialize_workflow_details(response.json())
 
 
 def mark_workflow_as_finished(execution_resource_name: str):

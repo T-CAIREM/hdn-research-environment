@@ -176,5 +176,5 @@ def delete_workbench(
 
 
 @api_request
-def get_workflow(execution_resource_name: str) -> Request:
-    return Request("GET", url=f"/workflow/{execution_resource_name}")
+def get_workflow(workflow_id: str) -> Request:
+    return Request("GET", url=f"/workflow/{workflow_id}")

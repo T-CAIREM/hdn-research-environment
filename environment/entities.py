@@ -37,7 +37,7 @@ class GPUAcceleratorType(Enum):
 
 
 class EnvironmentStatus(Enum):
-    CREATING = "crating"
+    CREATING = "creating"
 
     RUNNING = "running"
     STARTING = "starting"
@@ -134,7 +134,3 @@ class ResearchWorkspace:
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
-
-    @property
-    def is_scaffolding(self):
-        return True

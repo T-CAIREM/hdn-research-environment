@@ -59,8 +59,6 @@ def deserialize_research_environments(
 
 
 def deserialize_workflow_details(workflow_data: dict) -> Optional[Workflow]:
-    if not workflow_data:
-        return None
     return Workflow(
         id=workflow_data["id"],
         build_type=workflow_data["build_type"],
@@ -109,8 +107,8 @@ def _get_project_for_environment(
 ) -> PublishedProject:
     return next(
         iter(
-                project
-                for project in projects
-                if _project_data_group(project) == dataset_identifier
+            project
+            for project in projects
+            if _project_data_group(project) == dataset_identifier
         )
     )
