@@ -109,10 +109,8 @@ def _get_project_for_environment(
 ) -> PublishedProject:
     return next(
         iter(
-            [
                 project
                 for project in projects
                 if _project_data_group(project) == dataset_identifier
-            ]
         )
     )
