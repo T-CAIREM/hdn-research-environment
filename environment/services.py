@@ -9,16 +9,13 @@ import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
 from environment.deserializers import (
-    deserialize_research_environments,
-    deserialize_workspaces,
     _project_data_group,
+    deserialize_research_environments,
     deserialize_workflow_details,
+    deserialize_workspaces,
 )
-from environment.entities import (
-    ResearchEnvironment,
-    ResearchWorkspace,
-    Workflow as ApiWorkflow,
-)
+from environment.entities import ResearchEnvironment, ResearchWorkspace
+from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
     BillingSharingFailed,
@@ -29,10 +26,10 @@ from environment.exceptions import (
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetBillingAccountsListFailed,
+    GetWorkflowFailed,
     IdentityProvisioningFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
-    GetWorkflowFailed,
 )
 from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
 from environment.utilities import inner_join_iterators, left_join_iterators
@@ -254,7 +251,7 @@ def create_research_environment(
 
 
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
-    return PublishedProject.objects.accessible_by(user).prefetch_related("workflows")
+    return PublishedProject.objects.accessible_by(user)
 
 
 def _get_projects_for_environments(
@@ -478,7 +475,7 @@ def delete_environment(
 ) -> str:
     response = api.delete_workbench(
         workbench_type=workbench_type,
-        user=user.cloud_identity.email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
@@ -505,10 +502,19 @@ def mark_workflow_as_finished(execution_resource_name: str):
     workflow.save()
 
 
-def cpu_usage(value, user) -> int:
-    running_environments = get_active_environments(user)
-    cpu = sum(environment.machine_type.cpus() for environment in running_environments)
-    return value + cpu
+def cpu_usage(workspaces: Iterable[ResearchWorkspace]) -> int:
+    workbenches = [
+        workbench
+        for workspace in workspaces
+        if hasattr(
+            workspace, "workbenches"
+        )  # HACK: Workspace scaffolding do not have the workbenches attribute.
+        for workbench in workspace.workbenches
+        if hasattr(
+            workbench, "machine_type"
+        )  # HACK: Workbench scaffoldings do not have the machine type attribute.
+    ]
+    return sum(workbench.machine_type.cpus() for workbench in workbenches)
 
 
 def exceeded_quotas(user) -> Iterable[str]:

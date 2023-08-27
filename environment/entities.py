@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from enum import Enum, StrEnum
-from typing import Optional, Iterable, Union
+from enum import Enum
+from typing import Iterable, Optional, Union
+
 from django.apps import apps
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -63,23 +64,44 @@ class EnvironmentType(Enum):
 
 
 class WorkspaceStatus(Enum):
-    RUNNING = "running"
+    CREATED = "created"
     CREATING = "creating"
     DESTROYING = "destroying"
 
 
-class WorkflowStatus(StrEnum):
+class WorkflowStatus(Enum):
     IN_PROGRESS = "in_progress"
     FAILURE = "failure"
     SUCCESS = "success"
 
 
+class WorkflowType(Enum):
+    WORKSPACE_CREATION = "workspace_creation"
+    WORKSPACE_DELETION = "workspace_deletion"
+
+    JUPYTER_CREATION = "jupyter_creation"
+    JUPYTER_DESTROY = "jupyter_destroy"
+    JUPYTER_STOP = "jupyter_stop"
+    JUPYTER_START = "jupyter_start"
+    JUPYTER_UPDATE = "jupyter_update"
+
+    RSTUDIO_CREATION = "rstudio_creation"
+    RSTUDIO_DESTROY = "rstudio_destroy"
+    RSTUDIO_STOP = "rstudio_stop"
+    RSTUDIO_START = "rstudio_start"
+    RSTUDIO_UPDATE = "rstudio_update"
+
+
 @dataclass
 class Workflow:
     id: str
-    build_type: str
+    type: WorkflowType
     status: WorkflowStatus
     error_information: str
+
+    def display_type(self) -> str:
+        entity_type, action_type = self.type.value.split("_")
+        return f"{entity_type} {action_type}".capitalize()
 
 
 @dataclass
@@ -94,7 +116,7 @@ class ResearchEnvironment:
     region: Region
     type: EnvironmentType
     project: PublishedProject
-    machine_type: Optional[str]
+    machine_type: Optional[InstanceType]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
 

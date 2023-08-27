@@ -1,17 +1,20 @@
-from typing import Iterable, Optional
+from typing import Iterable
+
+from django.apps import apps
 
 from environment.entities import (
+    EntityScaffolding,
     EnvironmentStatus,
     EnvironmentType,
+    InstanceType,
     Region,
     ResearchEnvironment,
     ResearchWorkspace,
-    EntityScaffolding,
     Workflow,
     WorkflowStatus,
+    WorkflowType,
+    WorkspaceStatus,
 )
-from django.apps import apps
-
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -45,7 +48,7 @@ def deserialize_research_environments(
             memory=workbench["memory"],
             region=region,
             type=EnvironmentType(workbench["workbench_type"]),
-            machine_type=workbench["machine_type"],
+            machine_type=InstanceType(workbench["machine_type"]),
             disk_size=workbench.get("disk_size"),
             project=_get_project_for_environment(
                 workbench["dataset_identifier"], projects
@@ -58,10 +61,10 @@ def deserialize_research_environments(
     ]
 
 
-def deserialize_workflow_details(workflow_data: dict) -> Optional[Workflow]:
+def deserialize_workflow_details(workflow_data: dict) -> Workflow:
     return Workflow(
         id=workflow_data["id"],
-        build_type=workflow_data["build_type"],
+        type=WorkflowType(workflow_data["build_type"]),
         status=WorkflowStatus(workflow_data["status"]),
         error_information=workflow_data["error"],
     )
@@ -74,7 +77,7 @@ def deserialize_workspace_details(
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
-        status=data["status"],
+        status=WorkspaceStatus(data["status"]),
         workbenches=deserialize_research_environments(
             data["workbenches"],
             data["gcp_project_id"],
@@ -86,7 +89,7 @@ def deserialize_workspace_details(
 
 def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
     return EntityScaffolding(
-        gcp_project_id=data["gcp_project_id"], status=data["status"]
+        gcp_project_id=data["gcp_project_id"], status=EnvironmentStatus(data["status"])
     )
 
 

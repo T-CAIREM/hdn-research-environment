@@ -62,13 +62,14 @@ def research_environments(request):
             services.get_billing_accounts_list, request.user
         )
 
-    workspaces_with_workbenches = workspaces_list_future.result()
+    workspaces = workspaces_list_future.result()
+    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
-
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
-        "workspaces_with_workbenches": workspaces_with_workbenches,
+        "workspaces_with_workbenches": workspaces,
+        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
     }
@@ -92,12 +93,14 @@ def research_environments_partial(request):
             services.get_billing_accounts_list, request.user
         )
 
-    workspaces_with_workbenches = workspaces_list_future.result()
+    workspaces = workspaces_list_future.result()
+    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
-        "workspaces_with_workbenches": workspaces_with_workbenches,
+        "workspaces_with_workbenches": workspaces,
+        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
     }
@@ -175,11 +178,9 @@ def create_research_environment(request, project_slug, project_version):
             request.POST, workspace_list=workspaces_list
         )
         if form.is_valid():
-            cpu_usage = services.cpu_usage(
-                value=InstanceType(form.cleaned_data["machine_type"]).cpus(),
-                user=request.user,
-            )
-            if cpu_usage <= constants.MAX_CPU_USAGE:
+            workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
+            new_cpu_usage = services.cpu_usage(workspaces_list) + workbench_cpu_usage
+            if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -193,7 +194,7 @@ def create_research_environment(request, project_slug, project_version):
             else:
                 messages.error(
                     request,
-                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
+                    f"Quota exceeded - the specified configuration would use {new_cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
         form = CreateResearchEnvironmentForm(workspace_list=workspaces_list)
