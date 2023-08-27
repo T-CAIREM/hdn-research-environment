@@ -7,7 +7,6 @@ from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
-from google.cloud.workflows.executions_v1beta.types.executions import Execution
 
 import environment.constants as constants
 import environment.services as services
@@ -16,7 +15,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
 )
-from environment.entities import InstanceType
+from environment.entities import InstanceType, WorkflowStatus
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -63,55 +62,16 @@ def research_environments(request):
             services.get_billing_accounts_list, request.user
         )
 
-    workspaces_list = workspaces_list_future.result()
+    workspaces = workspaces_list_future.result()
+    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
-
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        user=request.user
-    )
-    workspace_workflows = services.get_workspace_workflows(user=request.user)
-
-    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    available_project_environment_workflow_triplets = (
-        services.get_available_projects_with_environments(
-            request.user,
-            environments,
-        )
-    )
-    projects_with_environments_being_created = (
-        services.get_projects_with_environment_being_created(
-            available_project_environment_workflow_triplets
-        )
-    )
-    environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created + environment_project_workflow_triplets
-    )
-
-    sorted_environments_project_workflow_triplets_dict = (
-        services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating,
-            workspaces_list,
-        )
-    )
-
-    inprogress_workspaces = [
-        workflow.workspace_name
-        for workflow in workspace_workflows
-        if workflow.workspace_name
-    ]
-    triplets_without_inprogress_workspaces = {
-        workspace: workbenches
-        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-        if workspace.gcp_project_id not in inprogress_workspaces
-    }
+    running_workflows = services.get_running_workflows(request.user)
 
     context = {
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        "workspace_workflows": workspace_workflows,
+        "workspaces_with_workbenches": workspaces,
+        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
-        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
+        "workflows": running_workflows,
     }
 
     return render(
@@ -132,71 +92,27 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
-        workspace_workflows_future = executor.submit(
-            services.get_workspace_workflows, request.user
-        )
 
-    workspaces_list = workspaces_list_future.result()
+    workspaces = workspaces_list_future.result()
+    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
-    workspace_workflows = workspace_workflows_future.result()
-
-    environment_project_workflow_triplets = services.get_environments_with_projects(
-        user=request.user
-    )
-
-    environments = map(lambda pair: pair[0], environment_project_workflow_triplets)
-    available_project_environment_workflow_triplets = (
-        services.get_available_projects_with_environments(
-            request.user,
-            environments,
-        )
-    )
-    projects_with_environments_being_created = (
-        services.get_projects_with_environment_being_created(
-            available_project_environment_workflow_triplets
-        )
-    )
-    environment_projects_pairs_with_creating = (
-        projects_with_environments_being_created + environment_project_workflow_triplets
-    )
-
-    sorted_environments_project_workflow_triplets_dict = (
-        services.sort_environments_per_workspace(
-            environment_projects_pairs_with_creating,
-            workspaces_list,
-        )
-    )
-
-    inprogress_workspaces = [
-        workflow.workspace_name
-        for workflow in workspace_workflows
-        if workflow.workspace_name
-    ]
-    triplets_without_inprogress_workspaces = {
-        workspace: workbenches
-        for workspace, workbenches in sorted_environments_project_workflow_triplets_dict.items()
-        if workspace.gcp_project_id not in inprogress_workspaces
-    }
+    running_workflows = services.get_running_workflows(request.user)
 
     context = {
-        "available_project_environment_workflow_triplets": available_project_environment_workflow_triplets,
-        "environment_project_workflow_triplets": environment_projects_pairs_with_creating,
-        "workspace_project_environment_workflow_triplets_dict": triplets_without_inprogress_workspaces,
-        "workspace_workflows": workspace_workflows,
+        "workspaces_with_workbenches": workspaces,
+        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
-        "machine_type_specification_dict": constants.MACHINE_TYPE_SPECIFICATION,
+        "workflows": running_workflows,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
     if execution_resource_name:
-        workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
+        workflow = services.get_execution(execution_resource_name)
         workflow_state_context = {
             "recent_workflow": workflow,
-            "recent_workflow_failed": workflow.status == Workflow.FAILED,
-            "recent_workflow_succeeded": workflow.status == Workflow.SUCCESS,
-            "workflow_finished_message": services.workflow_finished_message(
-                workflow=workflow
-            ),
+            "recent_workflow_failed": workflow.status == WorkflowStatus.FAILURE,
+            "recent_workflow_succeeded": workflow.status == WorkflowStatus.SUCCESS,
+            "workflow_finished_message": workflow.error_information,
         }
         context = {**context, **workflow_state_context}
 
@@ -262,11 +178,9 @@ def create_research_environment(request, project_slug, project_version):
             request.POST, workspace_list=workspaces_list
         )
         if form.is_valid():
-            cpu_usage = services.cpu_usage(
-                value=InstanceType(form.cleaned_data["machine_type"]).cpus(),
-                user=request.user,
-            )
-            if cpu_usage <= constants.MAX_CPU_USAGE:
+            workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
+            new_cpu_usage = services.cpu_usage(workspaces_list) + workbench_cpu_usage
+            if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -280,7 +194,7 @@ def create_research_environment(request, project_slug, project_version):
             else:
                 messages.error(
                     request,
-                    f"Quota exceeded - the specified configuration would use {cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
+                    f"Quota exceeded - the specified configuration would use {new_cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
         form = CreateResearchEnvironmentForm(workspace_list=workspaces_list)
@@ -372,7 +286,7 @@ def stop_running_environment(request):
     services.stop_running_environment(
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
     )
     return JsonResponse({})
@@ -384,7 +298,7 @@ def stop_running_environment(request):
 def start_stopped_environment(request):
     data = json.loads(request.body)
     services.start_stopped_environment(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
         workspace_project_id=data["gcp_project_id"],
@@ -398,7 +312,7 @@ def start_stopped_environment(request):
 def change_environment_machine_type(request):
     data = json.loads(request.body)
     services.change_environment_machine_type(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
         machine_type=data["machine_type"],
         workbench_type=data["environment_type"],
@@ -413,7 +327,7 @@ def change_environment_machine_type(request):
 def delete_environment(request):
     data = json.loads(request.body)
     services.delete_environment(
-        user_email=request.user.cloud_identity.email,
+        user=request.user,
         workspace_project_id=data["gcp_project_id"],
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
@@ -440,13 +354,10 @@ def delete_workspace(request):
 @cloud_identity_required
 def check_execution_status(request):
     execution_resource_name = request.GET["execution_resource_name"]
-    execution_state = services.get_execution_state(
-        execution_resource_name=execution_resource_name
-    )
-    finished = execution_state != Execution.State.ACTIVE
+    execution = services.get_execution(execution_resource_name=execution_resource_name)
+    finished = execution.status != WorkflowStatus.IN_PROGRESS
     if finished:
         services.mark_workflow_as_finished(
             execution_resource_name=execution_resource_name,
-            execution_state=execution_state,
         )
     return JsonResponse({"finished": finished})

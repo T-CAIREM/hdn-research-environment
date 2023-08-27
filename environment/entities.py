@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Iterable, Optional, Union
+
+from django.apps import apps
+
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 class Region(Enum):
@@ -34,19 +38,17 @@ class GPUAcceleratorType(Enum):
 
 
 class EnvironmentStatus(Enum):
-    PROVISIONING = "inprogress"
-    PROVISIONING_FAILED = "workbench-setup-failed"
+    CREATING = "creating"
 
     RUNNING = "running"
-    STARTING = "running-inprogress"
+    STARTING = "starting"
 
-    UPDATING = "updating-inprogress"
+    UPDATING = "updating"
 
     STOPPED = "stopped"
-    STOPPING = "stopping-inprogress"
+    STOPPING = "stopping"
 
-    DESTROYING = "destroying-inprogress"
-    DESTROYED = "workbench-destroy-done"
+    DESTROYING = "destroying"
 
 
 class EnvironmentType(Enum):
@@ -62,10 +64,44 @@ class EnvironmentType(Enum):
 
 
 class WorkspaceStatus(Enum):
-    DONE = "workspace-setup-done"
-    INPROGRESS = "workspace-setup-inprogress"
-    PENDING = "workspace-setup-pending"
-    RETRYING = "workspace-setup-retrying"
+    CREATED = "created"
+    CREATING = "creating"
+    DESTROYING = "destroying"
+
+
+class WorkflowStatus(Enum):
+    IN_PROGRESS = "in_progress"
+    FAILURE = "failure"
+    SUCCESS = "success"
+
+
+class WorkflowType(Enum):
+    WORKSPACE_CREATION = "workspace_creation"
+    WORKSPACE_DELETION = "workspace_deletion"
+
+    JUPYTER_CREATION = "jupyter_creation"
+    JUPYTER_DESTROY = "jupyter_destroy"
+    JUPYTER_STOP = "jupyter_stop"
+    JUPYTER_START = "jupyter_start"
+    JUPYTER_UPDATE = "jupyter_update"
+
+    RSTUDIO_CREATION = "rstudio_creation"
+    RSTUDIO_DESTROY = "rstudio_destroy"
+    RSTUDIO_STOP = "rstudio_stop"
+    RSTUDIO_START = "rstudio_start"
+    RSTUDIO_UPDATE = "rstudio_update"
+
+
+@dataclass
+class Workflow:
+    id: str
+    type: WorkflowType
+    status: WorkflowStatus
+    error_information: str
+
+    def display_type(self) -> str:
+        entity_type, action_type = self.type.value.split("_")
+        return f"{entity_type} {action_type}".capitalize()
 
 
 @dataclass
@@ -79,7 +115,8 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
-    machine_type: Optional[str]
+    project: PublishedProject
+    machine_type: Optional[InstanceType]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
 
@@ -94,7 +131,7 @@ class ResearchEnvironment:
     @property
     def is_in_progress(self):
         return self.status in [
-            EnvironmentStatus.PROVISIONING,
+            EnvironmentStatus.CREATING,
             EnvironmentStatus.STARTING,
             EnvironmentStatus.STOPPING,
             EnvironmentStatus.UPDATING,
@@ -111,3 +148,11 @@ class ResearchWorkspace:
     region: Region
     gcp_project_id: str
     gcp_billing_id: str
+    status: WorkspaceStatus
+    workbenches: Iterable[ResearchEnvironment]
+
+
+@dataclass
+class EntityScaffolding:
+    status: Union[WorkspaceStatus, EnvironmentStatus]
+    gcp_project_id: str

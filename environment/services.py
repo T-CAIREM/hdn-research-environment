@@ -4,17 +4,18 @@ from typing import Dict, Iterable, Optional, Tuple
 from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import Model, Q
-from google.cloud.workflows import executions_v1beta
-from google.cloud.workflows.executions_v1beta.types import executions
 
 import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
 from environment.deserializers import (
+    _project_data_group,
     deserialize_research_environments,
+    deserialize_workflow_details,
     deserialize_workspaces,
 )
 from environment.entities import ResearchEnvironment, ResearchWorkspace
+from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
     BillingSharingFailed,
@@ -25,6 +26,7 @@ from environment.exceptions import (
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
     GetBillingAccountsListFailed,
+    GetWorkflowFailed,
     IdentityProvisioningFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
@@ -39,18 +41,6 @@ User = Model
 
 
 DEFAULT_REGION = "us-central1"
-
-
-def _project_data_group(project: PublishedProject) -> str:
-    # HACK: Use the slug and version to calculate the dataset group.
-    # The result has to match the patterns for:
-    # - Service Account ID: must start with a lower case letter, followed by one or more lower case alphanumerical characters that can be separated by hyphens
-    # - Role ID: can only include letters, numbers, full stops and underscores
-    #
-    # Potential collisions may happen:
-    # { slug: some-project, version: 1.1.0 } => someproject110
-    # { slug: some-project1, version: 1.0 }  => someproject110
-    return "".join(c for c in project.slug + project.version if c.isalnum())
 
 
 def _environment_data_group(environment: ResearchEnvironment) -> str:
@@ -183,6 +173,8 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         error_message = response.json()["error"]
         raise CreateWorkspaceFailed(error_message)
 
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+
 
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
@@ -196,6 +188,8 @@ def delete_workspace(
     if not response.ok:
         error_message = response.json()["error"]
         raise DeleteWorkspaceFailed(error_message)
+
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
 
 def _create_workbench_kwargs(
@@ -251,12 +245,13 @@ def create_research_environment(
             "error"
         ]  # TODO: Check all uses of "error"/"message"
         raise EnvironmentCreationFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
 def get_available_projects(user: User) -> Iterable[PublishedProject]:
-    return PublishedProject.objects.accessible_by(user).prefetch_related("workflows")
+    return PublishedProject.objects.accessible_by(user)
 
 
 def _get_projects_for_environments(
@@ -271,6 +266,19 @@ def _get_projects_for_environments(
         for project in PublishedProject.objects.all()
         if _project_data_group(project) in dataset_identifiers
     ]
+
+
+def _get_project_for_environment(
+    dataset_identifier: str,
+    projects: Iterable[PublishedProject],
+) -> PublishedProject:
+    return next(
+        iter(
+            project
+            for project in projects
+            if _project_data_group(project) == dataset_identifier
+        )
+    )
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
@@ -392,25 +400,27 @@ def match_workspace_with_billing_id(
 
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
+    projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
-    return deserialize_workspaces(response.json())
+    return deserialize_workspaces(response.json(), projects)
 
 
 def stop_running_environment(
     workbench_type: str,
     workbench_resource_id: str,
-    user_email: str,
+    user: User,
     workspace_project_id: str,
 ) -> str:
     response = api.stop_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
         raise StopEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
@@ -418,24 +428,25 @@ def stop_running_environment(
 def start_stopped_environment(
     workbench_type: str,
     workbench_resource_id: str,
-    user_email: str,
+    user: User,
     workspace_project_id: str,
 ) -> str:
     response = api.start_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise StartEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
 def change_environment_machine_type(
-    user_email: str,
+    user: User,
     workspace_project_id: str,
     machine_type: str,
     workbench_type: str,
@@ -444,58 +455,66 @@ def change_environment_machine_type(
     response = api.change_workbench_machine_type(
         workbench_type=workbench_type,
         machine_type=machine_type,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise ChangeEnvironmentInstanceTypeFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
 def delete_environment(
-    user_email: str,
+    user: User,
     workspace_project_id: str,
     workbench_type: str,
     workbench_resource_id: str,
 ) -> str:
     response = api.delete_workbench(
         workbench_type=workbench_type,
-        user_email=user_email,
+        user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
     if not response.ok:
         error_message = response.json()["message"]
         raise DeleteEnvironmentFailed(error_message)
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
 
 
-def get_execution_state(execution_resource_name) -> executions.Execution.State:
-    client = executions_v1beta.ExecutionsClient()
-    execution = client.get_execution(request={"name": execution_resource_name})
-    return execution.state
+def get_execution(execution_resource_name) -> ApiWorkflow:
+    response = api.get_workflow(execution_resource_name)
+    if not response.ok:
+        error_message = response.json()["message"]
+        raise GetWorkflowFailed(error_message)
+    if response.json():
+        return deserialize_workflow_details(response.json())
 
 
-def mark_workflow_as_finished(
-    execution_resource_name: str, execution_state: executions.Execution.State
-):
+def mark_workflow_as_finished(execution_resource_name: str):
     workflow = Workflow.objects.get(execution_resource_name=execution_resource_name)
-    if execution_state == executions.Execution.State.SUCCEEDED:
-        workflow.status = Workflow.SUCCESS
-    else:
-        workflow.status = Workflow.FAILED
-
+    workflow.in_progress = False
     workflow.save()
 
 
-def cpu_usage(value, user) -> int:
-    running_environments = get_active_environments(user)
-    cpu = sum(environment.machine_type.cpus() for environment in running_environments)
-    return value + cpu
+def cpu_usage(workspaces: Iterable[ResearchWorkspace]) -> int:
+    workbenches = [
+        workbench
+        for workspace in workspaces
+        if hasattr(
+            workspace, "workbenches"
+        )  # HACK: Workspace scaffolding do not have the workbenches attribute.
+        for workbench in workspace.workbenches
+        if hasattr(
+            workbench, "machine_type"
+        )  # HACK: Workbench scaffoldings do not have the machine type attribute.
+    ]
+    return sum(workbench.machine_type.cpus() for workbench in workbenches)
 
 
 def exceeded_quotas(user) -> Iterable[str]:
@@ -510,13 +529,13 @@ def exceeded_quotas(user) -> Iterable[str]:
     return quotas_exceeded
 
 
-def workflow_finished_message(workflow: Workflow) -> Optional[str]:
-    if workflow.status == Workflow.SUCCESS:
-        return None
+def persist_workflow(user: User, workflow_id: str):
+    Workflow.objects.create(
+        user=user,
+        execution_resource_name=workflow_id,
+        in_progress=True,
+    )
 
-    workflow_type_failure_messages = {
-        Workflow.WORKSPACE_CREATE: "Please retry the action. If the error persists, it's likely that the billing account quota was exceeded.",
-        Workflow.CREATE: "This is likely caused by insufficient cloud resources at the moment. Please retry the action.",
-    }
 
-    return workflow_type_failure_messages.get(workflow.type)
+def get_running_workflows(user: User):
+    return Workflow.objects.filter(user=user, in_progress=True)

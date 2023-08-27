@@ -3,7 +3,6 @@ import uuid
 from django.core.validators import EmailValidator
 from django.db import models
 
-from environment.managers import WorkflowManager
 from environment.validators import gcp_billing_account_id_validator
 
 
@@ -40,45 +39,8 @@ class BillingAccountSharingInvite(models.Model):
 
 
 class Workflow(models.Model):
-    objects = WorkflowManager()
-
-    project = models.ForeignKey(
-        "project.PublishedProject",
-        related_name="workflows",
-        on_delete=models.CASCADE,
-        null=True,
-    )
     user = models.ForeignKey(
         "user.User", related_name="workflows", on_delete=models.CASCADE
     )
     execution_resource_name = models.CharField(max_length=256, unique=True)
-
-    workspace_name = models.CharField(max_length=256, null=True)
-
-    INPROGRESS = 0
-    SUCCESS = 1
-    FAILED = 2
-    STATUS_CHOICES = [
-        (INPROGRESS, "In Progress"),
-        (SUCCESS, "Succeeded"),
-        (FAILED, "Failed"),
-    ]
-    status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES)
-
-    CREATE = 0
-    DESTROY = 1
-    START = 2
-    PAUSE = 3
-    CHANGE = 4
-    WORKSPACE_CREATE = 5
-    WORKSPACE_DESTROY = 6
-    TYPE_CHOICES = [
-        (CREATE, "Creating"),
-        (DESTROY, "Destroying"),
-        (START, "Starting"),
-        (PAUSE, "Pausing"),
-        (CHANGE, "Changing"),
-        (WORKSPACE_CREATE, "Creating Workspace"),
-        (WORKSPACE_DESTROY, "Destroying Workspace"),
-    ]
-    type = models.PositiveSmallIntegerField(choices=TYPE_CHOICES)
+    in_progress = models.BooleanField(default=False)
