@@ -15,7 +15,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
 )
-from environment.entities import InstanceType, WorkflowStatus
+from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -162,7 +162,8 @@ def create_workspace(request):
 @cloud_identity_required
 def create_research_environment(request, project_slug, project_version):
     workspaces_list = services.get_workspaces_list(request.user)
-    if not workspaces_list:
+    available_workspaces = list(workspace for workspace in workspaces_list if workspace.status == WorkspaceStatus.CREATED)
+    if not available_workspaces:
         messages.info(
             request,
             "You have to have at least one workspace in order to create a research environment. You can create one using the form below.",
@@ -175,11 +176,11 @@ def create_research_environment(request, project_slug, project_version):
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
-            request.POST, workspace_list=workspaces_list
+            request.POST, workspace_list=available_workspaces
         )
         if form.is_valid():
             workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
-            new_cpu_usage = services.cpu_usage(workspaces_list) + workbench_cpu_usage
+            new_cpu_usage = services.cpu_usage(available_workspaces) + workbench_cpu_usage
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
@@ -197,7 +198,7 @@ def create_research_environment(request, project_slug, project_version):
                     f"Quota exceeded - the specified configuration would use {new_cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
-        form = CreateResearchEnvironmentForm(workspace_list=workspaces_list)
+        form = CreateResearchEnvironmentForm(workspace_list=available_workspaces)
 
     context = {
         "form": form,
