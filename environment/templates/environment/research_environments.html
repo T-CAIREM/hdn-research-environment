@@ -26,10 +26,11 @@
 
         let data = request_data;
         if (button_type === "update") {
-            const instance = $("#form-select option:selected").val();
+            data = JSON.parse(data);
+            let instance_name = data["instance_name"]
+            const instance = $(`#form-select-${instance_name} option:selected`).val();
             if (instance === "") return;
 
-            data = JSON.parse(data);
             data["machine_type"] = instance;
             data = JSON.stringify(data);
         }
