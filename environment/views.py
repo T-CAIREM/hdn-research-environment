@@ -94,13 +94,11 @@ def research_environments_partial(request):
         )
 
     workspaces = workspaces_list_future.result()
-    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
         "workspaces_with_workbenches": workspaces,
-        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
     }
@@ -160,9 +158,13 @@ def create_workspace(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
-def create_research_environment(request, project_slug, project_version):
+def create_research_environment(request):
     workspaces_list = services.get_workspaces_list(request.user)
-    available_workspaces = list(workspace for workspace in workspaces_list if workspace.status == WorkspaceStatus.CREATED)
+    available_workspaces = list(
+        workspace
+        for workspace in workspaces_list
+        if workspace.status == WorkspaceStatus.CREATED
+    )
     if not available_workspaces:
         messages.info(
             request,
@@ -170,18 +172,19 @@ def create_research_environment(request, project_slug, project_version):
         )
         return redirect("create_workspace")
 
-    project = services.get_available_projects(request.user).get(
-        slug=project_slug, version=project_version
-    )
+    projects = services.get_available_projects(request.user)
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
-            request.POST, workspace_list=available_workspaces
+            request.POST, workspace_list=available_workspaces, projects_list=projects
         )
         if form.is_valid():
             workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
-            new_cpu_usage = services.cpu_usage(available_workspaces) + workbench_cpu_usage
+            new_cpu_usage = (
+                services.cpu_usage(available_workspaces) + workbench_cpu_usage
+            )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
+                project = services.get_project(form.cleaned_data["project_id"])
                 services.create_research_environment(
                     user=request.user,
                     project=project,
@@ -198,11 +201,12 @@ def create_research_environment(request, project_slug, project_version):
                     f"Quota exceeded - the specified configuration would use {new_cpu_usage} out of {constants.MAX_CPU_USAGE} CPUs",
                 )
     else:
-        form = CreateResearchEnvironmentForm(workspace_list=available_workspaces)
+        form = CreateResearchEnvironmentForm(
+            workspace_list=available_workspaces, projects_list=projects
+        )
 
     context = {
         "form": form,
-        "project": project,
         "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
