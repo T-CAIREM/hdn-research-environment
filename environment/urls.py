@@ -41,7 +41,7 @@ urlpatterns = [
     ),
     path("environment/delete", views.delete_environment, name="delete_environment"),
     path(
-        "environment/create",
+        "environment/create/<workspace_id>",
         views.create_research_environment,
         name="create_research_environment",
     ),

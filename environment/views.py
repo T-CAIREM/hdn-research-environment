@@ -158,7 +158,7 @@ def create_workspace(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
-def create_research_environment(request):
+def create_research_environment(request, workspace_id):
     workspaces_list = services.get_workspaces_list(request.user)
     available_workspaces = list(
         workspace
@@ -171,12 +171,20 @@ def create_research_environment(request):
             "You have to have at least one workspace in order to create a research environment. You can create one using the form below.",
         )
         return redirect("create_workspace")
-
+    selected_workspace = next(
+        iter(
+            [
+                workspace
+                for workspace in available_workspaces
+                if workspace.gcp_project_id == workspace_id
+            ]
+        )
+    )
     projects = services.get_available_projects(request.user)
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
-            request.POST, workspace_list=available_workspaces, projects_list=projects
+            request.POST, selected_workspace=selected_workspace, projects_list=projects
         )
         if form.is_valid():
             workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
@@ -202,10 +210,11 @@ def create_research_environment(request):
                 )
     else:
         form = CreateResearchEnvironmentForm(
-            workspace_list=available_workspaces, projects_list=projects
+            selected_workspace=selected_workspace, projects_list=projects
         )
 
     context = {
+        "selected_workspace": selected_workspace,
         "form": form,
         "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,

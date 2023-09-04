@@ -110,7 +110,7 @@
                         </div>
                     {% endif %}
                     <div class="row mt-3">
-                        <a class="btn btn-sm btn-primary" href="{% url 'create_research_environment' %}">
+                        <a class="m-auto" href="{% url 'create_research_environment' workspace_id=workspace.gcp_project_id %}">
                             Launch Research Environment
                         </a>
                     </div>

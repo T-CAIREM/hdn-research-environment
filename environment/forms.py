@@ -2,6 +2,7 @@ from typing import Iterable
 
 from django import forms
 from django.apps import apps
+from django.utils.safestring import mark_safe
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import InstanceType, ResearchWorkspace
@@ -59,7 +60,12 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
-    workspace_project_id = forms.ChoiceField(label="Workspace")
+    workspace_project_id = forms.CharField(
+        label="Selected workspace",
+        help_text=mark_safe(
+            f'Get back to <a href="/environments/">Research Enironments</a> to change your choice <br>'
+        ),
+    )
     project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ChoiceField(
         label="Instance type",
@@ -88,15 +94,14 @@ class CreateResearchEnvironmentForm(forms.Form):
     def __init__(
         self,
         *args,
-        workspace_list: Iterable[ResearchWorkspace],
+        selected_workspace: ResearchWorkspace,
         projects_list: Iterable[PublishedProject],
-        **kwargs
+        **kwargs,
     ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
-        self.fields["workspace_project_id"].choices = [
-            (workspace.gcp_project_id, workspace.gcp_project_id)
-            for workspace in workspace_list
-        ]
+        self.fields["workspace_project_id"].default = selected_workspace
+        self.fields["workspace_project_id"].disabled = True
+
         self.fields["project_id"].choices = [
             (project.id, " ".join([project.slug, project.version]))
             for project in projects_list
