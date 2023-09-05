@@ -44,8 +44,31 @@
 {% else %}
     <div class="container text-center">
         You don't have any billing accounts.<br>
-        <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
-            Create one using the Google Cloud Platform console.
-        </a>
+        <span >In order to set up billing account please follow one of flows that are shown below:</span><br>
+    </div>
+    <div>
+        <h6>
+            Creation:
+        </h6>
+        <ol>
+            <li>
+                <span class="font-italic">Visit <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">the Google Cloud Platform console</a> and follow the instructions there.</span>
+            </li>
+            <li>
+                <span class="font-italic">Configure new billing account and refresh the list, newly created billing account should be visible there.</span>
+            </li>
+        </ol>
+        <h6>
+            Sharing:
+        </h6>
+        <ol>
+            <li>
+                <span class="font-italic">Ask someone with already created billing account to share billing account with you using email provided before.</span>
+            </li>
+            <li>
+                <span class="font-italic">Accept billing invitation that has been sent to your email.</span>
+            </li>
+        </ol>
+        <span >After the process is complete go to Running Environments tab and create your first workspace.</span>
     </div>
 {% endif %}
