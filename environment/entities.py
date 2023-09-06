@@ -14,6 +14,14 @@ class Region(Enum):
     AUSTRALIA_SOUTHEAST = "australia-southeast1"
 
 
+GOOGLE_REGIONS_SHORTCUTS = {
+    Region.US_CENTRAL: "us-c1",
+    Region.EUROPE_WEST: "eu-w3",
+    Region.NORTHAMERICA_NORTHEAST: "na-ne3",
+    Region.AUSTRALIA_SOUTHEAST: "au-se1",
+}
+
+
 class InstanceType(Enum):
     N1_STANDARD_1 = "n1-standard-1"
     N1_STANDARD_2 = "n1-standard-2"

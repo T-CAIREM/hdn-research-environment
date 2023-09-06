@@ -162,7 +162,11 @@ def create_workspace(request):
 @cloud_identity_required
 def create_research_environment(request, project_slug, project_version):
     workspaces_list = services.get_workspaces_list(request.user)
-    available_workspaces = list(workspace for workspace in workspaces_list if workspace.status == WorkspaceStatus.CREATED)
+    available_workspaces = list(
+        workspace
+        for workspace in workspaces_list
+        if workspace.status == WorkspaceStatus.CREATED
+    )
     if not available_workspaces:
         messages.info(
             request,
@@ -180,7 +184,9 @@ def create_research_environment(request, project_slug, project_version):
         )
         if form.is_valid():
             workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
-            new_cpu_usage = services.cpu_usage(available_workspaces) + workbench_cpu_usage
+            new_cpu_usage = (
+                services.cpu_usage(available_workspaces) + workbench_cpu_usage
+            )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 services.create_research_environment(
                     user=request.user,
