@@ -44,8 +44,34 @@
 {% else %}
     <div class="container text-center">
         You don't have any billing accounts.<br>
-        <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
-            Create one using the Google Cloud Platform console.
-        </a>
+        <span >In order to set up billing account please follow one of flows that are shown below:</span><br>
+    </div>
+    <div>
+        <h6>
+            Creation:
+        </h6>
+        <ol>
+            <li>
+                <span class="font-italic">Visit <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">the Google Cloud Platform console</a> and follow the instructions there.</span>
+            </li>
+            <li>
+                <span class="font-italic">After supplying your billing information, the created billing account will become accessible via this panel.</span>
+            </li>
+        </ol>
+        <h6>
+            Using a shared account:
+        </h6>
+        <ol>
+            <li>
+                <span class="font-italic">The owner of a billing account can send out invitations to use a shared account via e-mail. The specific address you use doesn't have to be connected with Health Data Nexus.</span>
+            </li>
+            <li>
+                <span class="font-italic">Clicking the link in the e-mail message will prompt you to log in to Health Data Nexus and consume the invitation.</span>
+            </li>
+            <li>
+                <span class="font-italic">You can use shared billing accounts to create resources in the platform the same way you would use one that was created by you.</span>
+            </li>
+        </ol>
+        <span >After the process is complete go to Running Environments tab and create your first workspace.</span>
     </div>
 {% endif %}
