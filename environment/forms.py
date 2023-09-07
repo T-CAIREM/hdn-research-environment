@@ -100,7 +100,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         **kwargs,
     ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
-        self.fields["workspace_project_id"].default = selected_workspace
+        self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
 
         self.fields["project_id"].choices = [
