@@ -1,9 +1,13 @@
 from typing import Iterable
 
 from django import forms
+from django.apps import apps
+from django.utils.safestring import mark_safe
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import InstanceType, ResearchWorkspace
+
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -56,7 +60,14 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
-    workspace_project_id = forms.ChoiceField(label="Workspace")
+    workspace_project_id = forms.CharField(
+        label="Selected workspace",
+        help_text=mark_safe(
+            f'Go <a href="/environments/">back</a> to select a different workspace. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"})
+    )
+    project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ChoiceField(
         label="Instance type",
         choices=AVAILABLE_MACHINE_TYPES,
@@ -81,11 +92,20 @@ class CreateResearchEnvironmentForm(forms.Form):
         required=False,
     )
 
-    def __init__(self, *args, workspace_list: Iterable[ResearchWorkspace], **kwargs):
+    def __init__(
+        self,
+        *args,
+        selected_workspace: ResearchWorkspace,
+        projects_list: Iterable[PublishedProject],
+        **kwargs,
+    ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
-        self.fields["workspace_project_id"].choices = [
-            (workspace.gcp_project_id, workspace.gcp_project_id)
-            for workspace in workspace_list
+        self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
+        self.fields["workspace_project_id"].disabled = True
+
+        self.fields["project_id"].choices = [
+            (project.id, project)
+            for project in projects_list
         ]
 
     def clean_gpu_accelerator(self):
