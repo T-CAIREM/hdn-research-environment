@@ -103,7 +103,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.fields["workspace_project_id"].disabled = True
 
         self.fields["project_id"].choices = [
-            (project.id, " ".join([project.slug, project.version]))
+            (project.id, project)
             for project in projects_list
         ]
 

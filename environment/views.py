@@ -63,13 +63,11 @@ def research_environments(request):
         )
 
     workspaces = workspaces_list_future.result()
-    available_projects = services.get_available_projects(request.user)
     billing_accounts_list = billing_accounts_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
         "workspaces_with_workbenches": workspaces,
-        "available_projects": available_projects,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
     }
@@ -173,11 +171,9 @@ def create_research_environment(request, workspace_id):
         return redirect("create_workspace")
     selected_workspace = next(
         iter(
-            [
-                workspace
-                for workspace in available_workspaces
-                if workspace.gcp_project_id == workspace_id
-            ]
+            workspace
+            for workspace in available_workspaces
+            if workspace.gcp_project_id == workspace_id
         )
     )
     projects = services.get_available_projects(request.user)
