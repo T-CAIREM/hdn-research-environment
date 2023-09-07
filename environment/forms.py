@@ -63,8 +63,9 @@ class CreateResearchEnvironmentForm(forms.Form):
     workspace_project_id = forms.CharField(
         label="Selected workspace",
         help_text=mark_safe(
-            f'Get back to <a href="/environments/">Research Enironments</a> to change your choice <br>'
+            f'Go <a href="/environments/">back</a> to select a different workspace. <br>'
         ),
+        widget=forms.TextInput(attrs={"class": "text-muted"})
     )
     project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ChoiceField(
