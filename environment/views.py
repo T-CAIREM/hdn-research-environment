@@ -198,6 +198,10 @@ def create_research_environment(request, workspace_id):
                     disk_size=form.cleaned_data.get("disk_size"),
                     gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
                 )
+                messages.info(
+                    request,
+                    "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
+                )
                 return redirect("research_environments")
             else:
                 messages.error(
