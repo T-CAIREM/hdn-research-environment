@@ -193,7 +193,7 @@ def create_research_environment(request, project_slug, project_version):
                 )
                 messages.info(
                     request,
-                    "Workbench creation has been started - it may take 3-10 minutes based on selected configuration",
+                    "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
                 )
                 return redirect("research_environments")
             else:
