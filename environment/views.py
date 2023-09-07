@@ -170,11 +170,9 @@ def create_research_environment(request, workspace_id):
         )
         return redirect("create_workspace")
     selected_workspace = next(
-        iter(
-            workspace
-            for workspace in available_workspaces
-            if workspace.gcp_project_id == workspace_id
-        )
+        workspace
+        for workspace in available_workspaces
+        if workspace.gcp_project_id == workspace_id
     )
     projects = services.get_available_projects(request.user)
 
