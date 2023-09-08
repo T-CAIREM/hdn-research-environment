@@ -1,6 +1,5 @@
 $(function(){
-    var current_workspace_array = $("#id_workspace_project_id").val().split("-")
-    var current_region = [current_workspace_array[1],current_workspace_array[2]].join("-")
+    var current_region = $("#id_workspace_region").val()
     var current_machine_type = $("#id_machine_type").val()
     var current_instance_price = $(`#${current_region}-${current_machine_type}`)
     var current_data_amount = $("#id_disk_size").val()

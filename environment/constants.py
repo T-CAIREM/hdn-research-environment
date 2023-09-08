@@ -4,7 +4,6 @@ from environment.entities import (
     GPUAcceleratorType,
     InstanceType,
     Region,
-    GOOGLE_REGIONS_SHORTCUTS,
 )
 
 MAX_RUNNING_WORKSPACES = 4
@@ -15,7 +14,7 @@ PERSISTENT_DATA_DISK_NAME = "Persistent data disk 1GB"
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 INSTANCE_PROJECTED_COSTS = {
-    GOOGLE_REGIONS_SHORTCUTS[Region.US_CENTRAL]: [
+    Region.US_CENTRAL: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [InstanceType.N1_STANDARD_2.value, 0.09],
@@ -24,7 +23,7 @@ INSTANCE_PROJECTED_COSTS = {
             [InstanceType.N1_STANDARD_16.value, 0.76],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.NORTHAMERICA_NORTHEAST]: [
+    Region.NORTHAMERICA_NORTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [InstanceType.N1_STANDARD_2.value, 0.11],
@@ -33,7 +32,7 @@ INSTANCE_PROJECTED_COSTS = {
             [InstanceType.N1_STANDARD_16.value, 0.84],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.EUROPE_WEST]: [
+    Region.EUROPE_WEST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [InstanceType.N1_STANDARD_2.value, 0.12],
@@ -42,7 +41,7 @@ INSTANCE_PROJECTED_COSTS = {
             [InstanceType.N1_STANDARD_16.value, 0.98],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.AUSTRALIA_SOUTHEAST]: [
+    Region.AUSTRALIA_SOUTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [InstanceType.N1_STANDARD_2.value, 0.13],
@@ -54,25 +53,25 @@ INSTANCE_PROJECTED_COSTS = {
 }
 
 GPU_PROJECTED_COSTS = {
-    GOOGLE_REGIONS_SHORTCUTS[Region.US_CENTRAL]: [
+    Region.US_CENTRAL: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.35],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.NORTHAMERICA_NORTHEAST]: [
+    Region.NORTHAMERICA_NORTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.35],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.EUROPE_WEST]: [
+    Region.EUROPE_WEST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.41],
         ]
     ],
-    GOOGLE_REGIONS_SHORTCUTS[Region.AUSTRALIA_SOUTHEAST]: [
+    Region.AUSTRALIA_SOUTHEAST: [
         ProjectedWorkbenchCost(*parameters)
         for parameters in [
             [GPUAcceleratorType.NVIDIA_TESLA_T4.value, 0.44],
@@ -81,18 +80,12 @@ GPU_PROJECTED_COSTS = {
 }
 
 DATA_STORAGE_PROJECTED_COSTS = {
-    GOOGLE_REGIONS_SHORTCUTS[Region.US_CENTRAL]: ProjectedWorkbenchCost(
+    Region.US_CENTRAL: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
+    Region.NORTHAMERICA_NORTHEAST: ProjectedWorkbenchCost(
         PERSISTENT_DATA_DISK_NAME, 0.05
     ),
-    GOOGLE_REGIONS_SHORTCUTS[Region.NORTHAMERICA_NORTHEAST]: ProjectedWorkbenchCost(
-        PERSISTENT_DATA_DISK_NAME, 0.05
-    ),
-    GOOGLE_REGIONS_SHORTCUTS[Region.EUROPE_WEST]: ProjectedWorkbenchCost(
-        PERSISTENT_DATA_DISK_NAME, 0.05
-    ),
-    GOOGLE_REGIONS_SHORTCUTS[Region.AUSTRALIA_SOUTHEAST]: ProjectedWorkbenchCost(
-        PERSISTENT_DATA_DISK_NAME, 0.05
-    ),
+    Region.EUROPE_WEST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
+    Region.AUSTRALIA_SOUTHEAST: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
 }
 
 MACHINE_TYPE_SPECIFICATION = {
