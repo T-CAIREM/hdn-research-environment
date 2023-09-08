@@ -65,8 +65,9 @@ class CreateResearchEnvironmentForm(forms.Form):
         help_text=mark_safe(
             f'Go <a href="/environments/">back</a> to select a different workspace. <br>'
         ),
-        widget=forms.TextInput(attrs={"class": "text-muted"})
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
+    workspace_region = forms.CharField(widget=forms.HiddenInput())
     project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ChoiceField(
         label="Instance type",
@@ -102,10 +103,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
+        self.fields["workspace_region"].initial = selected_workspace.region.value
 
         self.fields["project_id"].choices = [
-            (project.id, project)
-            for project in projects_list
+            (project.id, project) for project in projects_list
         ]
 
     def clean_gpu_accelerator(self):
