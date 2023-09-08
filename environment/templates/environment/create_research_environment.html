@@ -26,10 +26,7 @@
     <div class="container-body">
       <div class="card" style="width: 36rem;">
         <div class="card-body">
-          <h3 class="card-title">
-              Project: <span class="font-italic">{{ project.title }}</span>
-          </h3>
-          <form class="single-submit-form" action="{% url 'create_research_environment' project_slug=project.slug project_version=project.version %}" method="post" style="width: 24rem;">
+          <form class="single-submit-form" action="{% url 'create_research_environment' selected_workspace.gcp_project_id %}" method="post" style="width: 24rem;">
             {% csrf_token %}
             {{ form }}
             <button class="btn btn-primary mt-3" type="submit">

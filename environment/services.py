@@ -254,6 +254,10 @@ def get_available_projects(user: User) -> Iterable[PublishedProject]:
     return PublishedProject.objects.accessible_by(user)
 
 
+def get_project(project_id: str) -> PublishedProject:
+    return PublishedProject.objects.get(id=project_id)
+
+
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[PublishedProject]:

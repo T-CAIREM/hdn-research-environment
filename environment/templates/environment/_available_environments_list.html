@@ -21,96 +21,108 @@
 </div>
 
 <div id="accordion">
-    {% for workspace in workspaces_with_workbenches %}
-        <div class="card">
-            <div class="card-header py-3" id="{{ heading }}">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="mb-0">
-                            {{ workspace.gcp_project_id }}
-                        </h6>
-                        {% if workspace.gcp_billing_id %}
-                            <small>
-                                <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
-                                    Billing Account:
-                                </span>
-                                <span class="d-inline font-weight-normal">
-                                    {{ workspace.gcp_billing_id }}
-                                </span>
-                            </small>
+    {% if workspaces_with_workbenches %}
+        {% for workspace in workspaces_with_workbenches %}
+            <div class="card">
+                <div class="card-header py-3" id="{{ heading }}">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">
+                                {{ workspace.gcp_project_id }}
+                            </h6>
+                            {% if workspace.gcp_billing_id %}
+                                <small>
+                                    <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
+                                        Billing Account:
+                                    </span>
+                                    <span class="d-inline font-weight-normal">
+                                        {{ workspace.gcp_billing_id }}
+                                    </span>
+                                </small>
+                            {% endif %}
+                        </div>
+                        {% if not workspace.status.value == "created" %}
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h6 class="m-0 mr-5">
+                                    {{ workspace.status.value|capfirst }}...
+                                </h6>
+                                <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
+                            </div>
+                        {% else %}
+                            {% workspace_destroy_modal_button workspace=workspace %}
                         {% endif %}
                     </div>
-                    {% if not workspace.status.value == "created" %}
-                        <div class="d-flex align-items-center justify-content-between">
-                            <h6 class="m-0 mr-5">
-                                {{ workspace.status.value|capfirst }}...
-                            </h6>
-                            <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
-                        </div>
-                    {% else %}
-                        {% workspace_destroy_modal_button workspace=workspace %}
-                    {% endif %}
                 </div>
-            </div>
 
-            {% if workspace.status.value == "created" %}
-                <div class="card-body">
-                    {% if workspace.workbenches %}
-                        <ul class="list-group list-group-flush">
-                            {% for environment in workspace.workbenches %}
-                                <li class="list-group-item">
-                                    <div class="row">
-                                        {% if environment.status.value == "creating" %}
-                                            <div class="d-flex m-auto">
-                                                <span class="mr-5">Creating...</span>
-                                                <div class="loader m-auto" style="font-size: 4px"></div>
-                                            </div>
-                                        {% else %}
-                                            <div class="col-md-3">
-                                                <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
-                                                    {{ environment.project }}
-                                                </a>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small>
-                                                    <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
-                                                    <i>CPU:</i> {{ environment.cpu }}<br>
-                                                    <i>Memory:</i> {{ environment.memory }}<br>
-                                                    <i>Region:</i> {{ environment.region.value }}
-                                                </small>
-                                            </div>
-                                            <div class="col-md-2">
-                                                {{ environment.status.value|capfirst }}
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="d-flex flex-wrap">
-                                                    {% if environment.is_in_progress %}
-                                                        <div class="loader" style="margin: 18px; font-size: 4px">Loading...</div>
-                                                    {% elif environment.is_running or environment.is_paused %}
-                                                        {% if environment.is_running %}
-                                                            <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
-                                                            {% environment_modal_button environment=environment button_type="modal_pause" %}
-                                                        {% else %}
-                                                            {% environment_modal_button environment=environment button_type="modal_start" %}
-                                                        {% endif %}
-                                                        {% environment_modal_button environment=environment button_type="modal_instance" %}
-                                                        {% environment_modal_button environment=environment button_type="modal_destroy" %}
-                                                    {% endif %}
+                {% if workspace.status.value == "created" %}
+                    <div class="card-body">
+                        {% if workspace.workbenches %}
+                            <ul class="list-group list-group-flush">
+                                {% for environment in workspace.workbenches %}
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            {% if environment.status.value == "creating" %}
+                                                <div class="d-flex m-auto">
+                                                    <span class="mr-5">Creating...</span>
+                                                    <div class="loader m-auto" style="font-size: 4px"></div>
                                                 </div>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <div class="text-center">
-                            You don't have any workbenches in this workspace.<br>
-                            Create one in the "Projects" tab.
+                                            {% else %}
+                                                <div class="col-md-3">
+                                                    <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
+                                                        {{ environment.project }}
+                                                    </a>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small>
+                                                        <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
+                                                        <i>CPU:</i> {{ environment.cpu }}<br>
+                                                        <i>Memory:</i> {{ environment.memory }}<br>
+                                                        <i>Region:</i> {{ environment.region.value }}
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    {{ environment.status.value|capfirst }}
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="d-flex flex-wrap">
+                                                        {% if environment.is_in_progress %}
+                                                            <div class="loader" style="margin: 18px; font-size: 4px">Loading...</div>
+                                                        {% elif environment.is_running or environment.is_paused %}
+                                                            {% if environment.is_running %}
+                                                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
+                                                                {% environment_modal_button environment=environment button_type="modal_pause" %}
+                                                            {% else %}
+                                                                {% environment_modal_button environment=environment button_type="modal_start" %}
+                                                            {% endif %}
+                                                            {% environment_modal_button environment=environment button_type="modal_instance" %}
+                                                            {% environment_modal_button environment=environment button_type="modal_destroy" %}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center">
+                                You don't have any workbenches in this workspace.<br>
+                                Create one using the button below.
+                            </div>
+                        {% endif %}
+                        <div class="row mt-3">
+                            <a class="m-auto" href="{% url 'create_research_environment' workspace_id=workspace.gcp_project_id %}">
+                                Launch Research Environment
+                            </a>
                         </div>
-                    {% endif %}
-                </div>
-            {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center" style="margin-top: -3rem;">
+            You don't have any workspaces yet.<br>
+            Create one before creating a workbench.
         </div>
-    {% endfor %}
+    {% endif %}
 </div>
