@@ -203,7 +203,7 @@ def _create_workbench_kwargs(
 ) -> dict:
     user_email = user.cloud_identity.email
 
-    common = {
+    return {
         "user_email": user_email,
         "workspace_project_id": workspace_project_id,
         "workbench_type": workbench_type,
@@ -211,14 +211,8 @@ def _create_workbench_kwargs(
         "dataset_identifier": _project_data_group(project),
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
+        "gpu_accelerator_type": gpu_accelerator_type,
     }
-    if workbench_type == "jupyter":
-        jupyter_kwargs = {
-            "gpu_accelerator_type": gpu_accelerator_type,
-        }
-        return {**common, **jupyter_kwargs}
-    else:
-        return common
 
 
 def create_research_environment(
