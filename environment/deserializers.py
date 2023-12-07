@@ -14,6 +14,8 @@ from environment.entities import (
     WorkflowStatus,
     WorkflowType,
     WorkspaceStatus,
+    SharedWorkspace,
+    SharedBucket,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -87,6 +89,22 @@ def deserialize_workspace_details(
     )
 
 
+def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
+    return [
+        SharedBucket(name=data["bucket_name"], is_owner=data["is_owner"])
+        for data in buckets_data
+    ]
+
+
+def deserialize_shared_workspace_details(data: dict) -> SharedWorkspace:
+    return SharedWorkspace(
+        gcp_project_id=data["gcp_project_id"],
+        gcp_billing_id=data["billing_info"]["billing_account_id"],
+        status=WorkspaceStatus(data["status"]),
+        buckets=deserialize_shared_bucket_details(data["buckets"]),
+    )
+
+
 def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
     return EntityScaffolding(
         gcp_project_id=data["gcp_project_id"], status=EnvironmentStatus(data["status"])
@@ -99,6 +117,15 @@ def deserialize_workspaces(
     return [
         deserialize_workspace_details(workspace_data, projects)
         if workspace_data.get("type") == "Workspace"
+        else deserialize_entity_scaffolding(workspace_data)
+        for workspace_data in data
+    ]
+
+
+def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
+    return [
+        deserialize_shared_workspace_details(workspace_data)
+        if workspace_data.get("type") == "SharedWorkspace"
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]

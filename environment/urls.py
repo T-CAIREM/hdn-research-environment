@@ -52,4 +52,22 @@ urlpatterns = [
     ),
     path("workspace/create", views.create_workspace, name="create_workspace"),
     path("workspace/delete", views.delete_workspace, name="delete_workspace"),
+    path(
+        "sharing/workspace/create",
+        views.create_shared_workspace,
+        name="create_shared_workspace",
+    ),
+    path(
+        "sharing/workspace/delete",
+        views.delete_shared_workspace,
+        name="delete_shared_workspace",
+    ),
+    path(
+        "sharing/bucket/create/<workspace_id>",
+        views.create_shared_bucket,
+        name="create_shared_bucket",
+    ),
+    path(
+        "sharing/bucket/delete", views.delete_shared_bucket, name="delete_shared_bucket"
+    ),
 ]
