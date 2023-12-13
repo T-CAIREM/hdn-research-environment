@@ -38,6 +38,26 @@ class BillingAccountSharingInvite(models.Model):
     is_revoked = models.BooleanField(default=False)
 
 
+class BucketSharingInvite(models.Model):
+    owner = models.ForeignKey(
+        "user.User",
+        related_name="owner_bucketsharinginvite_set",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        "user.User",
+        related_name="user_bucketsharinginvite_set",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    user_contact_email = models.EmailField()
+    shared_bucket_name = models.CharField(max_length=100)
+    shared_workspace_name = models.CharField(max_length=100)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_consumed = models.BooleanField(default=False)
+    is_revoked = models.BooleanField(default=False)
+
+
 class Workflow(models.Model):
     user = models.ForeignKey(
         "user.User", related_name="workflows", on_delete=models.CASCADE

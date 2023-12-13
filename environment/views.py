@@ -23,8 +23,9 @@ from environment.forms import (
     ShareBillingAccountForm,
     CreateSharedWorkspaceForm,
     CreateSharedBucketForm,
+    BucketSharingForm,
 )
-from environment.models import BillingAccountSharingInvite, Workflow
+from environment.models import BillingAccountSharingInvite, Workflow, BucketSharingInvite
 from environment.utilities import user_has_cloud_identity
 
 
@@ -376,6 +377,75 @@ def confirm_billing_account_sharing(request):
     )
     context = {"token": token, "invitation_owner": invite.owner}
     return render(request, "environment/manage_shared_billing_invitation.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+@transaction.atomic
+def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
+    if not services.is_shared_bucket_owner(request.user, shared_bucket_name):
+        raise Http404()
+
+    owner = request.user
+    bucket_sharing_form = BucketSharingForm()
+
+    if request.method == "POST":
+        form_action = request.POST["action"]
+        if form_action == "share_account":
+            bucket_sharing_form = BucketSharingForm(request.POST)
+            if bucket_sharing_form.is_valid():
+                services.invite_user_to_shared_bucket(
+                    request=request,
+                    owner=owner,
+                    user_email=bucket_sharing_form.cleaned_data["user_email"],
+                    shared_bucket_name=shared_bucket_name,
+                    shared_workspace_name=shared_workspace_name,
+                )
+                return redirect(request.path)
+        elif form_action == "revoke_access":
+            services.revoke_shared_bucket_access(request.POST["share_id"])
+            return redirect(request.path)
+
+    bucket_shares = services.get_owned_shares_of_bucket(
+        owner=owner, shared_bucket_name=shared_bucket_name
+    )
+    pending_shares = [share for share in bucket_shares if not share.is_consumed]
+    consumed_shares = [share for share in bucket_shares if share.is_consumed]
+
+    context = {
+        "bucket_sharing_form": bucket_sharing_form,
+        "shared_bucket_name": shared_bucket_name,
+        "shared_workspace_name": shared_workspace_name,
+        "pending_shares": pending_shares,
+        "consumed_shares": consumed_shares,
+    }
+
+    return render(request, "environment/manage_shared_bucket.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+def confirm_bucket_sharing(request):
+    if request.method == "POST":
+        token = request.POST["token"]
+        services.consume_bucket_sharing_token(user=request.user, token=token)
+        messages.info(
+            request,
+            "You accepted the shared bucket invitation! The bucket will be accessible in a few moments.",
+        )
+        return redirect("research_environments")
+
+    token = request.GET.get("token")
+    if not token:
+        messages.error(request, "The invitation is either invalid or expired.")
+        return redirect("research_environments")
+
+    invite = BucketSharingInvite.objects.select_related("owner").get(
+        token=token, is_revoked=False
+    )
+    context = {"token": token, "invitation_owner": invite.owner}
+    return render(request, "environment/manage_shared_bucket_invitation.html", context)
 
 
 @require_PATCH

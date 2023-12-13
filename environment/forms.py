@@ -151,3 +151,7 @@ class CreateSharedBucketForm(forms.Form):
             "workspace_project_id"
         ].initial = selected_shared_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
+
+
+class BucketSharingForm(forms.Form):
+    user_email = forms.EmailField(label="User E-Mail")

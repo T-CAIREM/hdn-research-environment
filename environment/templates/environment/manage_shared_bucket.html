@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/manage_billing_account.css' %}">
+{% endblock %}
+
+{% block title %}Manage Shared Bucket{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h3 class="mb-4 jumbotron">
+      Manage Shared Bucket
+    </h3>
+    <div class="container-body">
+        <div class="card" style="height: fit-content; width: 42rem;">
+            <div class="card-body">
+                <div id="billing-account-id-card">
+                    <h5 class="card-title">
+                        Shared Bucket Details
+                    </h5>
+                    <div>
+                        <b>Bucket Name:</b> <i>{{ shared_bucket_name }}</i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <div class="card" style="width: 100%;">
+                <div class="card-body">
+                    <div id="new-share-card">
+                        <h5 class="card-title">
+                            New Share
+                        </h5>
+
+                    <form action="{% url 'manage_shared_bucket' shared_workspace_name=shared_workspace_name shared_bucket_name=shared_bucket_name %}" method="post" style="width: 24rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="share_account">
+                        {{ bucket_sharing_form }}
+                        <button class="btn btn-sm btn-primary mt-3" type="submit">
+                            Share
+                        </button>
+                    </form>
+                </div>
+
+                <div id="pending-shares-card" class="mt-5">
+                    <h5 class="card-title">
+                        Pending Shares
+                    </h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <strong>
+                                        E-Mail
+                                    </strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>
+                                        Actions
+                                    </strong>
+                                </div>
+                            </div>
+                        </li>
+                        {% for share in pending_shares %}
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ share.user_contact_email }}
+                                </div>
+                                <div class="col-md-4">
+                                    <form action="{% url 'manage_shared_bucket' shared_workspace_name=shared_workspace_name shared_bucket_name=shared_bucket_name %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="revoke_access">
+                                        <input type="hidden" name="share_id" value="{{ share.id }}">
+                                        <button class="btn btn-sm btn-secondary" type="submit">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div id="active-shares-card" class="mt-5">
+                    <h5 class="card-title">
+                        Active Shares
+                    </h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <strong>
+                                        E-Mail
+                                    </strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>
+                                        Actions
+                                    </strong>
+                                </div>
+                            </div>
+                        </li>
+                        {% for share in consumed_shares %}
+                        <li class="list-group-item">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ share.user_contact_email }}
+                                </div>
+                                <div class="col-md-4">
+                                    <form action="{% url 'manage_shared_bucket' shared_workspace_name=shared_workspace_name shared_bucket_name=shared_bucket_name %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="revoke_access">
+                                        <input type="hidden" name="share_id" value="{{ share.id }}">
+                                        <button class="btn btn-sm btn-danger" type="submit">
+                                            Revoke
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
