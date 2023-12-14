@@ -109,10 +109,7 @@ def is_shared_bucket_owner(user: User, shared_bucket_name: str):
     shared_workspaces_list = get_shared_workspaces_list(user)
     for workspace in shared_workspaces_list:
         for bucket in workspace.buckets:
-            if (
-                bucket.name == shared_bucket_name
-                and bucket.is_owner is True
-            ):
+            if bucket.name == shared_bucket_name and bucket.is_owner is True:
                 return True
 
     return False
@@ -150,10 +147,14 @@ def consume_billing_account_sharing_token(
 def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
     invite = BucketSharingInvite.objects.get(token=token, is_revoked=False)
     invite.user = user
+    share_bucket(
+        owner_email=invite.owner.cloud_identity.email,
+        user_email=invite.user.cloud_identity.email,
+        bucket_name=invite.shared_bucket_name,
+        workspace_project_id=invite.shared_workspace_name,
+    )
+    invite.is_consumed = True
     invite.save()
-    share_bucket(owner_email=invite.owner.cloud_identity.email, user_email=invite.user.cloud_identity.email,
-                 bucket_name=invite.shared_bucket_name,
-                 workspace_project_id=invite.shared_workspace_name)
     return invite
 
 
@@ -197,13 +198,17 @@ def _revoke_consumed_billing_account_access(
 
 
 def invite_user_to_shared_bucket(
-    request, owner: User, user_email: str, shared_bucket_name: str, shared_workspace_name: str
+    request,
+    owner: User,
+    user_email: str,
+    shared_bucket_name: str,
+    shared_workspace_name: str,
 ) -> BucketSharingInvite:
     invite = BucketSharingInvite.objects.create(
         owner=owner,
         shared_bucket_name=shared_bucket_name,
         user_contact_email=user_email,
-        shared_workspace_name=shared_workspace_name
+        shared_workspace_name=shared_workspace_name,
     )
     site_domain = get_current_site(request).domain
     mailers.send_bucket_sharing_confirmation(site_domain=site_domain, invite=invite)
