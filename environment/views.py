@@ -205,7 +205,17 @@ def create_shared_workspace(request):
 @login_required
 @cloud_identity_required
 def create_research_environment(request, workspace_id):
-    workspaces_list = services.get_workspaces_list(request.user)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        workspaces_list_future = executor.submit(
+            services.get_workspaces_list, request.user
+        )
+        shared_workspaces_list_feature = executor.submit(
+            services.get_shared_workspaces_list, request.user
+        )
+    workspaces_list = workspaces_list_future.result()
+    shared_workspaces = shared_workspaces_list_feature.result()
+    shared_buckets = services.get_shared_buckets(shared_workspaces)
+
     available_workspaces = list(
         workspace
         for workspace in workspaces_list
@@ -226,7 +236,7 @@ def create_research_environment(request, workspace_id):
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
-            request.POST, selected_workspace=selected_workspace, projects_list=projects
+            request.POST, selected_workspace=selected_workspace, projects_list=projects, buckets_list=shared_buckets
         )
         if form.is_valid():
             workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
@@ -256,7 +266,7 @@ def create_research_environment(request, workspace_id):
                 )
     else:
         form = CreateResearchEnvironmentForm(
-            selected_workspace=selected_workspace, projects_list=projects
+            selected_workspace=selected_workspace, projects_list=projects, buckets_list=shared_buckets
         )
 
     context = {
