@@ -253,6 +253,7 @@ def create_research_environment(request, workspace_id):
                     workbench_type=form.cleaned_data["environment_type"],
                     disk_size=form.cleaned_data.get("disk_size"),
                     gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
+                    sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket")
                 )
                 messages.info(
                     request,
