@@ -5,7 +5,12 @@ from django.apps import apps
 from django.utils.safestring import mark_safe
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
-from environment.entities import InstanceType, ResearchWorkspace, SharedWorkspace, SharedBucket
+from environment.entities import (
+    InstanceType,
+    ResearchWorkspace,
+    SharedWorkspace,
+    SharedBucket,
+)
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -116,9 +121,9 @@ class CreateResearchEnvironmentForm(forms.Form):
             (project.id, project) for project in projects_list
         ]
 
-        self.fields["shared_bucket"].choices = [("", "Machine without shared bucket attached")] + [
-            (bucket.name, bucket.name) for bucket in buckets_list
-        ]
+        self.fields["shared_bucket"].choices = [
+            ("", "Machine without shared bucket attached")
+        ] + [(bucket.name, bucket.name) for bucket in buckets_list]
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")

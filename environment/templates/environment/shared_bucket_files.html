@@ -1,0 +1,181 @@
+{% load static %}
+
+{% block local_js_top %}
+<script src="{% static 'environment/js/bucket_files_dropzone.min.js' %}"></script>
+{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/bucket_files_dropzone.css' %}">
+{% endblock %}
+
+<div id="forms-and-panel">
+    {% csrf_token %}
+    {% include "environment/bucket_files_form.html" %}
+    <div id="files-panel" class="card">
+      <div class="card-header">
+      </div>
+      <table class="files-panel">
+        <col class="files-panel-name"></col>
+        <col class="files-panel-size"></col>
+        <col class="files-panel-date"></col>
+        <col class="files-panel-checkbox"></col>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Modified</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if current_dir_path %}
+          <tr class="parentdir">
+            <td><a href="#files-panel" onclick="return navigateSharedBucketDir('{{ parent_dir }}')">Parent Directory</a></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        {% endif %}
+        {% for content in bucket_content %}
+          {% if content.type == "directory" %}
+            <tr class="subdir">
+              <td><a href="#files-panel" onclick="return navigateSharedBucketDir('{{ content.full_path }}')">{{ content.name }}</a></td>
+              <td></td>
+              <td></td>
+              <td><input type="checkbox" name="items" value="{{ content.full_path }}" onchange="countSelected(this)"></td>
+            </tr>
+          {% else %}
+            <tr>
+              <td>{{ content.name }}</td>
+              <td>{{ content.size }}</td>
+              <td>{{ content.modification_time }}</td>
+              <td><input type="checkbox" name="items" value="{{ content.full_path }}" onchange="countSelected(this)"></td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  <script>
+    $(document).ready(() => {
+      const dropzoneObj = {
+            method: 'PUT',
+            createImageThumbnails: false,
+            maxFiles: 2000,
+            maxFilesize: 10000,
+            parallelUploads: 1,
+            timeout: null,
+            headers: {
+                'Cache-Control': null,
+                'X-Requested-With': null,
+                'Accept': null,
+            },
+            url: files => files[0].dynamicUploadUrl,
+            sending: (file, xhr, formData) => {
+                xhr.setRequestHeader("X-Upload-Content-Length", file.size);
+                xhr.setRequestHeader("Content-Type", file.type);
+                let _send = xhr.send;
+                xhr.send = function () {
+                    _send.call(xhr, file);
+                };
+            },
+            accept: (file, done) => {
+                const payload = {size: file.size, filename: "{{ current_dir_path }}/" + file.upload.filename, csrfmiddlewaretoken: "{{ csrf_token }}"};
+
+                $.post("{% url 'generate_bucket_signed_url' bucket_name=shared_bucket_name %}", payload, "json")
+                .done(data => {
+                  file.dynamicUploadUrl = data.signed_url;
+                  done();
+                }).fail(data => {
+                  console.log(data.responseJSON.detail)
+                  done(data.responseJSON.detail);
+                });
+            }
+        };
+        $("#myDropzone").addClass("dropzone");
+        $("#myDropzone").dropzone(dropzoneObj);
+    });
+</script>
+
+</div>
+  <script>
+  // Navigate to another file directory and reload the file panel
+  // subdir is the full subdirectory
+  function navigateSharedBucketDir(subdir) {
+    $.ajax({
+            url: "{% url 'get_shared_bucket_content' shared_bucket_name %}",
+            data: {'subdir': subdir},
+            success: result => {
+                $("#forms-and-panel").html(result);
+            }
+    });
+  };
+
+  function createSharedBucketDir(subdir) {
+    $.ajax({
+            type: "POST",
+            url: "{% url 'create_shared_bucket_directory' bucket_name=shared_bucket_name %}",
+            data: JSON.stringify(
+            {
+              "directory_name": $("#create-directory-name-field").val(),
+              "parent_path": subdir,
+            }),
+            beforeSend: function (xhr){
+               xhr.setRequestHeader('X-CSRFToken', $("input[name=csrfmiddlewaretoken]").val());
+              },
+            dataType: "json",
+            contentType: "application/json",
+            success: result => {
+              navigateSharedBucketDir(subdir)
+            }
+    });
+  };
+
+  function deleteSharedBucketItems(subdir) {
+  checked_checkboxes = $('input[name="items"]:checked')
+  checked_checkboxes.each((index, item) => {
+      $.ajax({
+              type: "DELETE",
+              url: "{% url 'delete_shared_bucket_content' bucket_name=shared_bucket_name %}",
+              beforeSend: function (xhr){
+               xhr.setRequestHeader('X-CSRFToken', $("input[name=csrfmiddlewaretoken]").val());
+              },
+              data: JSON.stringify({"full_path": item.value}),
+              dataType: "json",
+              contentType: "application/json",
+              success: result => {
+                if (index == (checked_checkboxes.length - 1)){
+                    navigateSharedBucketDir(subdir)
+                }
+              }
+      });
+    });
+  };
+
+
+  // Selected checkboxes
+  n_selected = 0
+
+  // Enables and disables buttons based on selected checkboxes
+  function countSelected(box){
+    if (box.checked){
+      n_selected ++
+    }
+    else{
+      n_selected --
+    }
+
+    if (n_selected > 0){
+      document.getElementById("delete-items-button").disabled = false
+    }
+    else{
+      document.getElementById("delete-items-button").disabled = true
+    }
+  }
+
+  function prepareDelete(){
+    document.getElementById("delete-items-message").innerHTML = "Are you sure you wish to delete the "+ n_selected + " selected item(s)?"
+  }
+
+</script>

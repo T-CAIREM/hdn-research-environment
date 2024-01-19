@@ -105,7 +105,7 @@ def create_workbench(
         "bucket_name": bucket_name,
         "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
-        "sharing_bucket_identifiers": sharing_bucket_identifiers
+        "sharing_bucket_identifiers": sharing_bucket_identifiers,
     }
 
     return Request("POST", url="/workbench/create", json=json)
@@ -256,3 +256,52 @@ def revoke_shared_bucket_access(
         "bucket_name": bucket_name,
     }
     return Request("POST", url="/sharing/bucket/revoke_access", json=json)
+
+
+@api_request
+def generate_signed_url(
+    filename: str, size: int, bucket_name: str, user_email: str
+) -> Request:
+    json = {
+        "filename": filename,
+        "size": size,
+        "bucket_name": bucket_name,
+        "user_email": user_email,
+    }
+    return Request("POST", url="/sharing/bucket/generate_signed_url", json=json)
+
+
+@api_request
+def get_shared_bucket_content(
+    bucket_name: str, subdir: str, user_email: str
+) -> Request:
+    return Request(
+        "GET",
+        url=f"/sharing/{bucket_name}",
+        params={"subdir": subdir, "user_email": user_email},
+    )
+
+
+@api_request
+def create_shared_bucket_directory(
+    bucket_name: str, parent_path: str, directory_name: str, user_email: str
+) -> Request:
+    json = {
+        "directory_name": directory_name,
+        "parent_path": parent_path,
+        "bucket_name": bucket_name,
+        "user_email": user_email,
+    }
+    return Request("POST", url="/sharing/bucket/content/create", json=json)
+
+
+@api_request
+def delete_shared_bucket_content(
+    bucket_name: str, full_path: str, user_email: str
+) -> Request:
+    json = {
+        "full_path": full_path,
+        "bucket_name": bucket_name,
+        "user_email": user_email,
+    }
+    return Request("DELETE", url="/sharing/bucket/content/delete", json=json)

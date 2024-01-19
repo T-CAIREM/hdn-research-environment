@@ -80,4 +80,24 @@ urlpatterns = [
         views.confirm_bucket_sharing,
         name="confirm_bucket_sharing",
     ),
+    path(
+        "sharing/generate_signed_url/<bucket_name>",
+        views.generate_signed_url,
+        name="generate_bucket_signed_url",
+    ),
+    path(
+        "sharing/<bucket_name>",
+        views.get_shared_bucket_content,
+        name="get_shared_bucket_content",
+    ),
+    path(
+        "sharing/<bucket_name>/content/create",
+        views.create_shared_bucket_directory,
+        name="create_shared_bucket_directory",
+    ),
+    path(
+        "sharing/<bucket_name>/content/delete",
+        views.delete_shared_bucket_content,
+        name="delete_shared_bucket_content",
+    ),
 ]
