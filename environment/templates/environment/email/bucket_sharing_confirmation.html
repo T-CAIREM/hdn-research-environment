@@ -1,0 +1,10 @@
+{% load i18n %}{% autoescape off %}{% filter wordwrap:70 %}
+
+A {{ site_name }} bucket was shared with you. <br/><br/>
+
+Visit <a href="{{ confirmation_url }}">{{ site_name }}</a> to view the request.<br/><br/>
+
+{{ signature }}
+
+{% endfilter %}{% endautoescape %}
+

@@ -67,7 +67,10 @@
                                             </div>
                                             <div class="col-md-3">
                                             {% if bucket.is_owner %}
-                                                 {% delete_shared_bucket_modal_button shared_bucket=bucket %}
+                                                {% delete_shared_bucket_modal_button shared_bucket=bucket %}
+                                                <a href="{% url 'manage_shared_bucket' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
+                                                    Manage
+                                                </a>
                                             {% else %}
                                                 Shared
                                             {% endif %}

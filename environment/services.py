@@ -36,7 +36,12 @@ from environment.exceptions import (
     BucketSharingFailed,
     BucketAccessRevokationFailed,
 )
-from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
+from environment.models import (
+    BillingAccountSharingInvite,
+    CloudIdentity,
+    Workflow,
+    BucketSharingInvite,
+)
 from environment.utilities import inner_join_iterators, left_join_iterators
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -100,6 +105,15 @@ def is_billing_account_owner(user: User, billing_account_id: str):
     return False
 
 
+def is_shared_bucket_owner(user: User, shared_bucket_name: str):
+    shared_workspaces_list = get_shared_workspaces_list(user)
+    return any(
+        bucket.name == shared_bucket_name and bucket.is_owner is True
+        for workspace in shared_workspaces_list
+        for bucket in workspace.buckets
+    )
+
+
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
     return owner.owner_billingaccountsharinginvite_set.filter(
         billing_account_id=billing_account_id, is_revoked=False
@@ -126,6 +140,20 @@ def consume_billing_account_sharing_token(
     invite.user = user
     invite.save()
 
+    return invite
+
+
+def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
+    invite = BucketSharingInvite.objects.get(token=token, is_revoked=False)
+    invite.user = user
+    share_bucket(
+        owner_email=invite.owner.cloud_identity.email,
+        user_email=invite.user.cloud_identity.email,
+        bucket_name=invite.shared_bucket_name,
+        workspace_project_id=invite.shared_workspace_name,
+    )
+    invite.is_consumed = True
+    invite.save()
     return invite
 
 
@@ -166,6 +194,24 @@ def _revoke_consumed_billing_account_access(
     if not response.ok:
         error_message = response.json()
         raise BillingAccessRevokationFailed(error_message)
+
+
+def invite_user_to_shared_bucket(
+    request,
+    owner: User,
+    user_email: str,
+    shared_bucket_name: str,
+    shared_workspace_name: str,
+) -> BucketSharingInvite:
+    invite = BucketSharingInvite.objects.create(
+        owner=owner,
+        shared_bucket_name=shared_bucket_name,
+        user_contact_email=user_email,
+        shared_workspace_name=shared_workspace_name,
+    )
+    site_domain = get_current_site(request).domain
+    mailers.send_bucket_sharing_confirmation(site_domain=site_domain, invite=invite)
+    return invite
 
 
 def create_workspace(user: User, billing_account_id: str, region: str):
@@ -547,13 +593,13 @@ def delete_shared_bucket(bucket_name: str):
 def share_bucket(
     owner_email: str,
     user_email: str,
-    billing_account_id: str,
+    bucket_name: str,
     workspace_project_id: str,
 ):
     response = api.share_bucket(
         owner_email=owner_email,
         user_email=user_email,
-        billing_account_id=billing_account_id,
+        bucket_name=bucket_name,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
@@ -561,13 +607,32 @@ def share_bucket(
         raise BucketSharingFailed(error_message)
 
 
-def revoke_shared_bucket_access(owner_email: str, user_email: str, bucket_name: str):
+def revoke_shared_bucket_access(bucket_sharing_invite_id: str):
+    bucket_sharing_invite = BucketSharingInvite.objects.select_related(
+        "owner__cloud_identity", "user__cloud_identity"
+    ).get(pk=bucket_sharing_invite_id)
+    bucket_sharing_invite.is_revoked = True
+    bucket_sharing_invite.save()
+
+    if bucket_sharing_invite.is_consumed:
+        _revoke_consumed_shared_bucket_access(bucket_sharing_invite)
+
+
+def _revoke_consumed_shared_bucket_access(bucket_sharing_invite: BucketSharingInvite):
     response = api.revoke_shared_bucket_access(
-        owner_email=owner_email, user_email=user_email, bucket_name=bucket_name
+        owner_email=bucket_sharing_invite.owner.cloud_identity.email,
+        user_email=bucket_sharing_invite.user.cloud_identity.email,
+        bucket_name=bucket_sharing_invite.shared_bucket_name,
     )
     if not response.ok:
         error_message = response.json()
         raise BucketAccessRevokationFailed(error_message)
+
+
+def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
+    return owner.owner_bucketsharinginvite_set.filter(
+        shared_bucket_name=shared_bucket_name, is_revoked=False
+    )
 
 
 def get_execution(execution_resource_name) -> ApiWorkflow:
