@@ -14,6 +14,11 @@ class Region(Enum):
     AUSTRALIA_SOUTHEAST = "australia-southeast1"
 
 
+class BucketObjectType(Enum):
+    DIRECTORY = "directory"
+    FILE = "file"
+
+
 class InstanceType(Enum):
     N1_STANDARD_1 = "n1-standard-1"
     N1_STANDARD_2 = "n1-standard-2"
@@ -170,3 +175,12 @@ class SharedWorkspace:
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+
+
+@dataclass
+class SharedBucketObject:
+    type: BucketObjectType
+    name: str
+    full_path: str
+    size: str = None
+    modification_time: str = None

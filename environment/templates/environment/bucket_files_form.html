@@ -1,0 +1,80 @@
+ <!-- Content manipulation buttons to trigger modals -->
+  <div class="big-toolbar">
+    <span class="big-toolbar-left">
+      <button id="upload-files-button" type="button" class="btn btn-success" data-toggle="modal" data-target="#upload-files-modal">
+        <i class="fa fa-arrow-circle-up"></i> Upload Files
+      </button>
+      <button id="create-folder-button" type="button" class="btn btn-success" data-toggle="modal" data-target="#create-folder-modal">
+        <i class="fa fa-folder-open"></i> Create Folder
+      </button>
+    </span>
+    <span class="big-toolbar-right">
+      <button id="delete-items-button" type="button" class="btn btn-danger" data-toggle="modal" data-target="#delete-items-modal" onclick="prepareDelete()" disabled>
+        <i class="fa fa-trash-alt"></i> Delete Items
+      </button>
+    </span>
+  </div>
+
+  <!-- File manipulation modals -->
+  <div class="modal fade" id="upload-files-modal" tabindex="-1" role="dialog" aria-labelledby="upload-files-modal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Upload Files</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+          <div class="modal-body">
+                <div id="myDropzone"></div>
+            <br>
+          </div>
+          <div class="modal-footer">
+              <button id="upload-files-finish" type="button" data-dismiss="modal" class="btn btn-secondary" onclick="return navigateSharedBucketDir('{{ subdir }}')">Finish</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="create-folder-modal" tabindex="-1" role="dialog" aria-labelledby="create-folder-modal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Create Folder</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+          <div class="modal-body">
+            <label for="create-directory-name-field">New Directory Name:</label>
+              <input id="create-directory-name-field" type="text"/>
+          </div>
+          <div class="modal-footer">
+            <button id="create-folder-button-submit" class="btn btn-success" name="create_folder" onclick="createSharedBucketDir('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-folder-open"></i> Create Folder</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="delete-items-modal" tabindex="-1" role="dialog" aria-labelledby="delete-items-modal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete Items</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+          <div class="modal-body">
+            <p id="delete-items-message"></p>
+          </div>
+          <div class="modal-footer">
+            <button id="delete-items-button-submit" class="btn btn-danger" name="delete_items" onclick="deleteSharedBucketItems('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-trash-alt"></i> Delete Items</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+      </div>
+    </div>
+  </div>
+

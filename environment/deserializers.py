@@ -16,6 +16,7 @@ from environment.entities import (
     WorkspaceStatus,
     SharedWorkspace,
     SharedBucket,
+    SharedBucketObject,
     WorkspaceType,
 )
 
@@ -143,3 +144,16 @@ def _get_project_for_environment(
             if _project_data_group(project) == dataset_identifier
         )
     )
+
+
+def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject]:
+    return [
+        SharedBucketObject(
+            type=bucket_object["type"],
+            name=bucket_object["name"],
+            size=bucket_object["size"],
+            modification_time=bucket_object["modification_time"],
+            full_path=bucket_object["full_path"],
+        )
+        for bucket_object in data
+    ]

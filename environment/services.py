@@ -14,8 +14,15 @@ from environment.deserializers import (
     deserialize_workflow_details,
     deserialize_workspaces,
     deserialize_shared_workspaces,
+    deserialize_shared_bucket_objects,
 )
-from environment.entities import ResearchEnvironment, ResearchWorkspace, SharedWorkspace, SharedBucket
+from environment.entities import (
+    ResearchEnvironment,
+    ResearchWorkspace,
+    SharedWorkspace,
+    SharedBucket,
+    SharedBucketObject,
+)
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
@@ -35,6 +42,10 @@ from environment.exceptions import (
     DeleteSharedBucketFailed,
     BucketSharingFailed,
     BucketAccessRevokationFailed,
+    GenerateSignedUrlFailed,
+    GetSharedBucketContentFailed,
+    CreateSharedBucketDirectoryFailed,
+    DeleteSharedBucketContentFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -289,7 +300,7 @@ def _create_workbench_kwargs(
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
-        "sharing_bucket_identifiers": sharing_bucket_identifiers.split(",")
+        "sharing_bucket_identifiers": sharing_bucket_identifiers.split(","),
     }
 
 
@@ -311,7 +322,7 @@ def create_research_environment(
         workbench_type,
         disk_size,
         gpu_accelerator_type,
-        sharing_bucket_identifiers
+        sharing_bucket_identifiers,
     )
     response = api.create_workbench(**kwargs)
     if not response.ok:
@@ -489,7 +500,11 @@ def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
-    return [bucket for shared_workspace in shared_workspaces for bucket in shared_workspace.buckets]
+    return [
+        bucket
+        for shared_workspace in shared_workspaces
+        for bucket in shared_workspace.buckets
+    ]
 
 
 def stop_running_environment(
@@ -695,3 +710,63 @@ def persist_workflow(user: User, workflow_id: str):
 
 def get_running_workflows(user: User):
     return Workflow.objects.filter(user=user, in_progress=True)
+
+
+def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) -> str:
+    user_email = user.cloud_identity.email
+    response = api.generate_signed_url(
+        bucket_name=bucket_name,
+        size=size,
+        filename=filename,
+        user_email=user_email,
+    )
+
+    if not response.ok:
+        error_message = response.json()
+        raise GenerateSignedUrlFailed(error_message)
+
+    body = response.json()
+
+    return body["signed_url"]
+
+
+def get_shared_bucket_content(
+    bucket_name: str, user: User, subdir: str = ""
+) -> Iterable[SharedBucketObject]:
+    user_email = user.cloud_identity.email
+    response = api.get_shared_bucket_content(
+        bucket_name=bucket_name, subdir=subdir, user_email=user_email
+    )
+
+    if not response.ok:
+        error_message = response.json()
+        raise GetSharedBucketContentFailed(error_message)
+
+    return deserialize_shared_bucket_objects(response.json())
+
+
+def create_shared_bucket_directory(
+    bucket_name: str, parent_path: str, directory_name: str, user: User
+):
+    user_email = user.cloud_identity.email
+    response = api.create_shared_bucket_directory(
+        bucket_name=bucket_name,
+        parent_path=parent_path,
+        directory_name=directory_name,
+        user_email=user_email,
+    )
+
+    if not response.ok:
+        error_message = response.json()
+        raise CreateSharedBucketDirectoryFailed(error_message)
+
+
+def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
+    user_email = user.cloud_identity.email
+    response = api.delete_shared_bucket_content(
+        bucket_name=bucket_name, full_path=full_path, user_email=user_email
+    )
+
+    if not response.ok:
+        error_message = response.json()
+        raise DeleteSharedBucketContentFailed(error_message)

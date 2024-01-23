@@ -80,3 +80,19 @@ class BucketAccessRevokationFailed(Exception):
 
 class GetWorkflowFailed(Exception):
     pass
+
+
+class GenerateSignedUrlFailed(Exception):
+    pass
+
+
+class GetSharedBucketContentFailed(Exception):
+    pass
+
+
+class CreateSharedBucketDirectoryFailed(Exception):
+    pass
+
+
+class DeleteSharedBucketContentFailed(Exception):
+    pass
