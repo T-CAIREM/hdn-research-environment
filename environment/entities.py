@@ -75,6 +75,11 @@ class WorkflowStatus(Enum):
     SUCCESS = "success"
 
 
+class WorkspaceType(Enum):
+    SHARED_WORKSPACE = "SharedWorkspace"
+    WORKSPACE = "Workspace"
+
+
 class WorkflowType(Enum):
     WORKSPACE_CREATION = "workspace_creation"
     WORKSPACE_DELETION = "workspace_deletion"
@@ -153,7 +158,7 @@ class SharedBucket:
     is_owner: bool
 
 
-@dataclass(frozen=True, eq=True)
+@dataclass(frozen=True)
 class SharedWorkspace:
     gcp_project_id: str
     gcp_billing_id: str

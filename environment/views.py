@@ -14,6 +14,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    billing_account_required,
 )
 from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
 from environment.forms import (
@@ -134,14 +135,9 @@ def research_environments_partial(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
+@billing_account_required
 def create_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
-    if not billing_accounts_list:
-        messages.info(
-            request,
-            "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
-        )
-        return redirect("research_environments")
 
     if request.method == "POST":
         form = CreateWorkspaceForm(
@@ -168,14 +164,9 @@ def create_workspace(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
+@billing_account_required
 def create_shared_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
-    if not billing_accounts_list:
-        messages.info(
-            request,
-            "You have to have access to at least one billing account in order to create a shared workspace. Visit the Billing tab for more information.",
-        )
-        return redirect("research_environments")
 
     if request.method == "POST":
         form = CreateSharedWorkspaceForm(
@@ -269,11 +260,11 @@ def create_research_environment(request, workspace_id):
 @cloud_identity_required
 def create_shared_bucket(request, workspace_id):
     shared_workspaces_list = services.get_shared_workspaces_list(request.user)
-    available_shared_workspaces = list(
+    available_shared_workspaces = [
         workspace
         for workspace in shared_workspaces_list
         if workspace.status == WorkspaceStatus.CREATED
-    )
+    ]
     if not available_shared_workspaces:
         messages.info(
             request,

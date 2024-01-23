@@ -64,7 +64,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     workspace_project_id = forms.CharField(
         label="Selected workspace",
         help_text=mark_safe(
-            f'Go <a href="/environments/">back</a> to select a different workspace. <br>'
+            'Go <a href="/environments/">back</a> to select a different workspace. <br>'
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
@@ -134,7 +134,7 @@ class CreateSharedBucketForm(forms.Form):
     workspace_project_id = forms.CharField(
         label="Selected workspace",
         help_text=mark_safe(
-            f'Go <a href="/environments/">back</a> to select a different shared workspace. <br>'
+            'Go <a href="/environments/">back</a> to select a different shared workspace. <br>'
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )

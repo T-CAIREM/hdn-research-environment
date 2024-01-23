@@ -16,6 +16,7 @@ from environment.entities import (
     WorkspaceStatus,
     SharedWorkspace,
     SharedBucket,
+    WorkspaceType,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -116,7 +117,7 @@ def deserialize_workspaces(
 ) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data, projects)
-        if workspace_data.get("type") == "Workspace"
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
@@ -125,7 +126,7 @@ def deserialize_workspaces(
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data)
-        if workspace_data.get("type") == "SharedWorkspace"
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
