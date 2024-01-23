@@ -94,6 +94,7 @@ def create_workbench(
     bucket_name: str,
     workspace_project_id: str,
     gpu_accelerator_type: Optional[str] = None,
+    sharing_bucket_identifiers: Optional[list[str]] = None,
 ):
     json = {
         "workbench_type": workbench_type,
@@ -104,6 +105,7 @@ def create_workbench(
         "bucket_name": bucket_name,
         "disk_size": disk_size,
         "gpu_accelerator_type": gpu_accelerator_type,
+        "sharing_bucket_identifiers": sharing_bucket_identifiers
     }
 
     return Request("POST", url="/workbench/create", json=json)

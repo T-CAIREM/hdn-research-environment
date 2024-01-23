@@ -15,7 +15,7 @@ from environment.deserializers import (
     deserialize_workspaces,
     deserialize_shared_workspaces,
 )
-from environment.entities import ResearchEnvironment, ResearchWorkspace, SharedWorkspace
+from environment.entities import ResearchEnvironment, ResearchWorkspace, SharedWorkspace, SharedBucket
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
@@ -276,6 +276,7 @@ def _create_workbench_kwargs(
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
+    sharing_bucket_identifiers: Optional[str] = None,
 ) -> dict:
     user_email = user.cloud_identity.email
 
@@ -288,6 +289,7 @@ def _create_workbench_kwargs(
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
+        "sharing_bucket_identifiers": sharing_bucket_identifiers.split(",")
     }
 
 
@@ -299,6 +301,7 @@ def create_research_environment(
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
+    sharing_bucket_identifiers: Optional[str] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
@@ -308,6 +311,7 @@ def create_research_environment(
         workbench_type,
         disk_size,
         gpu_accelerator_type,
+        sharing_bucket_identifiers
     )
     response = api.create_workbench(**kwargs)
     if not response.ok:
@@ -482,6 +486,10 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
     response = api.get_shared_workspaces(user.cloud_identity.email)
     return deserialize_shared_workspaces(response.json())
+
+
+def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
+    return [bucket for shared_workspace in shared_workspaces for bucket in shared_workspace.buckets]
 
 
 def stop_running_environment(
