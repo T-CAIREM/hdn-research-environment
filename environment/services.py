@@ -107,12 +107,11 @@ def is_billing_account_owner(user: User, billing_account_id: str):
 
 def is_shared_bucket_owner(user: User, shared_bucket_name: str):
     shared_workspaces_list = get_shared_workspaces_list(user)
-    for workspace in shared_workspaces_list:
-        for bucket in workspace.buckets:
-            if bucket.name == shared_bucket_name and bucket.is_owner is True:
-                return True
-
-    return False
+    return any(
+        bucket.name == shared_bucket_name and bucket.is_owner is True
+        for workspace in shared_workspaces_list
+        for bucket in workspace.buckets
+    )
 
 
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
