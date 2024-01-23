@@ -14,6 +14,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    billing_account_required,
 )
 from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
 from environment.forms import (
@@ -21,6 +22,8 @@ from environment.forms import (
     CreateResearchEnvironmentForm,
     CreateWorkspaceForm,
     ShareBillingAccountForm,
+    CreateSharedWorkspaceForm,
+    CreateSharedBucketForm,
 )
 from environment.models import BillingAccountSharingInvite, Workflow
 from environment.utilities import user_has_cloud_identity
@@ -61,12 +64,17 @@ def research_environments(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
+        shared_workspaces_list_feature = executor.submit(
+            services.get_shared_workspaces_list, request.user
+        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
+    shared_workspaces = shared_workspaces_list_feature.result()
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
+        "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
@@ -90,12 +98,17 @@ def research_environments_partial(request):
         billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
+        shared_workspaces_list_feature = executor.submit(
+            services.get_shared_workspaces_list, request.user
+        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
+    shared_workspaces = shared_workspaces_list_feature.result()
     running_workflows = services.get_running_workflows(request.user)
 
     context = {
+        "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
@@ -122,14 +135,9 @@ def research_environments_partial(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
+@billing_account_required
 def create_workspace(request):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
-    if not billing_accounts_list:
-        messages.info(
-            request,
-            "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
-        )
-        return redirect("research_environments")
 
     if request.method == "POST":
         form = CreateWorkspaceForm(
@@ -151,6 +159,32 @@ def create_workspace(request):
         "exceeded_quotas": exceeded_quotas,
     }
     return render(request, "environment/create_workspace.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+@billing_account_required
+def create_shared_workspace(request):
+    billing_accounts_list = services.get_billing_accounts_list(request.user)
+
+    if request.method == "POST":
+        form = CreateSharedWorkspaceForm(
+            request.POST, billing_accounts_list=billing_accounts_list
+        )
+        if form.is_valid():
+            services.create_shared_workspace(
+                user=request.user,
+                billing_account_id=form.cleaned_data["billing_account_id"],
+            )
+            return redirect("research_environments")
+    else:
+        form = CreateSharedWorkspaceForm(billing_accounts_list=billing_accounts_list)
+
+    context = {
+        "form": form,
+    }
+    return render(request, "environment/create_shared_workspace.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -219,6 +253,51 @@ def create_research_environment(request, workspace_id):
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+def create_shared_bucket(request, workspace_id):
+    shared_workspaces_list = services.get_shared_workspaces_list(request.user)
+    available_shared_workspaces = [
+        workspace
+        for workspace in shared_workspaces_list
+        if workspace.status == WorkspaceStatus.CREATED
+    ]
+    if not available_shared_workspaces:
+        messages.info(
+            request,
+            "You have to have at least one shared workspace in order to create a shared_bucket. You can create one using the form below.",
+        )
+        return redirect("create_workspace")
+    selected_shared_workspace = next(
+        shared_workspace
+        for shared_workspace in available_shared_workspaces
+        if shared_workspace.gcp_project_id == workspace_id
+    )
+
+    if request.method == "POST":
+        form = CreateSharedBucketForm(
+            request.POST, selected_shared_workspace=selected_shared_workspace
+        )
+        if form.is_valid():
+            services.create_shared_buket(
+                user=request.user,
+                region=form.cleaned_data["region"],
+                workspace_project_id=form.cleaned_data["workspace_project_id"],
+            )
+        return redirect("research_environments")
+    else:
+        form = CreateSharedBucketForm(
+            selected_shared_workspace=selected_shared_workspace
+        )
+
+    context = {
+        "selected_shared_workspace": selected_shared_workspace,
+        "form": form,
+    }
+    return render(request, "environment/create_shared_bucket.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -358,6 +437,28 @@ def delete_workspace(request):
         billing_account_id=data["billing_account_id"],
         region=data["region"],
     )
+    return JsonResponse({})
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_shared_workspace(request):
+    data = json.loads(request.body)
+    services.delete_shared_workspace(
+        user=request.user,
+        gcp_project_id=data["gcp_project_id"],
+        billing_account_id=data["billing_account_id"],
+    )
+    return JsonResponse({})
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_shared_bucket(request):
+    data = json.loads(request.body)
+    services.delete_shared_bucket(bucket_name=data["bucket_name"])
     return JsonResponse({})
 
 

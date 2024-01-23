@@ -6,8 +6,12 @@ from django.apps import apps
 from django.urls import reverse
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
-from environment.entities import ResearchEnvironment, ResearchWorkspace
-from environment.models import Workflow
+from environment.entities import (
+    ResearchEnvironment,
+    ResearchWorkspace,
+    SharedWorkspace,
+    SharedBucket,
+)
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -116,6 +120,26 @@ def environment_action_button(
     return result_data
 
 
+@register.inclusion_tag("tag/bucket_modal_button.html")
+def delete_shared_bucket_modal_button(
+    shared_bucket: SharedBucket,
+) -> dict:
+    request_data = {"bucket_name": shared_bucket.name}
+
+    result_data = {
+        "button_text": "Destroy",
+        "modal_title": "Destroy",
+        "modal_body": "Are you sure you want to destroy this bucket?",
+        "button_class": "btn-danger",
+        "modal_id": f"workspace-delete-{shared_bucket.name}",
+        "button_type": "shared_bucket_delete",
+        "request_url": reverse("delete_shared_bucket"),
+        "request_method": "DELETE",
+        "request_data": json.dumps(request_data),
+    }
+    return result_data
+
+
 @register.inclusion_tag("tag/workspace_destroy_modal_button.html")
 def workspace_destroy_modal_button(
     workspace: ResearchWorkspace,
@@ -133,5 +157,25 @@ def workspace_destroy_modal_button(
         "request_method": "DELETE",
         "request_data": json.dumps(request_data),
         "disabled": len(workspace.workbenches) > 0,
+    }
+    return result_data
+
+
+@register.inclusion_tag("tag/workspace_destroy_modal_button.html")
+def shared_workspace_destroy_modal_button(
+    shared_workspace: SharedWorkspace,
+) -> dict:
+    request_data = {
+        "gcp_project_id": shared_workspace.gcp_project_id,
+        "billing_account_id": shared_workspace.gcp_billing_id,
+    }
+    result_data = {
+        "shared_workspace": shared_workspace,
+        "modal_id": f"shared-workspace-delete-{shared_workspace.gcp_project_id}",
+        "button_type": "shared_workspace_delete",
+        "request_url": reverse("delete_shared_workspace"),
+        "request_method": "DELETE",
+        "request_data": json.dumps(request_data),
+        "disabled": len(shared_workspace.buckets) > 0,
     }
     return result_data

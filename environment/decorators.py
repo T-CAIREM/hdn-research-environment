@@ -1,23 +1,32 @@
 from functools import wraps
 from typing import Callable
+from django.contrib import messages
 
 from django.db.models import Model
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
+from environment.services import get_billing_accounts_list
 
-from environment.utilities import user_has_cloud_identity
+from environment.utilities import (
+    user_has_cloud_identity,
+    user_has_access_billing_account,
+)
 
 View = Callable[[HttpRequest], HttpResponse]
 
 User = Model
 
 
-def _redirect_view_if_user(predicate: Callable[[User], bool], redirect_url: str):
+def _redirect_view_if_user(
+    predicate: Callable[[User], bool], redirect_url: str, message: str = None
+):
     def wrapper(view: View) -> View:
         @wraps(view)
         def wrapped_view(request: HttpRequest, *args, **kwargs) -> HttpResponse:
             if predicate(request.user):
+                if message:
+                    messages.ingo(request, message)
                 return redirect(redirect_url)
             return view(request, *args, **kwargs)
 
@@ -28,6 +37,12 @@ def _redirect_view_if_user(predicate: Callable[[User], bool], redirect_url: str)
 
 cloud_identity_required = _redirect_view_if_user(
     lambda u: not user_has_cloud_identity(u), "identity_provisioning"
+)
+
+billing_account_required = _redirect_view_if_user(
+    lambda u: not user_has_access_billing_account(get_billing_accounts_list(u)),
+    "research_environments",
+    "You have to have access to at least one billing account in order to create a workspace. Visit the Billing tab for more information.",
 )
 
 

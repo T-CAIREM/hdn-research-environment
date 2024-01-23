@@ -5,9 +5,16 @@ from django.apps import apps
 from django.utils.safestring import mark_safe
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
-from environment.entities import InstanceType, ResearchWorkspace
+from environment.entities import InstanceType, ResearchWorkspace, SharedWorkspace
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+
+AVAILABLE_REGIONS = [
+    ("us-central1", "us-central1"),
+    ("northamerica-northeast1", "northamerica-northeast1"),
+    ("europe-west3", "europe-west3"),
+    ("australia-southeast1", "australia-southeast1"),
+]
 
 
 class CloudIdentityPasswordForm(forms.Form):
@@ -27,12 +34,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
 
 class CreateWorkspaceForm(forms.Form):
-    AVAILABLE_REGIONS = [
-        ("us-central1", "us-central1"),
-        ("northamerica-northeast1", "northamerica-northeast1"),
-        ("europe-west3", "europe-west3"),
-        ("australia-southeast1", "australia-southeast1"),
-    ]
     billing_account_id = forms.ChoiceField(label="Billing Account")
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
@@ -63,7 +64,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     workspace_project_id = forms.CharField(
         label="Selected workspace",
         help_text=mark_safe(
-            f'Go <a href="/environments/">back</a> to select a different workspace. <br>'
+            'Go <a href="/environments/">back</a> to select a different workspace. <br>'
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
@@ -116,3 +117,37 @@ class CreateResearchEnvironmentForm(forms.Form):
 
 class ShareBillingAccountForm(forms.Form):
     user_email = forms.EmailField(label="User E-Mail")
+
+
+class CreateSharedWorkspaceForm(forms.Form):
+    billing_account_id = forms.ChoiceField(label="Billing Account")
+
+    def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
+        super(CreateSharedWorkspaceForm, self).__init__(*args, **kwargs)
+        self.fields["billing_account_id"].choices = [
+            (billing_account["id"], billing_account["name"])
+            for billing_account in billing_accounts_list
+        ]
+
+
+class CreateSharedBucketForm(forms.Form):
+    workspace_project_id = forms.CharField(
+        label="Selected workspace",
+        help_text=mark_safe(
+            'Go <a href="/environments/">back</a> to select a different shared workspace. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
+
+    def __init__(
+        self,
+        *args,
+        selected_shared_workspace: SharedWorkspace,
+        **kwargs,
+    ):
+        super(CreateSharedBucketForm, self).__init__(*args, **kwargs)
+        self.fields[
+            "workspace_project_id"
+        ].initial = selected_shared_workspace.gcp_project_id
+        self.fields["workspace_project_id"].disabled = True

@@ -13,6 +13,10 @@ def user_has_cloud_identity(user: User) -> bool:
     return hasattr(user, "cloud_identity")
 
 
+def user_has_access_billing_account(billing_accounts_list) -> bool:
+    return bool(billing_accounts_list)
+
+
 def user_workspace_setup_done(user: User) -> bool:
     if not user_has_cloud_identity(user):
         return False

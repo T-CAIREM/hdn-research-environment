@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Create Shared Bucket{% endblock %}
+
+{% block local_js_top %}
+<script src="{% static 'environment/js/cookie.js' %}"></script>
+<script src="{% static 'environment/js/forms.js' %}"></script>
+{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/creation_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+    <h1 class="mb-4">
+      Create Shared Bucket
+    </h1>
+    <div class="container-body">
+      <div class="card" style="width: 36rem;">
+        <div class="card-body">
+          <form class="single-submit-form" action="{% url 'create_shared_bucket' workspace_id=selected_shared_workspace.gcp_project_id %}" method="post" style="width: 24rem;">
+            {% csrf_token %}
+            {{ form }}
+            <button class="btn btn-primary mt-3" type="submit">
+              Create bucket
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

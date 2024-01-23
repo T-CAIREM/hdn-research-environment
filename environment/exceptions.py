@@ -62,5 +62,21 @@ class DeleteWorkspaceFailed(Exception):
     pass
 
 
+class CreateSharedBucketFailed(Exception):
+    pass
+
+
+class DeleteSharedBucketFailed(Exception):
+    pass
+
+
+class BucketSharingFailed(Exception):
+    pass
+
+
+class BucketAccessRevokationFailed(Exception):
+    pass
+
+
 class GetWorkflowFailed(Exception):
     pass

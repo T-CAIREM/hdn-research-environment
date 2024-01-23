@@ -13,8 +13,9 @@ from environment.deserializers import (
     deserialize_research_environments,
     deserialize_workflow_details,
     deserialize_workspaces,
+    deserialize_shared_workspaces,
 )
-from environment.entities import ResearchEnvironment, ResearchWorkspace
+from environment.entities import ResearchEnvironment, ResearchWorkspace, SharedWorkspace
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
     BillingAccessRevokationFailed,
@@ -30,6 +31,10 @@ from environment.exceptions import (
     IdentityProvisioningFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
+    CreateSharedBucketFailed,
+    DeleteSharedBucketFailed,
+    BucketSharingFailed,
+    BucketAccessRevokationFailed,
 )
 from environment.models import BillingAccountSharingInvite, CloudIdentity, Workflow
 from environment.utilities import inner_join_iterators, left_join_iterators
@@ -176,6 +181,18 @@ def create_workspace(user: User, billing_account_id: str, region: str):
     persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
 
+def create_shared_workspace(user: User, billing_account_id: str):
+    response = api.create_shared_workspace(
+        user_email=user.cloud_identity.email,
+        billing_account_id=billing_account_id,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        raise CreateWorkspaceFailed(error_message)
+
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+
+
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
 ):
@@ -184,6 +201,19 @@ def delete_workspace(
         gcp_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
         region=region,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        raise DeleteWorkspaceFailed(error_message)
+
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+
+
+def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id: str):
+    response = api.delete_shared_workspace(
+        user_email=user.cloud_identity.email,
+        workspace_project_id=gcp_project_id,
+        billing_account_id=billing_account_id,
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -403,6 +433,11 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     return deserialize_workspaces(response.json(), projects)
 
 
+def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
+    response = api.get_shared_workspaces(user.cloud_identity.email)
+    return deserialize_shared_workspaces(response.json())
+
+
 def stop_running_environment(
     workbench_type: str,
     workbench_resource_id: str,
@@ -483,6 +518,56 @@ def delete_environment(
     persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
     return response.json()
+
+
+def create_shared_buket(
+    region: str,
+    workspace_project_id: str,
+    user: User,
+):
+    response = api.create_shared_bucket(
+        region=region,
+        user_email=user.cloud_identity.email,
+        workspace_project_id=workspace_project_id,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise CreateSharedBucketFailed(error_message)
+
+
+def delete_shared_bucket(bucket_name: str):
+    response = api.delete_shared_bucket(
+        bucket_name=bucket_name,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise DeleteSharedBucketFailed(error_message)
+
+
+def share_bucket(
+    owner_email: str,
+    user_email: str,
+    billing_account_id: str,
+    workspace_project_id: str,
+):
+    response = api.share_bucket(
+        owner_email=owner_email,
+        user_email=user_email,
+        billing_account_id=billing_account_id,
+        workspace_project_id=workspace_project_id,
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise BucketSharingFailed(error_message)
+
+
+def revoke_shared_bucket_access(owner_email: str, user_email: str, bucket_name: str):
+    response = api.revoke_shared_bucket_access(
+        owner_email=owner_email, user_email=user_email, bucket_name=bucket_name
+    )
+    if not response.ok:
+        error_message = response.json()
+        raise BucketAccessRevokationFailed(error_message)
 
 
 def get_execution(execution_resource_name) -> ApiWorkflow:

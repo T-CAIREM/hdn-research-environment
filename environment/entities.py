@@ -75,10 +75,16 @@ class WorkflowStatus(Enum):
     SUCCESS = "success"
 
 
+class WorkspaceType(Enum):
+    SHARED_WORKSPACE = "SharedWorkspace"
+    WORKSPACE = "Workspace"
+
+
 class WorkflowType(Enum):
     WORKSPACE_CREATION = "workspace_creation"
     WORKSPACE_DELETION = "workspace_deletion"
-
+    SHARED_WORKSPACE_CREATION = "shared_workspace_creation"
+    SHARED_WORKSPACE_DELETION = "shared_workspace_deletion"
     WORKBENCH_CREATION = "workbench_creation"
     WORKBENCH_DESTROY = "workbench_destroy"
     WORKBENCH_STOP = "workbench_stop"
@@ -94,8 +100,8 @@ class Workflow:
     error_information: str
 
     def display_type(self) -> str:
-        entity_type, action_type = self.type.value.split("_")
-        return f"{entity_type} {action_type}".capitalize()
+        action_string = self.type.value.replace("_", " ")
+        return action_string.capitalize()
 
 
 @dataclass
@@ -144,6 +150,20 @@ class ResearchWorkspace:
     gcp_billing_id: str
     status: WorkspaceStatus
     workbenches: Iterable[ResearchEnvironment]
+
+
+@dataclass
+class SharedBucket:
+    name: str
+    is_owner: bool
+
+
+@dataclass(frozen=True)
+class SharedWorkspace:
+    gcp_project_id: str
+    gcp_billing_id: str
+    status: WorkspaceStatus
+    buckets: Iterable[SharedBucket]
 
 
 @dataclass

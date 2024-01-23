@@ -178,3 +178,79 @@ def delete_workbench(
 @api_request
 def get_workflow(workflow_id: str) -> Request:
     return Request("GET", url=f"/workflow/{workflow_id}")
+
+
+@api_request
+def create_shared_workspace(
+    user_email: str,
+    billing_account_id: str,
+) -> Request:
+    json = {
+        "user_email": user_email,
+        "billing_account_id": billing_account_id,
+    }
+    return Request("POST", url="/workspace/shared/create", json=json)
+
+
+@api_request
+def delete_shared_workspace(
+    workspace_project_id: str, billing_account_id: str, user_email: str
+) -> Request:
+    json = {
+        "user_email": user_email,
+        "billing_account_id": billing_account_id,
+        "workspace_project_id": workspace_project_id,
+    }
+    return Request("DELETE", url="/workspace/shared/delete", json=json)
+
+
+@api_request
+def get_shared_workspaces(
+    email: str,
+) -> Request:
+    return Request("GET", url=f"/workspace/shared/{email}")
+
+
+@api_request
+def create_shared_bucket(
+    region: str,
+    workspace_project_id: str,
+    user_email: str,
+) -> Request:
+    json = {
+        "region": region,
+        "workspace_project_id": workspace_project_id,
+        "user_email": user_email,
+    }
+    return Request("POST", url="/sharing/bucket/create", json=json)
+
+
+@api_request
+def delete_shared_bucket(bucket_name: str) -> Request:
+    json = {"bucket_name": bucket_name}
+    return Request("DELETE", url="/sharing/bucket/delete", json=json)
+
+
+@api_request
+def share_bucket(
+    owner_email: str, user_email: str, workspace_project_id: str, bucket_name: str
+) -> Request:
+    json = {
+        "sharer_email": owner_email,
+        "accessor_email": user_email,
+        "bucket_name": bucket_name,
+        "project_id": workspace_project_id,
+    }
+    return Request("POST", url="/sharing/bucket/share", json=json)
+
+
+@api_request
+def revoke_shared_bucket_access(
+    owner_email: str, user_email: str, bucket_name: str
+) -> Request:
+    json = {
+        "sharer_email": owner_email,
+        "accessor_email": user_email,
+        "bucket_name": bucket_name,
+    }
+    return Request("POST", url="/sharing/bucket/revoke_access", json=json)
