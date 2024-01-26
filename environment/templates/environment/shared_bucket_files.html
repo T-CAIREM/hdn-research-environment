@@ -81,14 +81,13 @@
                 };
             },
             accept: (file, done) => {
-                const payload = {size: file.size, filename: "{{ current_dir_path }}/" + file.upload.filename, csrfmiddlewaretoken: "{{ csrf_token }}"};
+                const payload = {size: file.size, filename: "{{ current_dir_path }}" + file.upload.filename, csrfmiddlewaretoken: "{{ csrf_token }}"};
 
                 $.post("{% url 'generate_bucket_signed_url' bucket_name=shared_bucket_name %}", payload, "json")
                 .done(data => {
                   file.dynamicUploadUrl = data.signed_url;
                   done();
                 }).fail(data => {
-                  console.log(data.responseJSON.detail)
                   done(data.responseJSON.detail);
                 });
             }

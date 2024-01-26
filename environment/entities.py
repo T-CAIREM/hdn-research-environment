@@ -83,6 +83,7 @@ class WorkflowStatus(Enum):
 class WorkspaceType(Enum):
     SHARED_WORKSPACE = "SharedWorkspace"
     WORKSPACE = "Workspace"
+    ENTITY_SCAFFOLDING = "EntityScaffolding"
 
 
 class WorkflowType(Enum):
