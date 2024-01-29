@@ -404,12 +404,12 @@ def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
     )
 
     owner = request.user
-    bucket_sharing_form = BucketSharingForm()
+    bucket_sharing_form = BucketSharingForm(invitation_owner=owner)
 
     if request.method == "POST":
         form_action = request.POST["action"]
         if form_action == "share_account":
-            bucket_sharing_form = BucketSharingForm(request.POST)
+            bucket_sharing_form = BucketSharingForm(request.POST, invitation_owner=owner)
             if bucket_sharing_form.is_valid():
                 services.invite_user_to_shared_bucket(
                     request=request,

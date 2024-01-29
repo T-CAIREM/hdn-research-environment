@@ -12,6 +12,8 @@ from environment.entities import (
     SharedBucket,
 )
 
+from environment.models import BucketSharingInvite
+
 PublishedProject = apps.get_model("project", "PublishedProject")
 
 AVAILABLE_REGIONS = [
@@ -170,3 +172,18 @@ class CreateSharedBucketForm(forms.Form):
 
 class BucketSharingForm(forms.Form):
     user_email = forms.EmailField(label="User E-Mail")
+
+    def __init__(
+        self,
+        *args,
+        invitation_owner,
+        **kwargs,
+    ):
+        self.invitation_owner = invitation_owner
+        super(BucketSharingForm, self).__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super(BucketSharingForm, self).clean()
+        user_email = cleaned_data.get("user_email")
+        if BucketSharingInvite.objects.filter(owner=self.invitation_owner, user_contact_email=user_email, is_consumed=False):
+            raise forms.ValidationError("Already used user email")
