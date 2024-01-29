@@ -7,7 +7,6 @@ from django.db.models import Model
 from django.template import loader
 from django.urls import reverse
 from django.utils.html import strip_tags
-from django.utils.http import urlencode
 
 from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 
@@ -20,7 +19,7 @@ def send_billing_sharing_confirmation(
     site_domain: str, invite: BillingAccountSharingInvite
 ):
     confirmation_path = (
-        reverse("confirm_billing_account_sharing") + f"?token={urlencode(invite.token)}"
+        reverse("confirm_billing_account_sharing") + f"?token={invite.token}"
     )
     subject = f"{settings.SITE_NAME} Billing Account Shared"
     email_context = {
@@ -43,7 +42,7 @@ def send_billing_sharing_confirmation(
 
 
 def send_bucket_sharing_confirmation(site_domain: str, invite: BucketSharingInvite):
-    confirmation_path = reverse("confirm_bucket_sharing") + f"?token={urlencode(invite.token)}"
+    confirmation_path = reverse("confirm_bucket_sharing") + f"?token={invite.token}"
     subject = f"{settings.SITE_NAME}  GCP Bucket Shared"
     email_context = {
         "site_name": settings.SITE_NAME,
