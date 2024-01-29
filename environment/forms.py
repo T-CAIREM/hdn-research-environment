@@ -178,10 +178,12 @@ class BucketSharingForm(forms.Form):
         self,
         *args,
         invitation_owner: User,
+        shared_bucket_name: str,
         **kwargs,
     ):
-        self.invitation_owner = invitation_owner
         super(BucketSharingForm, self).__init__(*args, **kwargs)
+        self.invitation_owner = invitation_owner
+        self.shared_bucket_name = shared_bucket_name
 
     def clean(self):
         cleaned_data = super(BucketSharingForm, self).clean()
@@ -190,5 +192,8 @@ class BucketSharingForm(forms.Form):
             owner=self.invitation_owner,
             user_contact_email=user_email,
             is_consumed=False,
+            shared_bucket_name=self.shared_bucket_name,
         ):
-            raise forms.ValidationError("Already used user email")
+            raise forms.ValidationError(
+                "Invitation has been already sent to this email address"
+            )
