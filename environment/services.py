@@ -148,6 +148,8 @@ def consume_billing_account_sharing_token(
     user: User, token: str
 ) -> BillingAccountSharingInvite:
     invite = BillingAccountSharingInvite.objects.get(token=token, is_revoked=False)
+    if invite.owner == user:
+        raise InvitedUserIsAccountOwner
     invite.user = user
     invite.save()
 
