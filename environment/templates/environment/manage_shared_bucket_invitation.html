@@ -5,16 +5,31 @@
 {% block title %}Accept invitation to shared billing Account{% endblock %}
 
 {% block content %}
-<div class="card w-50 mt-3 ml-3" >
-  <div class="card-header">
-    You have been invited to use {{ invitation_owner.username }}'s bucket.
-  </div>
-  <div class="card-body">
-    <form method="post">
-      {% csrf_token %}
-      <input type="hidden" name="token" value="{{ token }}" />
-      <button class="btn btn-primary mt-3" type="submit">Accept Invitation</button>
-    </form>
+<div class="container">
+  {% if invitation_owner %}
+  <div class="card w-50 mt-3 ml-3" >
+    <div class="card-header">
+      You have been invited to use {{ invitation_owner.username }}'s bucket.
+    </div>
+    <div class="card-body">
+      {% if is_owner %}
+        You are owner of this shared bucket.
+      {% else %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="token" value="{{ token }}" />
+          <button class="btn btn-primary mt-3" type="submit">Accept Invitation</button>
+        </form>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="card-header">
+      This invitation has been revoked
+    </div>
+    <div class="card-body">
+      <a class="btn btn-primary mt-3" href="{% url 'research_environments' %}">Return to Environments page</a>
+    </div>
+  {% endif %}
   </div>
 </div>
 {% endblock %}

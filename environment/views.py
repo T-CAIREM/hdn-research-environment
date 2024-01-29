@@ -461,7 +461,7 @@ def confirm_bucket_sharing(request):
     invite = BucketSharingInvite.objects.select_related("owner").get(
         token=token, is_revoked=False
     )
-    context = {"token": token, "invitation_owner": invite.owner}
+    context = {"token": token, "invitation_owner": invite.owner, "is_owner": request.user == invite.owner}
     return render(request, "environment/manage_shared_bucket_invitation.html", context)
 
 
