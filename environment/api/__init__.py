@@ -217,11 +217,13 @@ def get_shared_workspaces(
 def create_shared_bucket(
     region: str,
     workspace_project_id: str,
+    user_defined_bucket_name: str,
     user_email: str,
 ) -> Request:
     json = {
         "region": region,
         "workspace_project_id": workspace_project_id,
+        "user_defined_bucket_name": user_defined_bucket_name,
         "user_email": user_email,
     }
     return Request("POST", url="/sharing/bucket/create", json=json)

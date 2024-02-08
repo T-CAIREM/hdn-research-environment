@@ -594,11 +594,13 @@ def delete_environment(
 def create_shared_buket(
     region: str,
     workspace_project_id: str,
+    user_defined_bucket_name: str,
     user: User,
 ):
     response = api.create_shared_bucket(
         region=region,
         user_email=user.cloud_identity.email,
+        user_defined_bucket_name=user_defined_bucket_name,
         workspace_project_id=workspace_project_id,
     )
     if not response.ok:
