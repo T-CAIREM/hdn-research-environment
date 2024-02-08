@@ -157,7 +157,7 @@ class CreateSharedBucketForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
 
-    user_defined_bucket_name = forms.CharField(max_length=32)
+    user_defined_bucket_name = forms.CharField(max_length=32, label="Bucket name")
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
     def __init__(
