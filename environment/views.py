@@ -307,6 +307,7 @@ def create_shared_bucket(request, workspace_id):
             services.create_shared_buket(
                 user=request.user,
                 region=form.cleaned_data["region"],
+                user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
                 workspace_project_id=form.cleaned_data["workspace_project_id"],
             )
         return redirect("research_environments")
@@ -387,7 +388,11 @@ def confirm_billing_account_sharing(request):
     invite = BillingAccountSharingInvite.objects.select_related("owner").get(
         token=token, is_revoked=False
     )
-    context = {"token": token, "invitation_owner": invite.owner, "is_owner": request.user == invite.owner}
+    context = {
+        "token": token,
+        "invitation_owner": invite.owner,
+        "is_owner": request.user == invite.owner,
+    }
     return render(request, "environment/manage_shared_billing_invitation.html", context)
 
 
@@ -467,7 +472,11 @@ def confirm_bucket_sharing(request):
     invite = BucketSharingInvite.objects.select_related("owner").get(
         token=token, is_revoked=False
     )
-    context = {"token": token, "invitation_owner": invite.owner, "is_owner": request.user == invite.owner}
+    context = {
+        "token": token,
+        "invitation_owner": invite.owner,
+        "is_owner": request.user == invite.owner,
+    }
     return render(request, "environment/manage_shared_bucket_invitation.html", context)
 
 
