@@ -104,6 +104,7 @@ def deserialize_shared_workspace_details(data: dict) -> SharedWorkspace:
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
+        is_owner=data["is_owner"],
     )
 
 
