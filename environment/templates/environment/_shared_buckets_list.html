@@ -85,11 +85,13 @@
                                 Create one using the button below.
                             </div>
                         {% endif %}
+                        {% if workspace.is_owner %}
                         <div class="row mt-3">
                             <a class="m-auto" href="{% url 'create_shared_bucket' workspace_id=workspace.gcp_project_id %}">
                                 Create shared bucket
                             </a>
                         </div>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

@@ -168,6 +168,7 @@ class SharedBucket:
 class SharedWorkspace:
     gcp_project_id: str
     gcp_billing_id: str
+    is_owner: bool
     status: WorkspaceStatus
     buckets: Iterable[SharedBucket]
 
