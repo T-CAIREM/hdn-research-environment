@@ -26,7 +26,7 @@ def _redirect_view_if_user(
         def wrapped_view(request: HttpRequest, *args, **kwargs) -> HttpResponse:
             if predicate(request.user):
                 if message:
-                    messages.ingo(request, message)
+                    messages.info(request, message)
                 return redirect(redirect_url)
             return view(request, *args, **kwargs)
 
