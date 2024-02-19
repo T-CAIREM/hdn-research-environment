@@ -310,7 +310,7 @@ def create_shared_bucket(request, workspace_id):
                 user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
                 workspace_project_id=form.cleaned_data["workspace_project_id"],
             )
-        return redirect("research_environments")
+            return redirect("research_environments")
     else:
         form = CreateSharedBucketForm(
             selected_shared_workspace=selected_shared_workspace

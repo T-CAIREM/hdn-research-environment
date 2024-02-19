@@ -3,6 +3,7 @@ from typing import Iterable
 from django import forms
 from django.apps import apps
 from django.utils.safestring import mark_safe
+from django.core.validators import RegexValidator
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import (
@@ -157,7 +158,15 @@ class CreateSharedBucketForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
 
-    user_defined_bucket_name = forms.CharField(max_length=32, label="Bucket name")
+    user_defined_bucket_name = forms.CharField(
+        max_length=32,
+        label="Bucket name",
+        validators=[RegexValidator(r"^[a-z0-9-_]+$")],
+        error_messages={
+            "invalid": "Enter a value that consists only of lowercase letters, digits, dashes or underscores"
+        },
+        help_text="<p>Note: Should consists only of lowercase letters, digits, dashes and underscores</p>",
+    )
     region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
     def __init__(
