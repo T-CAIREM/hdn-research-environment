@@ -67,7 +67,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     ]
     AVAILABLE_GPU_ACCELERATOR_TYPES = [
         ("", "Machine without GPU attached"),
-        ("NVIDIA_TESLA_T4", "Nvidia Tesla T4 (16 GB GDDR6)"),
+        ("nvidia-tesla-t4", "Nvidia Tesla T4 (16 GB GDDR6)"),
     ]
 
     workspace_project_id = forms.CharField(
