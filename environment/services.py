@@ -131,7 +131,7 @@ def is_shared_bucket_admin(
     shared_workspaces_list: Iterable[SharedWorkspace], shared_bucket_name: str
 ):
     return any(
-        bucket.name == shared_bucket_name and bucket.is_admin is True
+        bucket.name == shared_bucket_name and bucket.is_admin
         for workspace in shared_workspaces_list
         for bucket in workspace.buckets
     )
