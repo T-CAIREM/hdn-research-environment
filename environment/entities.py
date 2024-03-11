@@ -162,6 +162,7 @@ class ResearchWorkspace:
 class SharedBucket:
     name: str
     is_owner: bool
+    is_admin: bool
 
 
 @dataclass(frozen=True)

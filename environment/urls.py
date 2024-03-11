@@ -76,6 +76,11 @@ urlpatterns = [
         name="manage_shared_bucket",
     ),
     path(
+        "sharing/manage/<shared_workspace_name>/<shared_bucket_name>/files",
+        views.manage_shared_bucket_files,
+        name="manage_shared_bucket_files",
+    ),
+    path(
         "sharing/confirm",
         views.confirm_bucket_sharing,
         name="confirm_bucket_sharing",

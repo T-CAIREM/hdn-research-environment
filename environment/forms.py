@@ -183,7 +183,13 @@ class CreateSharedBucketForm(forms.Form):
 
 
 class BucketSharingForm(forms.Form):
+    PERMISSIONS = [
+        ("read", "Read"),
+        ("read_write", "Read and Write"),
+    ]
+
     user_email = forms.EmailField(label="User E-Mail")
+    user_permissions = forms.ChoiceField(label="User permissions", choices=PERMISSIONS)
 
     def __init__(
         self,
