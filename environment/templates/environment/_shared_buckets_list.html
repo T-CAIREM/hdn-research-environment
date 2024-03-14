@@ -71,6 +71,10 @@
                                                 <a href="{% url 'manage_shared_bucket' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
                                                     Manage
                                                 </a>
+                                            {% elif bucket.is_admin %}
+                                                <a href="{% url 'manage_shared_bucket_files' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
+                                                    Manage files
+                                                </a>
                                             {% else %}
                                                 Shared
                                             {% endif %}

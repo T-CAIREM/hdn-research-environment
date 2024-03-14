@@ -39,6 +39,10 @@ class BillingAccountSharingInvite(models.Model):
 
 
 class BucketSharingInvite(models.Model):
+    PERMISSIONS = (
+        ("read_write", "Read and Write"),
+        ("read", "Read"),
+    )
     owner = models.ForeignKey(
         "user.User",
         related_name="owner_bucketsharinginvite_set",
@@ -53,6 +57,7 @@ class BucketSharingInvite(models.Model):
     user_contact_email = models.EmailField()
     shared_bucket_name = models.CharField(max_length=100)
     shared_workspace_name = models.CharField(max_length=100)
+    permissions = models.CharField(max_length=100, choices=PERMISSIONS, default="read")
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     is_consumed = models.BooleanField(default=False)
     is_revoked = models.BooleanField(default=False)

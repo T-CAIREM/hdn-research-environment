@@ -93,7 +93,11 @@ def deserialize_workspace_details(
 
 def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
     return [
-        SharedBucket(name=data["bucket_name"], is_owner=data["is_owner"])
+        SharedBucket(
+            name=data["bucket_name"],
+            is_owner=data["is_owner"],
+            is_admin=data["is_admin"],
+        )
         for data in buckets_data
     ]
 

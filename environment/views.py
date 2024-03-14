@@ -401,7 +401,8 @@ def confirm_billing_account_sharing(request):
 @cloud_identity_required
 @transaction.atomic
 def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
-    if not services.is_shared_bucket_owner(request.user, shared_bucket_name):
+    shared_workspaces_list = services.get_shared_workspaces_list(request.user)
+    if not services.is_shared_bucket_owner(shared_workspaces_list, shared_bucket_name):
         raise Http404()
 
     bucket_content = services.get_shared_bucket_content(
@@ -428,6 +429,7 @@ def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
                     user_email=bucket_sharing_form.cleaned_data["user_email"],
                     shared_bucket_name=shared_bucket_name,
                     shared_workspace_name=shared_workspace_name,
+                    permissions=bucket_sharing_form.cleaned_data["user_permissions"]
                 )
                 return redirect(request.path)
         elif form_action == "revoke_access":
@@ -450,6 +452,34 @@ def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
     }
 
     return render(request, "environment/manage_shared_bucket.html", context)
+
+
+@require_http_methods(["GET"])
+@login_required
+@cloud_identity_required
+@transaction.atomic
+def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_name):
+    shared_workspaces_list = services.get_shared_workspaces_list(request.user)
+    if services.is_shared_bucket_owner(shared_workspaces_list, shared_bucket_name):
+        return redirect(
+            "manage_shared_bucket",
+            shared_workspace_name=shared_workspace_name,
+            shared_bucket_name=shared_bucket_name,
+        )
+    if not services.is_shared_bucket_admin(shared_workspaces_list, shared_bucket_name):
+        raise Http404()
+
+    bucket_content = services.get_shared_bucket_content(
+        shared_bucket_name, request.user
+    )
+
+    context = {
+        "shared_bucket_name": shared_bucket_name,
+        "shared_workspace_name": shared_workspace_name,
+        "bucket_content": bucket_content,
+    }
+
+    return render(request, "environment/manage_shared_bucket_files.html", context)
 
 
 @require_http_methods(["GET", "POST"])

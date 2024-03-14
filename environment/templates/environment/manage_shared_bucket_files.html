@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/management_views.css' %}">
+{% endblock %}
+
+{% block title %}Manage Shared Bucket Files{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h3 class="mb-4 jumbotron">
+      Manage Shared Bucket Files
+    </h3>
+    <div class="container-body">
+        <div class="card" style="height: fit-content; width: 42rem;">
+            <div class="card-body">
+                <div id="billing-account-id-card">
+                    <h5 class="card-title">
+                        Shared Bucket Details
+                    </h5>
+                    <div>
+                        <b>Bucket Name:</b> <i>{{ shared_bucket_name }}</i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "environment/shared_bucket_files.html" %}
+</div>
+{% endblock %}

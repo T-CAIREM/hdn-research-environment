@@ -237,13 +237,14 @@ def delete_shared_bucket(bucket_name: str) -> Request:
 
 @api_request
 def share_bucket(
-    owner_email: str, user_email: str, workspace_project_id: str, bucket_name: str
+    owner_email: str, user_email: str, workspace_project_id: str, bucket_name: str, permissions: str
 ) -> Request:
     json = {
         "sharer_email": owner_email,
         "accessor_email": user_email,
         "bucket_name": bucket_name,
         "project_id": workspace_project_id,
+        "permissions": permissions
     }
     return Request("POST", url="/sharing/bucket/share", json=json)
 

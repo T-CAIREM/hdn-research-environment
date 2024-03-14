@@ -117,10 +117,21 @@ def is_billing_account_owner(user: User, billing_account_id: str):
     return False
 
 
-def is_shared_bucket_owner(user: User, shared_bucket_name: str):
-    shared_workspaces_list = get_shared_workspaces_list(user)
+def is_shared_bucket_owner(
+    shared_workspaces_list: Iterable[SharedWorkspace], shared_bucket_name: str
+):
     return any(
         bucket.name == shared_bucket_name and bucket.is_owner is True
+        for workspace in shared_workspaces_list
+        for bucket in workspace.buckets
+    )
+
+
+def is_shared_bucket_admin(
+    shared_workspaces_list: Iterable[SharedWorkspace], shared_bucket_name: str
+):
+    return any(
+        bucket.name == shared_bucket_name and bucket.is_admin
         for workspace in shared_workspaces_list
         for bucket in workspace.buckets
     )
@@ -165,6 +176,7 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
         user_email=invite.user.cloud_identity.email,
         bucket_name=invite.shared_bucket_name,
         workspace_project_id=invite.shared_workspace_name,
+        permissions=invite.permissions
     )
     invite.is_consumed = True
     invite.save()
@@ -216,12 +228,14 @@ def invite_user_to_shared_bucket(
     user_email: str,
     shared_bucket_name: str,
     shared_workspace_name: str,
+    permissions: str,
 ) -> BucketSharingInvite:
     invite = BucketSharingInvite.objects.create(
         owner=owner,
         shared_bucket_name=shared_bucket_name,
         user_contact_email=user_email,
         shared_workspace_name=shared_workspace_name,
+        permissions=permissions,
     )
     site_domain = get_current_site(request).domain
     mailers.send_bucket_sharing_confirmation(site_domain=site_domain, invite=invite)
@@ -623,12 +637,14 @@ def share_bucket(
     user_email: str,
     bucket_name: str,
     workspace_project_id: str,
+    permissions: str
 ):
     response = api.share_bucket(
         owner_email=owner_email,
         user_email=user_email,
         bucket_name=bucket_name,
         workspace_project_id=workspace_project_id,
+        permissions=permissions,
     )
     if not response.ok:
         error_message = response.json()
