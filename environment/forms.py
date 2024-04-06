@@ -60,6 +60,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("n1-standard-4", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_4]),
         ("n1-standard-8", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_8]),
         ("n1-standard-16", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_16]),
+        ("n2-standard-2", MACHINE_TYPE_SPECIFICATION[InstanceType.N2_STANDARD_2]),
+        ("n2-standard-4", MACHINE_TYPE_SPECIFICATION[InstanceType.N2_STANDARD_4]),
+        ("n2-standard-8", MACHINE_TYPE_SPECIFICATION[InstanceType.N2_STANDARD_8]),
+        ("n2-standard-16", MACHINE_TYPE_SPECIFICATION[InstanceType.N2_STANDARD_16]),
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
