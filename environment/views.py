@@ -2,6 +2,7 @@ import concurrent
 import json
 import re
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -84,6 +85,7 @@ def research_environments(request):
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
+        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL
     }
 
     return render(
@@ -118,6 +120,7 @@ def research_environments_partial(request):
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
+        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")

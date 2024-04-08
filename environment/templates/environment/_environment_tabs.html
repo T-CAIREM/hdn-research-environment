@@ -90,7 +90,7 @@
         });
     }
 
-    var socket = io('http://host.docker.internal:5000');
+    var socket = io("{{ websocket_url }}");
 
     socket.on('workflow_update', function(data) {
         refreshCards(data.workbench_activity_id);
