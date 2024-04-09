@@ -72,6 +72,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js" integrity="sha512-luMnTJZ7oEchNDZAtQhgjomP1eZefnl82ruTH/3Oj/Yu5qYtwL7+dVRccACS/Snp1lFXq188XFipHKYE75IaQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     function refreshCards(executionId) {
         fetchNewCards(executionId)
@@ -85,18 +86,18 @@
         .then(({ finished }) => {
             if (finished) {
                 refreshCards(executionId);
-            } else {
-                scheduleExecutionPolling(executionId);
             }
         });
     }
 
-    function scheduleExecutionPolling(executionId, immediate=false) {
-        const timeout = immediate ? 0 : 30000;
-        setTimeout(() => pollExecutionStatus(executionId), timeout);
-    }
+    var socket = io("{{ websocket_url }}");
+
+    socket.on('workflow_update', function(data) {
+        refreshCards(data.workbench_activity_id);
+    });
 
     {% for workflow in workflows %}
-        scheduleExecutionPolling("{{ workflow.execution_resource_name }}", true);
+        socket.emit("join", "{{ workflow.execution_resource_name }}");
+        pollExecutionStatus("{{ workflow.execution_resource_name }}");
     {% endfor %}
 </script>
