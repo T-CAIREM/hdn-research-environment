@@ -90,7 +90,7 @@
         });
     }
 
-    var socket = io("{{ websocket_url }}");
+    var socket = io("{{ websocket_url }}", { transports : ['websocket'] });
 
     socket.on('workflow_update', function(data) {
         refreshCards(data.workbench_activity_id);
