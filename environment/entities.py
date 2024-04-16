@@ -25,7 +25,6 @@ class InstanceType(Enum):
     N1_STANDARD_4 = "n1-standard-4"
     N1_STANDARD_8 = "n1-standard-8"
     N1_STANDARD_16 = "n1-standard-16"
-    N2_STANDARD_1 = "n2-standard-1"
     N2_STANDARD_2 = "n2-standard-2"
     N2_STANDARD_4 = "n2-standard-4"
     N2_STANDARD_8 = "n2-standard-8"
@@ -38,7 +37,6 @@ class InstanceType(Enum):
             InstanceType.N1_STANDARD_4: 4,
             InstanceType.N1_STANDARD_8: 8,
             InstanceType.N1_STANDARD_16: 16,
-            InstanceType.N2_STANDARD_1: 1,
             InstanceType.N2_STANDARD_2: 2,
             InstanceType.N2_STANDARD_4: 4,
             InstanceType.N2_STANDARD_8: 8,
