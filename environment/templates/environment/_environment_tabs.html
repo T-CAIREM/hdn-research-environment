@@ -96,6 +96,21 @@
         refreshCards(data.workbench_activity_id);
     });
 
+    socket.on("disconnect", (reason) => {
+      if (reason === "io server disconnect") {
+        // the disconnection was initiated by the server, you need to reconnect manually
+        socket.connect();
+      }
+    });
+
+    function disconnectSocket() {
+      socket.disconnect();
+    }
+
+    window.onbeforeunload = function() {
+      disconnectSocket();
+    };
+
     {% for workflow in workflows %}
         socket.emit("join", "{{ workflow.execution_resource_name }}");
         pollExecutionStatus("{{ workflow.execution_resource_name }}");
