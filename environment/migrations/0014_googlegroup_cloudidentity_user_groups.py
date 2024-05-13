@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="GoogleGroup",
+            name="CloudGroup",
             fields=[
                 (
                     "id",
@@ -27,6 +27,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="cloudidentity",
             name="user_groups",
-            field=models.ManyToManyField(to="environment.googlegroup"),
+            field=models.ManyToManyField(to="environment.cloudgroup"),
         ),
     ]

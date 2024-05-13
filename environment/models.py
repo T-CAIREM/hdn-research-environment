@@ -6,7 +6,7 @@ from django.db import models
 from environment.validators import gcp_billing_account_id_validator
 
 
-class GoogleGroup(models.Model):
+class CloudGroup(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
 
@@ -19,7 +19,7 @@ class CloudIdentity(models.Model):
         max_length=255, unique=True, validators=[EmailValidator()]
     )
     initial_workspace_setup_done = models.BooleanField(default=False)
-    user_groups = models.ManyToManyField(GoogleGroup)
+    user_groups = models.ManyToManyField(CloudGroup)
 
 
 class BillingAccountSharingInvite(models.Model):

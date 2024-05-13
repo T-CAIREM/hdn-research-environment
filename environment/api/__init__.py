@@ -316,4 +316,4 @@ def create_google_user_group(group_name: str, description: str):
         "group_name": group_name,
         "description": description,
     }
-    return Request("DELETE", url="/group/create", json=json)
+    return Request("POST", url="/group/create", json=json)
