@@ -23,6 +23,7 @@ from environment.entities import (
     SharedWorkspace,
     SharedBucket,
     SharedBucketObject,
+    QuotaInfo,
 )
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
@@ -512,7 +513,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     return deserialize_workspaces(response.json(), projects)
 
 
-def list_quotas_data(workspace_project_id: str, region: str):
+def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
     response = api.list_quotas_data(workspace_project_id, region)
     return deserialize_quotas(response.json())
 
