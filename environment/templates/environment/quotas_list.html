@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Research environments{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/quotas_list.css' %}">
+{% endblock %}
+
+{% block local_js_top %}
+<script src="{% static 'environment/js/cookie.js' %}"></script>
+<script src="{% static 'environment/js/forms.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+      <div class="jumbotron">
+        <h1>Quotas</h1>
+        <p class="lead">
+          Here you can see the quotas for project {{ workspace_project_id }}.
+        </p>
+      </div>
+
+      {% block main_view %}
+        {% include "environment/_quotas_tabs.html" %}
+      {% endblock %}
+    </div>
+{% endblock %}

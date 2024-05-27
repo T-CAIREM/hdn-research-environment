@@ -1,0 +1,27 @@
+<div id="accordion">
+    {% for quota in quotas %}
+        <div class="card">
+            <div class="card-body" id="{{ heading }}">
+                <div class="row align-items-center">
+                    <div class="d-flex justify-content-between" style="width: 100%">
+                        <div>
+                            <h6 class="mb-0">
+                                {{ quota.metric_name }}
+                            </h6>
+                        </div>
+                        <div class="d-flex justify-content-between" style="width: 250px">
+                            <div class="progress" style="width: 100px; margin-right: 10px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ quota.usage_percentage }}%;" aria-valuenow="{{ quota.usage }}" aria-valuemin="0" aria-valuemax="{{ quota.limit }}"></div>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">
+                                    {{ quota.usage }}/{{ quota.limit }}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>

@@ -40,6 +40,12 @@
                                     </span>
                                 </small>
                             {% endif %}
+                            <small>
+                                <span>{{ workspace.region.value }}</span>
+                                <a class="m-auto" href="{% url 'get_quotas' workspace_region=workspace.gcp_project_id workspace_project_id=workspace.gcp_project_id %}">
+                                    Manage quotas
+                                </a>
+                            </small>
                         </div>
                         {% if not workspace.status.value == "created" %}
                             <div class="d-flex align-items-center justify-content-between">

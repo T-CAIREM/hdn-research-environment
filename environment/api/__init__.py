@@ -85,6 +85,11 @@ def get_workspace_list(email: str) -> Request:
 
 
 @api_request
+def list_quotas_data(region: str, workspace_project_id: str) -> Request:
+    return Request("GET", url=f"/workspace/quotas/{region}/{workspace_project_id}")
+
+
+@api_request
 def create_workbench(
     user_email: str,
     workbench_type: str,

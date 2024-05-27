@@ -15,6 +15,7 @@ from environment.deserializers import (
     deserialize_workspaces,
     deserialize_shared_workspaces,
     deserialize_shared_bucket_objects,
+    deserialize_quotas,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -509,6 +510,11 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
     return deserialize_workspaces(response.json(), projects)
+
+
+def list_quotas_data(workspace_project_id: str, region: str):
+    response = api.list_quotas_data(workspace_project_id, region)
+    return deserialize_quotas(response.json())
 
 
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
