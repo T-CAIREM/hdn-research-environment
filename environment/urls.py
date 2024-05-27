@@ -55,7 +55,7 @@ urlpatterns = [
     path(
         "workspace/quotas/<workspace_region>/<workspace_project_id>",
         views.get_quotas,
-        name="get_quotas"
+        name="get_quotas",
     ),
     path(
         "sharing/workspace/create",

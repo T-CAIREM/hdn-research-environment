@@ -163,15 +163,15 @@ def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject
         for bucket_object in data
     ]
 
-def deserialize_quotas(
-    data
-) -> Iterable[dict]:
+
+def deserialize_quotas(data) -> Iterable[dict]:
     return [_deserialize_quota(q) for q in data]
+
 
 def _deserialize_quota(quota):
     return {
         "limit": int(quota["limit"]),
         "usage": int(quota["usage"]),
         "metric_name": quota["metric_name"],
-        "usage_percentage": (quota['usage'] / quota['limit']) * 100
+        "usage_percentage": (quota["usage"] / quota["limit"]) * 100,
     }

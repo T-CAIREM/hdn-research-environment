@@ -686,10 +686,6 @@ def get_quotas(request, workspace_project_id, workspace_region):
             services.list_quotas_data, workspace_region, workspace_project_id
         )
     quotas_data_list = quotas_list_future.result()
-    context = {
-        "quotas": quotas_data_list,
-        "workspace_project_id": workspace_project_id
-    }
+    context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
-    return render(request, 'environment/quotas_list.html', context,
-                  status=200)
+    return render(request, "environment/quotas_list.html", context, status=200)
