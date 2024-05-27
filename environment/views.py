@@ -683,7 +683,7 @@ def delete_shared_bucket_content(request, bucket_name):
 def get_quotas(request, workspace_project_id, workspace_region):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         quotas_list_future = executor.submit(
-            services.list_quotas_data, "us-central1", workspace_project_id#workspace_region
+            services.list_quotas_data, workspace_region, workspace_project_id
         )
     quotas_data_list = quotas_list_future.result()
     context = {
