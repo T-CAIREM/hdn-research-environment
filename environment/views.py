@@ -688,28 +688,30 @@ def delete_shared_bucket_content(request, bucket_name):
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def add_user_to_cloud_group(request, user_id):
-    user = User.objects.get(user_id)
+    user = User.objects.get(id=user_id)
     cloud_group_list = list(CloudGroup.objects.all())
     form = AddUserToCloudGroupForm(user=user, cloud_group_list=cloud_group_list)
 
     if request.method == "POST":
-        form = AddUserToCloudGroupForm(request.POST, user=user, cloud_group_list=cloud_group_list)
+        form = AddUserToCloudGroupForm(
+            request.POST, user=user, cloud_group_list=cloud_group_list
+        )
         if form.is_valid():
-            services.add_user_to_cloud_group(
-                user, form.cleaned_data["cloud_group"]
-            )
+            services.add_user_to_cloud_group(user, form.cleaned_data["cloud_group"])
             return redirect("cloud_groups")
     context = {"form": form, "user_id": user_id}
-    return render(request, "environment/admin/add_user_to_cloud_groups.html", context=context)
+    return render(
+        request, "environment/admin/add_user_to_cloud_groups.html", context=context
+    )
 
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def remove_user_from_cloud_group(request, user_id):
-    user = User.objects.get(user_id)
+    user = User.objects.get(id=user_id)
     form = RemoveUserFromCloudGroupForm(user=user)
 
     if request.method == "POST":
@@ -720,12 +722,14 @@ def remove_user_from_cloud_group(request, user_id):
             )
             return redirect("cloud_groups")
     context = {"form": form, "user_id": user_id}
-    return render(request, "environment/admin/remove_user_from_cloud_groups.html", context=context)
+    return render(
+        request, "environment/admin/remove_user_from_cloud_groups.html", context=context
+    )
 
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def create_cloud_group(request):
     form = AddCloudGroupForm()
 
@@ -744,21 +748,23 @@ def create_cloud_group(request):
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def delete_cloud_group(request):
     data = json.loads(request.body)
-    services.delete_cloud_group(
-        group_name=data["group_name"]
-    )
+    services.delete_cloud_group(group_name=data["group_name"])
     return JsonResponse({})
 
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def cloud_groups(request):
     q = request.GET.get("q")
-    cloud_identity_list = CloudIdentity.objects.filter(user__icontains=q) if q else CloudIdentity.objects.all()
+    cloud_identity_list = (
+        CloudIdentity.objects.filter(user__icontains=q)
+        if q
+        else CloudIdentity.objects.all()
+    )
 
     context = {"cloud_identity_list": cloud_identity_list}
     return render(
@@ -768,14 +774,20 @@ def cloud_groups(request):
 
 @login_required
 @cloud_identity_required
-@console_permission_required('user.can_view_admin_console')
+@console_permission_required("user.can_view_admin_console")
 def cloud_groups_management(request):
     q = request.GET.get("q")
-    cloud_group_list = CloudGroup.objects.prefetch_related("cloudidentity_set__user").filter(name__icontains=q) if q else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
+    cloud_group_list = (
+        CloudGroup.objects.prefetch_related("cloudidentity_set__user").filter(
+            name__icontains=q
+        )
+        if q
+        else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
+    )
 
     context = {"cloud_group_list": cloud_group_list}
     return render(
-        request, "environment/admin/cloud_user_group_panel.html", context=context
+        request,
+        "environment/admin/cloud_user_group_management_panel.html",
+        context=context,
     )
-
-

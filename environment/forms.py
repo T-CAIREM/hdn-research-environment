@@ -240,7 +240,9 @@ class AddUserToCloudGroupForm(forms.Form):
         self.fields["username"].initial = user.username
         self.fields["username"].disabled = True
         self.fields["cloud_group"].choices = [
-            (cloud_group.id, cloud_group.name) for cloud_group in cloud_group_list if cloud_group not in user.cloud_identity.user_groups.all()
+            (cloud_group.id, cloud_group.name)
+            for cloud_group in cloud_group_list
+            if cloud_group not in user.cloud_identity.user_groups.all()
         ]
 
 
@@ -267,7 +269,8 @@ class RemoveUserFromCloudGroupForm(forms.Form):
         self.fields["username"].initial = user.username
         self.fields["username"].disabled = True
         self.fields["cloud_group"].choices = [
-            (cloud_group.id, cloud_group.name) for cloud_group in user.cloud_identity.user_groups.all()
+            (cloud_group.id, cloud_group.name)
+            for cloud_group in user.cloud_identity.user_groups.all()
         ]
 
 
