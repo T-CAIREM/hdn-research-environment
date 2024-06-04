@@ -112,7 +112,6 @@ urlpatterns = [
     ),
     path("console/group/create", views.create_cloud_group, name="create_cloud_group"),
     path("console/group/delete", views.delete_cloud_group, name="delete_cloud_group"),
-
     path(
         "console/group/add/<user_id>",
         views.add_user_to_cloud_group,
@@ -124,6 +123,9 @@ urlpatterns = [
         name="remove_user_from_cloud_group",
     ),
     path("console/group", views.cloud_groups, name="cloud_groups"),
-    path("console/group/management", views.cloud_groups_management, name="cloud_groups_management"),
-
+    path(
+        "console/group/management",
+        views.cloud_groups_management,
+        name="cloud_groups_management",
+    ),
 ]

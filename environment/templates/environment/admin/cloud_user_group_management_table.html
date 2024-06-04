@@ -11,10 +11,12 @@
             <tbody>
                 {% for cloud_group in cloud_group_list %}
                     <tr>
-                        <td>cloud_group.name</td>
+                        <td>{{cloud_group.name}}</td>
+                        <td>
                         {% for cloud_identity in cloud_group.cloudidentity_set.all %}
-                            <td><a href="{% url 'user_management' cloud_identity.user.username %}">{{cloud_identity.user}}</a></td>
+                            <a href="{% url 'user_management' cloud_identity.user.username %}">{{cloud_identity.user}}</a>
                         {% endfor %}
+                        </td>
                         <td><a href="{% url 'delete_cloud_group' %}" class="btn btn-sm btn-primary btn-danger" role="button">Delete Group</a></td>
                     </tr>
                 {% endfor %}

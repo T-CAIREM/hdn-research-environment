@@ -813,11 +813,13 @@ def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
 
 
 def add_user_to_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
-    (user.cloud_identity.user_groups.add(cloud_group) for cloud_group in cloud_group_list)
+    for cloud_group in cloud_group_list:
+        user.cloud_identity.user_groups.add(cloud_group)
 
 
 def remove_user_from_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
-    (user.cloud_identity.user_groups.remove(cloud_group) for cloud_group in cloud_group_list)
+    for cloud_group in cloud_group_list:
+        user.cloud_identity.user_groups.remove(cloud_group)
 
 
 def create_cloud_group(group_name: str, description: str):
