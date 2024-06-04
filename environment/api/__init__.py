@@ -57,9 +57,12 @@ def revoke_billing_account_access(
 
 
 @api_request
-def create_workspace(email: str, billing_account_id: str, region: str) -> Request:
+def create_workspace(
+    email: str, billing_account_id: str, region: str, user_groups: list[str]
+) -> Request:
     json = {
         "user_email": email,
+        "user_groups": user_groups,
         "billing_account_id": billing_account_id,
         "region": region,
     }
@@ -93,6 +96,7 @@ def create_workbench(
     disk_size: str,
     bucket_name: str,
     workspace_project_id: str,
+    user_groups: list[str],
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
 ):
@@ -104,6 +108,7 @@ def create_workbench(
         "user_email": user_email,
         "bucket_name": bucket_name,
         "disk_size": disk_size,
+        "user_groups": user_groups,
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers,
     }
@@ -148,6 +153,7 @@ def change_workbench_machine_type(
     workbench_type: str,
     machine_type: str,
     user_email: str,
+    user_groups: list[str],
     workspace_project_id: str,
     workbench_resource_id: str,
 ) -> Request:
@@ -156,6 +162,7 @@ def change_workbench_machine_type(
         "workspace_project_id": workspace_project_id,
         "user_email": user_email,
         "workbench_resource_id": workbench_resource_id,
+        "user_groups": user_groups,
         "machine_type": machine_type,
     }
     return Request("PUT", url="/workbench/update", json=json)
@@ -311,9 +318,17 @@ def delete_shared_bucket_content(
 
 
 @api_request
-def create_google_user_group(group_name: str, description: str):
+def create_cloud_user_group(group_name: str, description: str):
     json = {
         "group_name": group_name,
         "description": description,
     }
     return Request("POST", url="/group/create", json=json)
+
+
+@api_request
+def delete_cloud_user_group(group_name: str):
+    json = {
+        "group_name": group_name,
+    }
+    return Request("DELETE", url="/group/delete", json=json)

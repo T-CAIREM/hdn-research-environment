@@ -47,10 +47,13 @@ from environment.exceptions import (
     CreateSharedBucketDirectoryFailed,
     DeleteSharedBucketContentFailed,
     InvitedUserIsAccountOwner,
+    CreateCloudGroupFailed,
+    DeleteCloudGroupFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
     CloudIdentity,
+    CloudGroup,
     Workflow,
     BucketSharingInvite,
 )
@@ -176,7 +179,7 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
         user_email=invite.user.cloud_identity.email,
         bucket_name=invite.shared_bucket_name,
         workspace_project_id=invite.shared_workspace_name,
-        permissions=invite.permissions
+        permissions=invite.permissions,
     )
     invite.is_consumed = True
     invite.save()
@@ -247,6 +250,9 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
         region=region,
+        user_groups=list(
+            user.cloud_identity.groups.all().values_list("name", flat=True)
+        ),
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -318,6 +324,9 @@ def _create_workbench_kwargs(
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers.split(","),
+        "user_groups": list(
+            user.cloud_identity.user_groups.all().values_list("name", flat=True)
+        ),
     }
 
 
@@ -577,6 +586,9 @@ def change_environment_machine_type(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
+        user_groups=list(
+            user.cloud_identity.user_groups.all().values_list("name", flat=True)
+        ),
     )
     if not response.ok:
         error_message = response.json()["message"]
@@ -637,7 +649,7 @@ def share_bucket(
     user_email: str,
     bucket_name: str,
     workspace_project_id: str,
-    permissions: str
+    permissions: str,
 ):
     response = api.share_bucket(
         owner_email=owner_email,
@@ -791,3 +803,27 @@ def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
     if not response.ok:
         error_message = response.json()
         raise DeleteSharedBucketContentFailed(error_message)
+
+
+def add_user_to_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
+    (user.cloud_identity.user_groups.add(cloud_group) for cloud_group in cloud_group_list)
+
+
+def remove_user_from_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
+    (user.cloud_identity.user_groups.remove(cloud_group) for cloud_group in cloud_group_list)
+
+
+def create_cloud_group(group_name: str, description: str):
+    response = api.create_cloud_user_group(group_name, description)
+    if not response.ok:
+        error_message = response.json()
+        raise CreateCloudGroupFailed(error_message)
+    CloudGroup.objects.create(name=group_name, description=description)
+
+
+def delete_cloud_group(group_name: str):
+    response = api.delete_cloud_user_group(group_name)
+    if not response.ok:
+        error_message = response.json()
+        raise DeleteCloudGroupFailed(error_message)
+    CloudGroup.objects.filter(name=group_name).delete()

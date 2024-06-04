@@ -9,6 +9,7 @@ from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
+from django.contrib.auth import get_user_model
 
 import environment.constants as constants
 import environment.services as services
@@ -17,6 +18,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
     billing_account_required,
+    console_permission_required,
 )
 from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
 from environment.forms import (
@@ -27,13 +29,20 @@ from environment.forms import (
     CreateSharedWorkspaceForm,
     CreateSharedBucketForm,
     BucketSharingForm,
+    AddUserToCloudGroupForm,
+    AddCloudGroupForm,
+    RemoveUserFromCloudGroupForm,
 )
 from environment.models import (
     BillingAccountSharingInvite,
     Workflow,
     BucketSharingInvite,
+    CloudGroup,
+    CloudIdentity,
 )
 from environment.utilities import user_has_cloud_identity
+
+User = get_user_model()
 
 
 @require_http_methods(["GET", "POST"])
@@ -85,7 +94,7 @@ def research_environments(request):
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
-        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL
+        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
     }
 
     return render(
@@ -120,7 +129,7 @@ def research_environments_partial(request):
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
-        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL
+        "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -432,7 +441,7 @@ def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
                     user_email=bucket_sharing_form.cleaned_data["user_email"],
                     shared_bucket_name=shared_bucket_name,
                     shared_workspace_name=shared_workspace_name,
-                    permissions=bucket_sharing_form.cleaned_data["user_permissions"]
+                    permissions=bucket_sharing_form.cleaned_data["user_permissions"],
                 )
                 return redirect(request.path)
         elif form_action == "revoke_access":
@@ -675,3 +684,98 @@ def delete_shared_bucket_content(request, bucket_name):
         bucket_name=bucket_name, full_path=data["full_path"], user=request.user
     )
     return JsonResponse({})
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def add_user_to_cloud_group(request, user_id):
+    user = User.objects.get(user_id)
+    cloud_group_list = list(CloudGroup.objects.all())
+    form = AddUserToCloudGroupForm(user=user, cloud_group_list=cloud_group_list)
+
+    if request.method == "POST":
+        form = AddUserToCloudGroupForm(request.POST, user=user, cloud_group_list=cloud_group_list)
+        if form.is_valid():
+            services.add_user_to_cloud_group(
+                user, form.cleaned_data["cloud_group"]
+            )
+            return redirect("cloud_groups")
+    context = {"form": form, "user_id": user_id}
+    return render(request, "environment/admin/add_user_to_cloud_groups.html", context=context)
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def remove_user_from_cloud_group(request, user_id):
+    user = User.objects.get(user_id)
+    form = RemoveUserFromCloudGroupForm(user=user)
+
+    if request.method == "POST":
+        form = RemoveUserFromCloudGroupForm(request.POST, user=user)
+        if form.is_valid():
+            services.remove_user_from_cloud_group(
+                user, form.cleaned_data["cloud_group"]
+            )
+            return redirect("cloud_groups")
+    context = {"form": form, "user_id": user_id}
+    return render(request, "environment/admin/remove_user_from_cloud_groups.html", context=context)
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def create_cloud_group(request):
+    form = AddCloudGroupForm()
+
+    if request.method == "POST":
+        form = AddCloudGroupForm(request.POST)
+        if form.is_valid():
+            services.create_cloud_group(
+                form.cleaned_data["name"], form.cleaned_data["description"]
+            )
+            return redirect("cloud_groups")
+    context = {"form": form}
+    return render(
+        request, "environment/admin/create_cloud_user_group.html", context=context
+    )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def delete_cloud_group(request):
+    data = json.loads(request.body)
+    services.delete_cloud_group(
+        group_name=data["group_name"]
+    )
+    return JsonResponse({})
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def cloud_groups(request):
+    q = request.GET.get("q")
+    cloud_identity_list = CloudIdentity.objects.filter(user__icontains=q) if q else CloudIdentity.objects.all()
+
+    context = {"cloud_identity_list": cloud_identity_list}
+    return render(
+        request, "environment/admin/cloud_user_group_panel.html", context=context
+    )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required('user.can_view_admin_console')
+def cloud_groups_management(request):
+    q = request.GET.get("q")
+    cloud_group_list = CloudGroup.objects.prefetch_related("cloudidentity_set__user").filter(name__icontains=q) if q else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
+
+    context = {"cloud_group_list": cloud_group_list}
+    return render(
+        request, "environment/admin/cloud_user_group_panel.html", context=context
+    )
+
+
