@@ -6,6 +6,8 @@ from django.db.models import Model
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import permission_required
+
 from environment.services import get_billing_accounts_list
 
 from environment.utilities import (
@@ -31,6 +33,17 @@ def _redirect_view_if_user(
             return view(request, *args, **kwargs)
 
         return wrapped_view
+
+    return wrapper
+
+
+def console_permission_required(perm):
+    # decorator from physionet to add  required permissions to views -
+    # they are needed to properly handle admin console views
+    def wrapper(view):
+        view = permission_required(perm, raise_exception=True)(view)
+        view.required_permission = perm
+        return view
 
     return wrapper
 
