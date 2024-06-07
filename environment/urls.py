@@ -128,4 +128,9 @@ urlpatterns = [
         views.cloud_groups_management,
         name="cloud_groups_management",
     ),
+    path(
+        "console/group/management-table",
+        views.cloud_groups_management_partial,
+        name="cloud_groups_management_partial",
+    ),
 ]
