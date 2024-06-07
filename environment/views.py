@@ -791,3 +791,24 @@ def cloud_groups_management(request):
         "environment/admin/cloud_user_group_management_panel.html",
         context=context,
     )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required("user.can_view_admin_console")
+def cloud_groups_management_partial(request):
+    q = request.GET.get("q")
+    cloud_group_list = (
+        CloudGroup.objects.prefetch_related("cloudidentity_set__user").filter(
+            name__icontains=q
+        )
+        if q
+        else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
+    )
+
+    context = {"cloud_group_list": cloud_group_list}
+    return render(
+        request,
+        "environment/admin/cloud_user_group_management_table.html",
+        context=context,
+    )
