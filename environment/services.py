@@ -251,7 +251,7 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         billing_account_id=billing_account_id,
         region=region,
         user_groups=list(
-            user.cloud_identity.groups.all().values_list("name", flat=True)
+            user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
     )
     if not response.ok:
