@@ -681,10 +681,7 @@ def delete_shared_bucket_content(request, bucket_name):
 @login_required
 @cloud_identity_required
 def get_quotas(request, workspace_project_id, workspace_region):
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        quotas_list_future = executor.submit(
-            services.list_quotas_data, workspace_region, workspace_project_id
-        )
+    quotas_list_future = services.list_quotas_data(workspace_region, workspace_project_id)
     quotas_data_list = quotas_list_future.result()
     context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
