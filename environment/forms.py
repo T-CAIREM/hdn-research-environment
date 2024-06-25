@@ -53,10 +53,6 @@ class CreateWorkspaceForm(forms.Form):
 
 
 class CreateResearchEnvironmentForm(forms.Form):
-    AVAILABLE_MACHINE_TYPES = [
-        (instance.id, instance)
-        for instance in VMInstance.objects.all()
-    ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
@@ -75,9 +71,9 @@ class CreateResearchEnvironmentForm(forms.Form):
     )
     workspace_region = forms.CharField(widget=forms.HiddenInput())
     project_id = forms.ChoiceField(label="Project")
-    machine_type = forms.ChoiceField(
+    machine_type = forms.ModelChoiceField(
         label="Instance type",
-        choices=AVAILABLE_MACHINE_TYPES,
+        queryset=VMInstance.objects.all(),
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     environment_type = forms.ChoiceField(
