@@ -73,7 +73,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ModelChoiceField(
         label="Instance type",
-        queryset=VMInstance.objects.all(),
+        queryset=VMInstance.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     environment_type = forms.ChoiceField(
@@ -116,6 +116,12 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
+        self.fields["machine_type"].queryset = VMInstance.objects.filter(
+            region__region=selected_workspace.region.value
+        )
+
+        # printing the queryset's result
+
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")

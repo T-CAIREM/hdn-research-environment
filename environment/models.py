@@ -114,7 +114,7 @@ class GCPRegion(models.Model):
     region = models.CharField(max_length=32)
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return self.region
 
 class VMInstance(models.Model):
     instance_type = models.ForeignKey(InstanceType, on_delete=models.CASCADE)
@@ -132,7 +132,7 @@ class VMInstance(models.Model):
         return f"{self.instance_type.value.upper()}_{self.machine_type.upper()}_{self.cpu}"
 
     def __str__(self):
-        return f"{self.instance_type.value.upper()}, {self.cpu} CPU {self.memory} GB RAM"
+        return f"{self.instance_type.value.upper()}, {self.cpu} CPU {self.memory} GB RAM - {self.region.region}"
 
     class Meta:
         unique_together = ("instance_type", "machine_type", "region", "cpu")
