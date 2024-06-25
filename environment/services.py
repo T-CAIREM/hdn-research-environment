@@ -55,6 +55,7 @@ from environment.models import (
     CloudIdentity,
     Workflow,
     BucketSharingInvite,
+    VMInstance,
 )
 from environment.utilities import inner_join_iterators, left_join_iterators
 
@@ -302,7 +303,7 @@ def _create_workbench_kwargs(
     user: User,
     project: PublishedProject,
     workspace_project_id: str,
-    machine_type: str,
+    machine_type: int,
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
@@ -310,11 +311,15 @@ def _create_workbench_kwargs(
 ) -> dict:
     user_email = user.cloud_identity.email
 
+    # getting the instance value for selected machine type.
+    instance = VMInstance.objects.get(id=machine_type)
+    instance_value = instance.get_instance_value()
+
     return {
         "user_email": user_email,
         "workspace_project_id": workspace_project_id,
         "workbench_type": workbench_type,
-        "machine_type": machine_type,
+        "machine_type": instance_value,
         "dataset_identifier": _project_data_group(project),
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
@@ -327,7 +332,7 @@ def create_research_environment(
     user: User,
     project: PublishedProject,
     workspace_project_id: str,
-    machine_type: str,
+    machine_type: int,
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,

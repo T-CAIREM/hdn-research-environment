@@ -5,15 +5,13 @@ from django.apps import apps
 from django.utils.safestring import mark_safe
 from django.core.validators import RegexValidator
 
-from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import (
-    InstanceType,
     ResearchWorkspace,
     SharedWorkspace,
     SharedBucket,
 )
 
-from environment.models import BucketSharingInvite
+from environment.models import BucketSharingInvite, VMInstance
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 User = apps.get_model("user", "User")
@@ -56,10 +54,8 @@ class CreateWorkspaceForm(forms.Form):
 
 class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_MACHINE_TYPES = [
-        ("n1-standard-2", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_2]),
-        ("n1-standard-4", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_4]),
-        ("n1-standard-8", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_8]),
-        ("n1-standard-16", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_16]),
+        (instance.id, instance)
+        for instance in VMInstance.objects.all()
     ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),

@@ -18,7 +18,7 @@ from environment.decorators import (
     require_PATCH,
     billing_account_required,
 )
-from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
+from environment.entities import WorkflowStatus, WorkspaceStatus
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -32,6 +32,7 @@ from environment.models import (
     BillingAccountSharingInvite,
     Workflow,
     BucketSharingInvite,
+    # VMInstance,
 )
 from environment.utilities import user_has_cloud_identity
 
@@ -237,7 +238,7 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
         if form.is_valid():
-            workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
+            workbench_cpu_usage = VMInstance.objects.get(id=form.cleaned_data["machine_type"]).cpu
             new_cpu_usage = (
                 services.cpu_usage(available_workspaces) + workbench_cpu_usage
             )
@@ -270,10 +271,21 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
 
+    INSTANCE_PROJECTED_COSTS = {}
+    for region in Region:
+        instances = VMInstance.objects.filter(
+            region=region.value
+        )
+        projected_costs = [
+            ProjectedWorkbenchCost(instance.get_instance_value(), instance.price)
+            for instance in instances
+        ]
+        INSTANCE_PROJECTED_COSTS[region] = projected_costs
+
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
-        "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
+        "instance_projected_costs": INSTANCE_PROJECTED_COSTS,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
