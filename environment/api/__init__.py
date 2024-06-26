@@ -308,3 +308,12 @@ def delete_shared_bucket_content(
         "user_email": user_email,
     }
     return Request("DELETE", url="/sharing/bucket/content/delete", json=json)
+
+
+@api_request
+def create_google_user_group(group_name: str, description: str):
+    json = {
+        "group_name": group_name,
+        "description": description,
+    }
+    return Request("POST", url="/group/create", json=json)
