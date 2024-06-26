@@ -90,7 +90,11 @@
         });
     }
 
-    var socket = io("{{ websocket_url }}");
+    var socket = io("{{ websocket_url }}", {
+      pingInterval: 25000,
+      pingTimeout: 60000,
+      reconnection: true,
+    });
 
     socket.on('workflow_update', function(data) {
         refreshCards(data.workbench_activity_id);
