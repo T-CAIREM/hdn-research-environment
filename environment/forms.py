@@ -4,6 +4,7 @@ from django import forms
 from django.apps import apps
 from django.utils.safestring import mark_safe
 from django.core.validators import RegexValidator
+from django.contrib.admin.widgets import FilteredSelectMultiple
 
 from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import (
@@ -288,3 +289,67 @@ class AddCloudGroupForm(forms.Form):
     description = forms.CharField(
         label="Cloud Group Description",
     )
+
+
+class AddRolesToCloudGroupForm(forms.Form):
+    cloud_group_name = forms.CharField(
+        label="Selected Group",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different group. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+    roles_list = forms.MultipleChoiceField(
+        label="Roles", widget=FilteredSelectMultiple("Roles", is_stacked=True)
+    )
+
+    class Media:
+        css = {
+            "all": ("/static/admin/css/widgets.css",),
+        }
+        js = ("/admin/jsi18n",)
+
+    def __init__(
+        self,
+        *args,
+        cloud_group_name: str,
+        available_roles: list,
+        **kwargs,
+    ):
+        super(AddRolesToCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["cloud_group_name"].initial = cloud_group_name
+        self.fields["cloud_group_name"].disabled = True
+        self.fields["roles_list"].choices = [
+            (role.full_name, role.full_name) for role in available_roles
+        ]
+
+
+class RemoveRolesFromCloudGroupForm(forms.Form):
+    cloud_group_name = forms.CharField(
+        label="Selected Group",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different group. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+    roles_list = forms.MultipleChoiceField(
+        widget=FilteredSelectMultiple("Roles", is_stacked=True)
+    )
+
+    class Media:
+        css = {
+            "all": ("/static/admin/css/widgets.css",),
+        }
+        js = ("/admin/jsi18n",)
+
+    def __init__(
+        self,
+        *args,
+        cloud_group_name: str,
+        available_roles: list,
+        **kwargs,
+    ):
+        super(RemoveRolesFromCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["cloud_group_name"].initial = cloud_group_name
+        self.fields["cloud_group_name"].disabled = True
+        self.fields["roles_list"].choices = [(role, role) for role in available_roles]

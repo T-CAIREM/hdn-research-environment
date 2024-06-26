@@ -17,8 +17,8 @@
                         <td>{{ cloud_identity.user.get_full_name }}</td>
                         <td>{{ cloud_identity.email }}</td>
                         <td>{{ cloud_identity.user_groups.all|join:", " }}</td>
-                        <td><a href="{% url 'add_user_to_cloud_group' user_id=cloud_identity.user.id %}" class="btn btn-sm btn-primary" role="button">Add Group</a>
-                        <a href="{% url 'remove_user_from_cloud_group' user_id=cloud_identity.user.id %}" class="btn btn-sm btn-danger" role="button">Remove Group</a></td>
+                        <td><a href="{% url 'add_user_to_cloud_group' user_id=cloud_identity.user.id %}" class="btn btn-sm btn-primary" role="button">Add Groups</a>
+                        <a href="{% url 'remove_user_from_cloud_group' user_id=cloud_identity.user.id %}" class="btn btn-sm btn-primary" role="button">Remove Groups</a></td>
                     </tr>
                 {% endfor %}
             </tbody>

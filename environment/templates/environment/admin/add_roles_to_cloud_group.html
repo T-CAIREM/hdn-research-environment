@@ -1,0 +1,33 @@
+{% extends "console/base_console.html" %}
+
+{% load static %}
+
+{% block title %}Role addition to Cloud Group{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/selector.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+      Add roles to Cloud Groups
+    </h1>
+    <div class="container-body">
+      <div class="card" style="width: 36rem;">
+        <div class="card-body">
+          <form class="single-submit-form" action="{% url 'add_roles_to_cloud_group' cloud_group_id=cloud_group_id %}" method="post" style="width: 24rem;">
+            <div>{% csrf_token %}
+              {{ form.media }} {{ form }}
+            </div>
+            <div>
+              <button class="btn btn-primary mt-3" type="submit">
+                Add roles
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
