@@ -187,3 +187,11 @@ class SharedBucketObject:
     full_path: str
     size: str = None
     modification_time: str = None
+
+
+@dataclass
+class QuotaInfo:
+    metric_name: str
+    limit: int
+    usage: int
+    usage_percentage: float

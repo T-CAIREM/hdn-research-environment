@@ -18,6 +18,7 @@ from environment.entities import (
     SharedBucket,
     SharedBucketObject,
     WorkspaceType,
+    QuotaInfo,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -161,4 +162,16 @@ def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject
             full_path=bucket_object["full_path"],
         )
         for bucket_object in data
+    ]
+
+
+def deserialize_quotas(data) -> Iterable[QuotaInfo]:
+    return [
+        QuotaInfo(
+            metric_name=quota["metric_name"],
+            limit=quota["limit"],
+            usage=quota["usage"],
+            usage_percentage=(quota["usage"] / quota["limit"]) * 100,
+        )
+        for quota in data
     ]
