@@ -280,7 +280,7 @@ def create_research_environment(request, workspace_id):
             region__region=region.value
         )
         projected_costs = [
-            ProjectedWorkbenchCost(instance.get_instance_value(), instance.price)
+            ProjectedWorkbenchCost(instance.id, instance.price)
             for instance in instances
         ]
         instance_projected_cost[region] = projected_costs
