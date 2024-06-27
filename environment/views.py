@@ -681,8 +681,7 @@ def delete_shared_bucket_content(request, bucket_name):
 @login_required
 @cloud_identity_required
 def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_list_future = services.list_quotas_data(workspace_region, workspace_project_id)
-    quotas_data_list = quotas_list_future.result()
+    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
     context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
     return render(request, "environment/quotas_list.html", context, status=200)
