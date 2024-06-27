@@ -599,9 +599,6 @@ def change_environment_machine_type(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
-        user_groups=list(
-            user.cloud_identity.user_groups.all().values_list("name", flat=True)
-        ),
     )
     if not response.ok:
         error_message = response.json()["message"]
