@@ -241,7 +241,8 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
         if form.is_valid():
-            workbench_cpu_usage = VMInstance.objects.get(id=form.cleaned_data["machine_type"]).cpu
+            selected_workbench = form.cleaned_data["machine_type"]
+            workbench_cpu_usage = selected_workbench.cpu
             new_cpu_usage = (
                 services.cpu_usage(available_workspaces) + workbench_cpu_usage
             )
