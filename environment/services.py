@@ -18,6 +18,7 @@ from environment.deserializers import (
     deserialize_shared_bucket_objects,
     deserialize_quotas,
     deserialize_cloud_roles,
+    deserialize_datasets_monitoring_data,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -26,6 +27,7 @@ from environment.entities import (
     SharedBucket,
     SharedBucketObject,
     QuotaInfo,
+    DatasetsMonitoringEntry,
 )
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
@@ -920,3 +922,8 @@ def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
 def match_groups_with_roles(cloud_groups: list[CloudGroup]):
     cloud_groups_iam_list = get_cloud_groups_iam_roles()
     return {group: deserialize_cloud_roles(cloud_groups_iam_list.get(group.name, "")) for group in cloud_groups}
+
+
+def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
+    response = api.get_datasets_monitoring_data()
+    return deserialize_datasets_monitoring_data(response.json())
