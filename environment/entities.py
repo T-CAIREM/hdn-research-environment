@@ -102,7 +102,7 @@ class ResearchEnvironment:
     region: Region
     type: EnvironmentType
     project: PublishedProject
-    machine_type: str
+    machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
 

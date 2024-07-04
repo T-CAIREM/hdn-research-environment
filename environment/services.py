@@ -716,7 +716,7 @@ def cpu_usage(workspaces: Iterable[ResearchWorkspace]) -> int:
             workbench, "machine_type"
         )  # HACK: Workbench scaffoldings do not have the machine type attribute.
     ]
-    return sum(workbench.machine_type.cpus() for workbench in workbenches)
+    return sum(workbench.cpu for workbench in workbenches)
 
 
 def exceeded_quotas(user) -> Iterable[str]:
