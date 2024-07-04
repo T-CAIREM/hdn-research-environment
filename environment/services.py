@@ -60,6 +60,7 @@ from environment.exceptions import (
     AddRolesToCloudGroupFailed,
     RemoveRolesFromCloudGroupFailed,
     GetGroupsIAMRolesFailed,
+    GetMonitoringDatasetsFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -926,4 +927,8 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
 
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
     response = api.get_datasets_monitoring_data()
+    if not response.ok:
+        error_message = response.json()
+        raise GetMonitoringDatasetsFailed(error_message)
+
     return deserialize_datasets_monitoring_data(response.json())

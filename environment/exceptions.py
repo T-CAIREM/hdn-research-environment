@@ -128,3 +128,7 @@ class RemoveRolesFromCloudGroupFailed(Exception):
 
 class GetGroupsIAMRolesFailed(Exception):
     pass
+
+
+class GetMonitoringDatasetsFailed(Exception):
+    pass
