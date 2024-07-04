@@ -854,7 +854,7 @@ def get_cloud_group_iam_roles(group_name: str):
     if not response.ok:
         error_message = response.json()
         raise GetGroupIAMRolesFailed(error_message)
-    return response.json()
+    return deserialize_cloud_roles(response.json())
 
 
 def get_cloud_groups_iam_roles():
@@ -881,4 +881,4 @@ def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
 
 def match_groups_with_roles(cloud_groups: list[CloudGroup]):
     cloud_groups_iam_list = get_cloud_groups_iam_roles()
-    return {group: cloud_groups_iam_list.get(group.name, "") for group in cloud_groups}
+    return {group: deserialize_cloud_roles(cloud_groups_iam_list.get(group.name, "")) for group in cloud_groups}
