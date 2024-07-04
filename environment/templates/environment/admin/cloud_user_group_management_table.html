@@ -1,0 +1,38 @@
+{% load action_buttons %}
+
+<div class="tab-pane fade show active" id="table" role="tabpanel" aria-labelledby="valid-tab">
+    {% csrf_token %}
+    <div class="table-responsive" id="searchitems">
+        <table class="table table-bordered table-cred" id="validt">
+            <thead>
+                <tr class="header">
+                    <th>Name</th>
+                    <th>Users</th>
+                    <th>Roles</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cloud_group, cloud_roles in cloud_group_roles_dict.items %}
+                    <tr>
+                        <td>{{cloud_group.name}}</td>
+                        <td>
+                        {% for cloud_identity in cloud_group.cloudidentity_set.all %}
+                            <a href="{% url 'user_management' cloud_identity.user.username %}">{{cloud_identity.user}}</a>
+                        {% endfor %}
+                        </td>
+                        <td>
+                            {{ cloud_roles|join:"," }}
+                        </td>
+                        <td>
+                            <a href="{% url 'add_roles_to_cloud_group' cloud_group_id=cloud_group.id %}" class="btn btn-sm btn-primary m-1" role="button">Add Roles</a>
+                            <a href="{% url 'remove_roles_from_cloud_group' cloud_group_id=cloud_group.id %}" class="btn btn-sm btn-primary m-1" role="button">Remove Roles</a>
+                            {% delete_group_modal_button cloud_group_name=cloud_group.name %}</td>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include "environment/admin/pagination.html" with pagination=trainings %}
+    </div>
+</div>

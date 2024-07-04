@@ -16,6 +16,7 @@ from environment.deserializers import (
     deserialize_shared_workspaces,
     deserialize_shared_bucket_objects,
     deserialize_quotas,
+    deserialize_cloud_roles,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -49,10 +50,18 @@ from environment.exceptions import (
     CreateSharedBucketDirectoryFailed,
     DeleteSharedBucketContentFailed,
     InvitedUserIsAccountOwner,
+    CreateCloudGroupFailed,
+    DeleteCloudGroupFailed,
+    ListGroupRolesFailed,
+    GetGroupIAMRolesFailed,
+    AddRolesToCloudGroupFailed,
+    RemoveRolesFromCloudGroupFailed,
+    GetGroupsIAMRolesFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
     CloudIdentity,
+    CloudGroup,
     Workflow,
     BucketSharingInvite,
     VMInstance,
@@ -179,7 +188,7 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
         user_email=invite.user.cloud_identity.email,
         bucket_name=invite.shared_bucket_name,
         workspace_project_id=invite.shared_workspace_name,
-        permissions=invite.permissions
+        permissions=invite.permissions,
     )
     invite.is_consumed = True
     invite.save()
@@ -250,6 +259,9 @@ def create_workspace(user: User, billing_account_id: str, region: str):
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
         region=region,
+        user_groups=list(
+            user.cloud_identity.user_groups.all().values_list("name", flat=True)
+        ),
     )
     if not response.ok:
         error_message = response.json()["error"]
@@ -323,6 +335,9 @@ def _create_workbench_kwargs(
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers.split(","),
+        "user_groups": list(
+            user.cloud_identity.user_groups.all().values_list("name", flat=True)
+        ),
     }
 
 
@@ -647,7 +662,7 @@ def share_bucket(
     user_email: str,
     bucket_name: str,
     workspace_project_id: str,
-    permissions: str
+    permissions: str,
 ):
     response = api.share_bucket(
         owner_email=owner_email,
@@ -801,3 +816,72 @@ def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
     if not response.ok:
         error_message = response.json()
         raise DeleteSharedBucketContentFailed(error_message)
+
+
+def add_user_to_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
+    for cloud_group in cloud_group_list:
+        user.cloud_identity.user_groups.add(cloud_group)
+
+
+def remove_user_from_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
+    for cloud_group in cloud_group_list:
+        user.cloud_identity.user_groups.remove(cloud_group)
+
+
+def create_cloud_group(group_name: str, description: str):
+    response = api.create_cloud_user_group(group_name, description)
+    if not response.ok:
+        error_message = response.json()
+        raise CreateCloudGroupFailed(error_message)
+    CloudGroup.objects.create(name=group_name, description=description)
+
+
+def delete_cloud_group(group_name: str):
+    response = api.delete_cloud_user_group(group_name)
+    if not response.ok:
+        error_message = response.json()
+        raise DeleteCloudGroupFailed(error_message)
+    CloudGroup.objects.filter(name=group_name).delete()
+
+
+def list_cloud_group_roles():
+    response = api.list_cloud_group_roles()
+    if not response.ok:
+        error_message = response.json()
+        raise ListGroupRolesFailed(error_message)
+    return deserialize_cloud_roles(response.json())
+
+
+def get_cloud_group_iam_roles(group_name: str):
+    response = api.get_cloud_group_iam_roles(group_name)
+    if not response.ok:
+        error_message = response.json()
+        raise GetGroupIAMRolesFailed(error_message)
+    return response.json()
+
+
+def get_cloud_groups_iam_roles():
+    response = api.get_cloud_groups_iam_roles()
+    if not response.ok:
+        error_message = response.json()
+        raise GetGroupsIAMRolesFailed(error_message)
+    return response.json()
+
+
+def add_roles_to_cloud_group(group_name: str, role_list: list[str]):
+    response = api.add_roles_to_cloud_group(group_name, role_list)
+    if not response.ok:
+        error_message = response.json()
+        raise AddRolesToCloudGroupFailed(error_message)
+
+
+def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
+    response = api.remove_roles_from_cloud_group(group_name, role_list)
+    if not response.ok:
+        error_message = response.json()
+        raise RemoveRolesFromCloudGroupFailed(error_message)
+
+
+def match_groups_with_roles(cloud_groups: list[CloudGroup]):
+    cloud_groups_iam_list = get_cloud_groups_iam_roles()
+    return {group: cloud_groups_iam_list.get(group.name, "") for group in cloud_groups}

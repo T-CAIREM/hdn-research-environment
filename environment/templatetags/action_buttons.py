@@ -182,3 +182,19 @@ def shared_workspace_destroy_modal_button(
         "disabled": len(shared_workspace.buckets) > 0,
     }
     return result_data
+
+
+@register.inclusion_tag("tag/group_modal_button.html")
+def delete_group_modal_button(
+    cloud_group_name: str,
+) -> dict:
+    result_data = {
+        "button_text": "Delete Group",
+        "modal_title": "Delete Group",
+        "modal_body": "Are you sure you want to delete this group?",
+        "button_class": "btn-danger",
+        "modal_id": f"group-delete-{cloud_group_name}",
+        "button_type": "cloud_group_delete",
+        "cloud_group_name": cloud_group_name,
+    }
+    return result_data

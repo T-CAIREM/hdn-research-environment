@@ -4,6 +4,7 @@ from django import forms
 from django.apps import apps
 from django.utils.safestring import mark_safe
 from django.core.validators import RegexValidator
+from django.contrib.admin.widgets import FilteredSelectMultiple
 
 from environment.entities import (
     ResearchWorkspace,
@@ -11,7 +12,7 @@ from environment.entities import (
     SharedBucket,
 )
 
-from environment.models import BucketSharingInvite, VMInstance
+from environment.models import BucketSharingInvite, VMInstance, CloudGroup
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 User = apps.get_model("user", "User")
@@ -212,3 +213,141 @@ class BucketSharingForm(forms.Form):
             raise forms.ValidationError(
                 "Invitation has been already sent to this email address"
             )
+
+
+class AddUserToCloudGroupForm(forms.Form):
+    username = forms.CharField(
+        label="Selected User",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different user. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+
+    cloud_group = forms.MultipleChoiceField(
+        label="Google Cloud Group",
+    )
+
+    def __init__(
+        self,
+        *args,
+        user: User,
+        cloud_group_list: Iterable[CloudGroup],
+        **kwargs,
+    ):
+        super(AddUserToCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["username"].initial = user.username
+        self.fields["username"].disabled = True
+        self.fields["cloud_group"].choices = [
+            (cloud_group.id, cloud_group.name)
+            for cloud_group in cloud_group_list
+            if cloud_group not in user.cloud_identity.user_groups.all()
+        ]
+
+
+class RemoveUserFromCloudGroupForm(forms.Form):
+    username = forms.CharField(
+        label="Selected User",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different user. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+
+    cloud_group = forms.MultipleChoiceField(
+        label="User Google Cloud Groups",
+    )
+
+    def __init__(
+        self,
+        *args,
+        user: User,
+        **kwargs,
+    ):
+        super(RemoveUserFromCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["username"].initial = user.username
+        self.fields["username"].disabled = True
+        self.fields["cloud_group"].choices = [
+            (cloud_group.id, cloud_group.name)
+            for cloud_group in user.cloud_identity.user_groups.all()
+        ]
+
+
+class AddCloudGroupForm(forms.Form):
+    name = forms.CharField(
+        max_length=50,
+        label="Cloud Group Name",
+        validators=[RegexValidator(r"^[a-z0-9-_]+$")],
+        error_messages={
+            "invalid": "Enter a value that consists only of lowercase letters, digits, dashes or underscores"
+        },
+        help_text="<p>Note: Should consists only of lowercase letters, digits, dashes and underscores</p>",
+    )
+
+    description = forms.CharField(
+        label="Cloud Group Description",
+    )
+
+
+class AddRolesToCloudGroupForm(forms.Form):
+    cloud_group_name = forms.CharField(
+        label="Selected Group",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different group. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+    roles_list = forms.MultipleChoiceField(
+        label="Roles", widget=FilteredSelectMultiple("Roles", is_stacked=True)
+    )
+
+    class Media:
+        css = {
+            "all": ("/static/admin/css/widgets.css",),
+        }
+        js = ("/admin/jsi18n",)
+
+    def __init__(
+        self,
+        *args,
+        cloud_group_name: str,
+        available_roles: list,
+        **kwargs,
+    ):
+        super(AddRolesToCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["cloud_group_name"].initial = cloud_group_name
+        self.fields["cloud_group_name"].disabled = True
+        self.fields["roles_list"].choices = [
+            (role.full_name, role.full_name) for role in available_roles
+        ]
+
+
+class RemoveRolesFromCloudGroupForm(forms.Form):
+    cloud_group_name = forms.CharField(
+        label="Selected Group",
+        help_text=mark_safe(
+            'Go <a href="/environments/console/group">back</a> to select a different group. <br>'
+        ),
+        widget=forms.TextInput(attrs={"class": "text-muted"}),
+    )
+    roles_list = forms.MultipleChoiceField(
+        widget=FilteredSelectMultiple("Roles", is_stacked=True)
+    )
+
+    class Media:
+        css = {
+            "all": ("/static/admin/css/widgets.css",),
+        }
+        js = ("/admin/jsi18n",)
+
+    def __init__(
+        self,
+        *args,
+        cloud_group_name: str,
+        available_roles: list,
+        **kwargs,
+    ):
+        super(RemoveRolesFromCloudGroupForm, self).__init__(*args, **kwargs)
+        self.fields["cloud_group_name"].initial = cloud_group_name
+        self.fields["cloud_group_name"].disabled = True
+        self.fields["roles_list"].choices = [(role, role) for role in available_roles]
