@@ -100,3 +100,11 @@ class DeleteSharedBucketContentFailed(Exception):
 
 class InvitedUserIsAccountOwner(Exception):
     pass
+
+
+class CreateCloudGroupFailed(Exception):
+    pass
+
+
+class DeleteCloudGroupFailed(Exception):
+    pass

@@ -1,0 +1,31 @@
+{% extends "console/base_console.html" %}
+
+{% load static %}
+
+{% block title %}Edit Submission - {{ project }}{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'project/css/submission-timeline.css' %}">
+{% endblock %}
+
+{% block local_js_top %}
+<script src="{% static 'custom/js/copy-to-clipboard.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<h1>Cloud Group Creation Form</h1>
+<hr>
+<div class="card mb-3">
+  <div class="card-body">
+    <form action="" method="post" class="form-signin">
+      {% csrf_token %}
+      {{ form }}
+      <button class="btn btn-primary btn-fixed mt-3" name="submit_response" type="submit">Create</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block local_js_bottom %}
+<script src="{% static 'custom/js/enable-popover.js' %}"></script>
+{% endblock %}

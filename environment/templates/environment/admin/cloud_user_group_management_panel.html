@@ -1,0 +1,35 @@
+{% extends "console/base_console.html" %}
+
+{% load static %}
+
+{% block title %}Cloud Groups Management{% endblock %}
+
+{% block local_css %}
+  <link rel="stylesheet" type="text/css" href="{% static 'custom/css/pagination.css' %}">
+{% endblock %}
+
+{% block content %}
+ <script src="{% static 'console/js/generic-filter.js' %}"></script>
+ <div class="card mb-3">
+  <div class="card-header">
+    Cloud Groups Management
+  </div>
+  <div class="card-body" >
+    <input id="searchbox" type="search" oninput="search();"  placeholder="Search...">
+      {% include "environment/admin/cloud_user_group_management_table.html" %}
+      {% include "environment/admin/pagination.html" with pagination=c_projects %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block local_js_bottom %}
+  <script>
+    const search = () => {
+      const filters = {
+        q: $('#searchbox').val()
+      }
+      filter('{% url 'cloud_groups_management' %}', filters)
+    }
+  </script>
+{% endblock %}

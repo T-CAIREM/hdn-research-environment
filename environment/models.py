@@ -8,6 +8,10 @@ from environment.validators import gcp_billing_account_id_validator
 
 class CloudGroup(models.Model):
     name = models.CharField(max_length=50, unique=True)
+    description = models.TextField()
+
+    def __str__(self):
+        return self.name
 
 
 class CloudIdentity(models.Model):
