@@ -158,7 +158,6 @@ def change_workbench_machine_type(
     workbench_type: str,
     machine_type: str,
     user_email: str,
-    user_groups: list[str],
     workspace_project_id: str,
     workbench_resource_id: str,
 ) -> Request:
@@ -167,7 +166,6 @@ def change_workbench_machine_type(
         "workspace_project_id": workspace_project_id,
         "user_email": user_email,
         "workbench_resource_id": workbench_resource_id,
-        "user_groups": user_groups,
         "machine_type": machine_type,
     }
     return Request("PUT", url="/workbench/update", json=json)
