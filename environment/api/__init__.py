@@ -109,7 +109,7 @@ def create_workbench(
         "memory": memory,
         "cpu": cpu,
         "workspace_project_id": workspace_project_id,
-        "dataset_identifier": "test-copyedit-error",
+        "dataset_identifier": dataset_identifier,
         "user_email": user_email,
         "bucket_name": bucket_name,
         "disk_size": disk_size,
