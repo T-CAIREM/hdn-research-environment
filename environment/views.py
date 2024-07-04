@@ -798,7 +798,7 @@ def cloud_groups_management(request):
     )
     groups_with_roles = services.match_groups_with_roles(cloud_group_list)
 
-    context = {"cloud_group_list": groups_with_roles}
+    context = {"cloud_group_roles_dict": groups_with_roles}
     return render(
         request,
         "environment/admin/cloud_user_group_management_panel.html",
@@ -820,7 +820,7 @@ def cloud_groups_management_partial(request):
     )
     groups_with_roles = services.match_groups_with_roles(cloud_group_list)
 
-    context = {"cloud_group_list": groups_with_roles}
+    context = {"cloud_group_roles_dict": groups_with_roles}
     return render(
         request,
         "environment/admin/cloud_user_group_management_table.html",
@@ -836,12 +836,12 @@ def add_roles_to_cloud_group(request, cloud_group_id):
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         cloud_list_future = executor.submit(services.list_cloud_group_roles)
-        available_roles_list_feature = executor.submit(
+        available_roles_list_future = executor.submit(
             services.get_cloud_group_iam_roles, cloud_group.name
         )
 
     cloud_roles = cloud_list_future.result()
-    owned_cloud_roles = available_roles_list_feature.result()
+    owned_cloud_roles = available_roles_list_future.result()
     available_roles = [
         role for role in cloud_roles if role.full_name not in owned_cloud_roles
     ]
