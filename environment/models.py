@@ -110,6 +110,8 @@ class InstanceType(models.Model):
         unique_together = ("family", "value")
 
 
+# This Region has been added to be used for the VMInstance model.
+# The region entity is still being used and will be phased out slowly.
 class GCPRegion(models.Model):
     region = models.CharField(max_length=32)
 
