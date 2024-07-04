@@ -19,6 +19,7 @@ from environment.entities import (
     SharedBucketObject,
     WorkspaceType,
     QuotaInfo,
+    CloudRole,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -174,4 +175,15 @@ def deserialize_quotas(data) -> Iterable[QuotaInfo]:
             usage_percentage=(quota["usage"] / quota["limit"]) * 100,
         )
         for quota in data
+    ]
+
+
+def deserialize_cloud_roles(data: dict) -> Iterable[CloudRole]:
+    return [
+        CloudRole(
+            full_name=role_object["full_name"],
+            title=role_object["title"],
+            description=role_object["description"],
+        )
+        for role_object in data
     ]

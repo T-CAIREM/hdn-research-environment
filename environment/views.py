@@ -32,6 +32,8 @@ from environment.forms import (
     AddUserToCloudGroupForm,
     AddCloudGroupForm,
     RemoveUserFromCloudGroupForm,
+    AddRolesToCloudGroupForm,
+    RemoveRolesFromCloudGroupForm,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -794,8 +796,9 @@ def cloud_groups_management(request):
         if q
         else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
     )
+    groups_with_roles = services.match_groups_with_roles(cloud_group_list)
 
-    context = {"cloud_group_list": cloud_group_list}
+    context = {"cloud_group_roles_dict": groups_with_roles}
     return render(
         request,
         "environment/admin/cloud_user_group_management_panel.html",
@@ -815,10 +818,79 @@ def cloud_groups_management_partial(request):
         if q
         else CloudGroup.objects.prefetch_related("cloudidentity_set__user").all()
     )
+    groups_with_roles = services.match_groups_with_roles(cloud_group_list)
 
-    context = {"cloud_group_list": cloud_group_list}
+    context = {"cloud_group_roles_dict": groups_with_roles}
     return render(
         request,
         "environment/admin/cloud_user_group_management_table.html",
         context=context,
+    )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required("user.can_view_admin_console")
+def add_roles_to_cloud_group(request, cloud_group_id):
+    cloud_group = CloudGroup.objects.get(id=cloud_group_id)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        cloud_list_future = executor.submit(services.list_cloud_group_roles)
+        available_roles_list_future = executor.submit(
+            services.get_cloud_group_iam_roles, cloud_group.name
+        )
+
+    cloud_roles = cloud_list_future.result()
+    owned_cloud_roles = available_roles_list_future.result()
+    available_roles = [
+        role for role in cloud_roles if role.full_name not in owned_cloud_roles
+    ]
+
+    form = AddRolesToCloudGroupForm(
+        cloud_group_name=cloud_group.name, available_roles=available_roles
+    )
+
+    if request.method == "POST":
+        form = AddRolesToCloudGroupForm(
+            request.POST,
+            cloud_group_name=cloud_group.name,
+            available_roles=available_roles,
+        )
+        if form.is_valid():
+            services.add_roles_to_cloud_group(
+                cloud_group.name, form.cleaned_data["roles_list"]
+            )
+            return redirect("cloud_groups_management")
+    context = {"form": form, "cloud_group_id": cloud_group_id}
+    return render(
+        request, "environment/admin/add_roles_to_cloud_group.html", context=context
+    )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required("user.can_view_admin_console")
+def remove_roles_from_cloud_group(request, cloud_group_id):
+    cloud_group = CloudGroup.objects.get(id=cloud_group_id)
+
+    available_roles = services.get_cloud_group_iam_roles(cloud_group.name)
+
+    form = RemoveRolesFromCloudGroupForm(
+        cloud_group_name=cloud_group.name, available_roles=available_roles
+    )
+
+    if request.method == "POST":
+        form = RemoveRolesFromCloudGroupForm(
+            request.POST,
+            cloud_group_name=cloud_group.name,
+            available_roles=available_roles,
+        )
+        if form.is_valid():
+            services.remove_roles_from_cloud_group(
+                cloud_group.name, form.cleaned_data["roles_list"]
+            )
+            return redirect("cloud_groups_management")
+    context = {"form": form, "cloud_group_id": cloud_group_id}
+    return render(
+        request, "environment/admin/remove_roles_from_cloud_group.html", context=context
     )

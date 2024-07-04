@@ -190,6 +190,13 @@ class SharedBucketObject:
 
 
 @dataclass
+class CloudRole:
+    full_name: str
+    title: str
+    description: str
+
+
+@dataclass
 class QuotaInfo:
     metric_name: str
     limit: int

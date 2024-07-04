@@ -249,14 +249,18 @@ def delete_shared_bucket(bucket_name: str) -> Request:
 
 @api_request
 def share_bucket(
-    owner_email: str, user_email: str, workspace_project_id: str, bucket_name: str, permissions: str
+    owner_email: str,
+    user_email: str,
+    workspace_project_id: str,
+    bucket_name: str,
+    permissions: str,
 ) -> Request:
     json = {
         "sharer_email": owner_email,
         "accessor_email": user_email,
         "bucket_name": bucket_name,
         "project_id": workspace_project_id,
-        "permissions": permissions
+        "permissions": permissions,
     }
     return Request("POST", url="/sharing/bucket/share", json=json)
 
@@ -323,7 +327,7 @@ def delete_shared_bucket_content(
 
 
 @api_request
-def create_cloud_user_group(group_name: str, description: str):
+def create_cloud_user_group(group_name: str, description: str) -> Request:
     json = {
         "group_name": group_name,
         "description": description,
@@ -332,8 +336,35 @@ def create_cloud_user_group(group_name: str, description: str):
 
 
 @api_request
-def delete_cloud_user_group(group_name: str):
+def delete_cloud_user_group(group_name: str) -> Request:
     json = {
         "group_name": group_name,
     }
     return Request("DELETE", url="/group/delete", json=json)
+
+
+@api_request
+def list_cloud_group_roles() -> Request:
+    return Request("GET", url="/group/roles")
+
+
+@api_request
+def get_cloud_group_iam_roles(group_name: str) -> Request:
+    return Request("GET", url=f"/group/roles/iam/{group_name}")
+
+
+@api_request
+def get_cloud_groups_iam_roles() -> Request:
+    return Request("GET", url="/group/roles/iam")
+
+
+@api_request
+def add_roles_to_cloud_group(group_name: str, role_list: list) -> Request:
+    json = {"group_name": group_name, "role_list": role_list}
+    return Request("POST", url="/group/roles/add", json=json)
+
+
+@api_request
+def remove_roles_from_cloud_group(group_name: str, role_list: list) -> Request:
+    json = {"group_name": group_name, "role_list": role_list}
+    return Request("POST", url="/group/roles/remove", json=json)

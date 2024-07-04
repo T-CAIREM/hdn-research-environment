@@ -133,4 +133,14 @@ urlpatterns = [
         views.cloud_groups_management_partial,
         name="cloud_groups_management_partial",
     ),
+    path(
+        "console/group/<cloud_group_id>/roles/add",
+        views.add_roles_to_cloud_group,
+        name="add_roles_to_cloud_group",
+    ),
+    path(
+        "console/group/<cloud_group_id>/roles/remove",
+        views.remove_roles_from_cloud_group,
+        name="remove_roles_from_cloud_group",
+    ),
 ]

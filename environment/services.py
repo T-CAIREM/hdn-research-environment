@@ -16,6 +16,7 @@ from environment.deserializers import (
     deserialize_shared_workspaces,
     deserialize_shared_bucket_objects,
     deserialize_quotas,
+    deserialize_cloud_roles,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -51,6 +52,11 @@ from environment.exceptions import (
     InvitedUserIsAccountOwner,
     CreateCloudGroupFailed,
     DeleteCloudGroupFailed,
+    ListGroupRolesFailed,
+    GetGroupIAMRolesFailed,
+    AddRolesToCloudGroupFailed,
+    RemoveRolesFromCloudGroupFailed,
+    GetGroupsIAMRolesFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -836,3 +842,46 @@ def delete_cloud_group(group_name: str):
         error_message = response.json()
         raise DeleteCloudGroupFailed(error_message)
     CloudGroup.objects.filter(name=group_name).delete()
+
+
+def list_cloud_group_roles():
+    response = api.list_cloud_group_roles()
+    if not response.ok:
+        error_message = response.json()
+        raise ListGroupRolesFailed(error_message)
+    return deserialize_cloud_roles(response.json())
+
+
+def get_cloud_group_iam_roles(group_name: str):
+    response = api.get_cloud_group_iam_roles(group_name)
+    if not response.ok:
+        error_message = response.json()
+        raise GetGroupIAMRolesFailed(error_message)
+    return response.json()
+
+
+def get_cloud_groups_iam_roles():
+    response = api.get_cloud_groups_iam_roles()
+    if not response.ok:
+        error_message = response.json()
+        raise GetGroupsIAMRolesFailed(error_message)
+    return response.json()
+
+
+def add_roles_to_cloud_group(group_name: str, role_list: list[str]):
+    response = api.add_roles_to_cloud_group(group_name, role_list)
+    if not response.ok:
+        error_message = response.json()
+        raise AddRolesToCloudGroupFailed(error_message)
+
+
+def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
+    response = api.remove_roles_from_cloud_group(group_name, role_list)
+    if not response.ok:
+        error_message = response.json()
+        raise RemoveRolesFromCloudGroupFailed(error_message)
+
+
+def match_groups_with_roles(cloud_groups: list[CloudGroup]):
+    cloud_groups_iam_list = get_cloud_groups_iam_roles()
+    return {group: cloud_groups_iam_list.get(group.name, "") for group in cloud_groups}
