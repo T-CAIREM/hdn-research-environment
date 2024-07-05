@@ -122,6 +122,7 @@ class GCPRegion(models.Model):
     def __str__(self):
         return self.region
 
+
 class VMInstance(models.Model):
     instance_type = models.ForeignKey(InstanceType, on_delete=models.CASCADE)
     machine_type = models.CharField(max_length=32, choices=MACHINE_TYPE_CHOICES)
@@ -135,7 +136,9 @@ class VMInstance(models.Model):
         return f"{self.instance_type.value}-{self.machine_type}-{self.cpu}"
 
     def get_instance_key(self):
-        return f"{self.instance_type.value.upper()}_{self.machine_type.upper()}_{self.cpu}"
+        return (
+            f"{self.instance_type.value.upper()}_{self.machine_type.upper()}_{self.cpu}"
+        )
 
     def __str__(self):
         return f"{self.instance_type.value.upper()}, {self.cpu} CPU {self.memory} GB RAM - {self.region.region}"

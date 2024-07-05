@@ -44,7 +44,6 @@ GPU_PROJECTED_COSTS = {
 }
 
 
-
 DATA_STORAGE_PROJECTED_COSTS = {
     Region.US_CENTRAL: ProjectedWorkbenchCost(PERSISTENT_DATA_DISK_NAME, 0.05),
     Region.NORTHAMERICA_NORTHEAST: ProjectedWorkbenchCost(

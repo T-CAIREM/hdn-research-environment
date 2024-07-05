@@ -43,25 +43,27 @@ def deserialize_research_environments(
     projects: Iterable[PublishedProject],
 ) -> Iterable[ResearchEnvironment]:
     return [
-        ResearchEnvironment(
-            gcp_identifier=workbench["gcp_identifier"],
-            dataset_identifier=workbench["dataset_identifier"],
-            url=workbench.get("url"),
-            workspace_name=gcp_project_id,
-            status=EnvironmentStatus(workbench["status"]),
-            cpu=workbench["cpu"],
-            memory=workbench["memory"],
-            region=region,
-            type=EnvironmentType(workbench["workbench_type"]),
-            machine_type=workbench["machine_type"],
-            disk_size=workbench.get("disk_size"),
-            project=_get_project_for_environment(
-                workbench["dataset_identifier"], projects
-            ),
-            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+        (
+            ResearchEnvironment(
+                gcp_identifier=workbench["gcp_identifier"],
+                dataset_identifier=workbench["dataset_identifier"],
+                url=workbench.get("url"),
+                workspace_name=gcp_project_id,
+                status=EnvironmentStatus(workbench["status"]),
+                cpu=workbench["cpu"],
+                memory=workbench["memory"],
+                region=region,
+                type=EnvironmentType(workbench["workbench_type"]),
+                machine_type=workbench["machine_type"],
+                disk_size=workbench.get("disk_size"),
+                project=_get_project_for_environment(
+                    workbench["dataset_identifier"], projects
+                ),
+                gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+            )
+            if workbench.get("type") == "Workbench"
+            else deserialize_entity_scaffolding(workbench)
         )
-        if workbench.get("type") == "Workbench"
-        else deserialize_entity_scaffolding(workbench)
         for workbench in workbenches
     ]
 
@@ -123,18 +125,23 @@ def deserialize_workspaces(
     data: dict, projects: Iterable[PublishedProject]
 ) -> Iterable[ResearchWorkspace]:
     return [
-        deserialize_workspace_details(workspace_data, projects)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
+        (
+            deserialize_workspace_details(workspace_data, projects)
+            if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
+            else deserialize_entity_scaffolding(workspace_data)
+        )
         for workspace_data in data
     ]
 
 
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
-        deserialize_shared_workspace_details(workspace_data)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
+        (
+            deserialize_shared_workspace_details(workspace_data)
+            if WorkspaceType(workspace_data.get("type"))
+            == WorkspaceType.SHARED_WORKSPACE
+            else deserialize_entity_scaffolding(workspace_data)
+        )
         for workspace_data in data
     ]
 

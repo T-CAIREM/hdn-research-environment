@@ -51,6 +51,7 @@ User = get_user_model()
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
+
 @require_http_methods(["GET", "POST"])
 @login_required
 def identity_provisioning(request):
@@ -288,9 +289,7 @@ def create_research_environment(request, workspace_id):
 
     instance_projected_cost = {}
     for region in Region:
-        instances = VMInstance.objects.filter(
-            region__region=region.value
-        )
+        instances = VMInstance.objects.filter(region__region=region.value)
         projected_costs = [
             ProjectedWorkbenchCost(instance.id, instance.price)
             for instance in instances

@@ -14,9 +14,11 @@ class Region(Enum):
     EUROPE_WEST = "europe-west3"
     AUSTRALIA_SOUTHEAST = "australia-southeast1"
 
+
 class BucketObjectType(Enum):
     DIRECTORY = "directory"
     FILE = "file"
+
 
 class GPUAcceleratorType(Enum):
     NVIDIA_TESLA_T4 = "nvidia-tesla-t4"
