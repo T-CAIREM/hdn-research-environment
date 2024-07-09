@@ -2,7 +2,6 @@ from collections import namedtuple
 
 from environment.entities import (
     GPUAcceleratorType,
-    # InstanceType,
     Region,
 )
 

@@ -121,8 +121,6 @@ class CreateResearchEnvironmentForm(forms.Form):
             region__region=selected_workspace.region.value
         )
 
-        # printing the queryset's result
-
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]

@@ -296,8 +296,6 @@ def create_research_environment(request, workspace_id):
         ]
         instance_projected_cost[region] = projected_costs
 
-    print(instance_projected_cost)
-
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
