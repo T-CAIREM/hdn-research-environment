@@ -1,0 +1,402 @@
+[
+  {
+    "model": "environment.instancetype",
+    "pk": 1,
+    "fields": {
+      "family": "general",
+      "value": "n1"
+    }
+  },
+  {
+    "model": "environment.gcpregion",
+    "pk": 1,
+    "fields": {
+      "region": "us-central1"
+    }
+  },
+  {
+    "model": "environment.gcpregion",
+    "pk": 2,
+    "fields": {
+      "region": "northamerica-northeast1"
+    }
+  },
+  {
+    "model": "environment.gcpregion",
+    "pk": 3,
+    "fields": {
+      "region": "europe-west3"
+    }
+  },
+  {
+    "model": "environment.gcpregion",
+    "pk": 4,
+    "fields": {
+      "region": "australia-southeast1"
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 1,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 2,
+      "memory": 7.5,
+      "region": 1,
+      "price": 0.09,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 2,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 4,
+      "memory": 15,
+      "region": 1,
+      "price": 0.18,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 3,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 8,
+      "memory": 30,
+      "region": 1,
+      "price": 0.36,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 4,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 16,
+      "memory": 60,
+      "region": 1,
+      "price": 0.72,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 5,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 32,
+      "memory": 120,
+      "region": 1,
+      "price": 1.44,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 6,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 64,
+      "memory": 240,
+      "region": 1,
+      "price": 2.88,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 7,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 96,
+      "memory": 360,
+      "region": 1,
+      "price": 4.32,
+      "gpu_attachable": false
+    }
+  },
+  {
+    "model": "environment.vminstance",
+    "pk": 8,
+    "fields": {
+      "instance_type": 1,
+      "machine_type": "standard",
+      "cpu": 2,
+      "memory": 7.5,
+      "region": 2,
+      "price": 0.09,
+      "gpu_attachable": false
+    }
+  },
+    {
+        "model": "environment.vminstance",
+        "pk": 9,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 4,
+        "memory": 15,
+        "region": 2,
+        "price": 0.18,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 10,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 8,
+        "memory": 30,
+        "region": 2,
+        "price": 0.36,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 11,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 16,
+        "memory": 60,
+        "region": 2,
+        "price": 0.72,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 12,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 32,
+        "memory": 120,
+        "region": 2,
+        "price": 1.44,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 13,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 64,
+        "memory": 240,
+        "region": 2,
+        "price": 2.88,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 14,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 96,
+        "memory": 360,
+        "region": 2,
+        "price": 4.32,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 15,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 2,
+        "memory": 7.5,
+        "region": 3,
+        "price": 0.09,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 16,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 4,
+        "memory": 15,
+        "region": 3,
+        "price": 0.18,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 17,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 8,
+        "memory": 30,
+        "region": 3,
+        "price": 0.36,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 18,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 16,
+        "memory": 60,
+        "region": 3,
+        "price": 0.72,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 19,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 32,
+        "memory": 120,
+        "region": 3,
+        "price": 1.44,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 20,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 64,
+        "memory": 240,
+        "region": 3,
+        "price": 2.88,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 21,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 96,
+        "memory": 360,
+        "region": 3,
+        "price": 4.32,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 22,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 2,
+        "memory": 7.5,
+        "region": 4,
+        "price": 0.09,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 23,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 4,
+        "memory": 15,
+        "region": 4,
+        "price": 0.18,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 24,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 8,
+        "memory": 30,
+        "region": 4,
+        "price": 0.36,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 25,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 16,
+        "memory": 60,
+        "region": 4,
+        "price": 0.72,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 26,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 32,
+        "memory": 120,
+        "region": 4,
+        "price": 1.44,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 27,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 64,
+        "memory": 240,
+        "region": 4,
+        "price": 2.88,
+        "gpu_attachable": false
+        }
+    },
+    {
+        "model": "environment.vminstance",
+        "pk": 28,
+        "fields": {
+        "instance_type": 1,
+        "machine_type": "standard",
+        "cpu": 96,
+        "memory": 360,
+        "region": 4,
+        "price": 4.32,
+        "gpu_attachable": false
+        }
+    }
+]

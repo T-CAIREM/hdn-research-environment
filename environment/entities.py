@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Iterable, Optional, Union
 
 from django.apps import apps
+from environment.models import GCPRegion
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -17,25 +18,6 @@ class Region(Enum):
 class BucketObjectType(Enum):
     DIRECTORY = "directory"
     FILE = "file"
-
-
-class InstanceType(Enum):
-    N1_STANDARD_1 = "n1-standard-1"
-    N1_STANDARD_2 = "n1-standard-2"
-    N1_STANDARD_4 = "n1-standard-4"
-    N1_STANDARD_8 = "n1-standard-8"
-    N1_STANDARD_16 = "n1-standard-16"
-
-    def cpus(self):
-        INSTANCE_TO_CPU_MAP = {
-            InstanceType.N1_STANDARD_1: 1,
-            InstanceType.N1_STANDARD_2: 2,
-            InstanceType.N1_STANDARD_4: 4,
-            InstanceType.N1_STANDARD_8: 8,
-            InstanceType.N1_STANDARD_16: 16,
-        }
-
-        return INSTANCE_TO_CPU_MAP[self]
 
 
 class GPUAcceleratorType(Enum):
@@ -122,7 +104,7 @@ class ResearchEnvironment:
     region: Region
     type: EnvironmentType
     project: PublishedProject
-    machine_type: Optional[InstanceType]
+    machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
 

@@ -6,7 +6,6 @@ from environment.entities import (
     EntityScaffolding,
     EnvironmentStatus,
     EnvironmentType,
-    InstanceType,
     Region,
     ResearchEnvironment,
     ResearchWorkspace,
@@ -54,7 +53,7 @@ def deserialize_research_environments(
             memory=workbench["memory"],
             region=region,
             type=EnvironmentType(workbench["workbench_type"]),
-            machine_type=InstanceType(workbench["machine_type"]),
+            machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
             project=_get_project_for_environment(
                 workbench["dataset_identifier"], projects
@@ -134,7 +133,8 @@ def deserialize_workspaces(
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
+        if WorkspaceType(workspace_data.get("type"))
+        == WorkspaceType.SHARED_WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]

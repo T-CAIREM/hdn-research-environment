@@ -5,13 +5,14 @@ from django import template
 from django.apps import apps
 from django.urls import reverse
 
-from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import (
     ResearchEnvironment,
     ResearchWorkspace,
     SharedWorkspace,
     SharedBucket,
 )
+
+from environment.models import VMInstance
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -92,6 +93,9 @@ def environment_modal_button(
         "action_button_type": data["action_button_type"],
     }
     if button_type == "modal_instance":
+        MACHINE_TYPE_SPECIFICATION = {}
+        for instance in VMInstance.objects.all():
+            MACHINE_TYPE_SPECIFICATION[instance.get_instance_value()] = instance
         result_data["instances_dict"] = MACHINE_TYPE_SPECIFICATION
 
     return result_data

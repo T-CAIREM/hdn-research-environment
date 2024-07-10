@@ -1,6 +1,7 @@
 import concurrent
 import json
 import re
+from collections import namedtuple
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,7 +21,7 @@ from environment.decorators import (
     billing_account_required,
     console_permission_required,
 )
-from environment.entities import InstanceType, WorkflowStatus, WorkspaceStatus
+from environment.entities import WorkflowStatus, WorkspaceStatus, Region
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -39,12 +40,16 @@ from environment.models import (
     BillingAccountSharingInvite,
     Workflow,
     BucketSharingInvite,
+    VMInstance,
     CloudGroup,
     CloudIdentity,
 )
 from environment.utilities import user_has_cloud_identity
 
 User = get_user_model()
+
+
+ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
 
 @require_http_methods(["GET", "POST"])
@@ -248,7 +253,8 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
         if form.is_valid():
-            workbench_cpu_usage = InstanceType(form.cleaned_data["machine_type"]).cpus()
+            selected_workbench = form.cleaned_data["machine_type"]
+            workbench_cpu_usage = selected_workbench.cpu
             new_cpu_usage = (
                 services.cpu_usage(available_workspaces) + workbench_cpu_usage
             )
@@ -281,10 +287,19 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
 
+    instance_projected_cost = {}
+    region = Region(selected_workspace.region)
+    instances = VMInstance.objects.filter(region__region=region.value)
+    projected_costs = [
+        ProjectedWorkbenchCost(instance.id, instance.price)
+        for instance in instances
+    ]
+    instance_projected_cost[region] = projected_costs
+
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
-        "instance_projected_costs": constants.INSTANCE_PROJECTED_COSTS,
+        "instance_projected_costs": instance_projected_cost,
         "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }

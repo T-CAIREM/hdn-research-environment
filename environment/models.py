@@ -2,8 +2,31 @@ import uuid
 
 from django.core.validators import EmailValidator
 from django.db import models
+from enum import Enum
 
 from environment.validators import gcp_billing_account_id_validator
+
+# GCP Compute Machine Choices
+MACHINE_FAMILY_CHOICES = (
+    ("general", "General Purpose"),
+    ("compute", "Compute Optimized"),
+    ("memory", "Memory Optimized"),
+    ("storage", "Storage Optimized"),
+    ("accelerator", "Accelerator Optimized"),
+)
+
+# GCP Machine Type Choices
+MACHINE_TYPE_CHOICES = (
+    ("standard", "Standard"),
+    ("highmem", "High Memory"),
+    ("ultramem", "Ultra Memory"),
+    ("megamem", "Mega Memory"),
+    ("hypermem", "High Memory"),
+    ("highcpu", "High CPU"),
+    ("highgpu", "High GPU"),
+    ("megagpu", "Mega GPU"),
+    ("ultragpu", "Ultra GPU"),
+)
 
 
 class CloudGroup(models.Model):
@@ -78,3 +101,47 @@ class Workflow(models.Model):
     )
     execution_resource_name = models.CharField(max_length=256, unique=True)
     in_progress = models.BooleanField(default=False)
+
+
+class InstanceType(models.Model):
+    family = models.CharField(max_length=32, choices=MACHINE_FAMILY_CHOICES)
+    value = models.CharField(max_length=32)
+
+    def __str__(self):
+        return f"{self.family} {self.value}"
+
+    class Meta:
+        unique_together = ("family", "value")
+
+
+# This Region has been added to be used for the VMInstance model.
+# The region entity is still being used and will be phased out slowly.
+class GCPRegion(models.Model):
+    region = models.CharField(max_length=32)
+
+    def __str__(self):
+        return self.region
+
+
+class VMInstance(models.Model):
+    instance_type = models.ForeignKey(InstanceType, on_delete=models.CASCADE)
+    machine_type = models.CharField(max_length=32, choices=MACHINE_TYPE_CHOICES)
+    cpu = models.IntegerField()
+    memory = models.FloatField()
+    region = models.ForeignKey(GCPRegion, on_delete=models.CASCADE)
+    price = models.FloatField()
+    gpu_attachable = models.BooleanField(default=False)
+
+    def get_instance_value(self):
+        return f"{self.instance_type.value}-{self.machine_type}-{self.cpu}"
+
+    def get_instance_key(self):
+        return (
+            f"{self.instance_type.value.upper()}_{self.machine_type.upper()}_{self.cpu}"
+        )
+
+    def __str__(self):
+        return f"{self.instance_type.value.upper()}, {self.cpu} CPU {self.memory} GB RAM - {self.region.region}"
+
+    class Meta:
+        unique_together = ("instance_type", "machine_type", "region", "cpu")

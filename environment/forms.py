@@ -6,15 +6,13 @@ from django.utils.safestring import mark_safe
 from django.core.validators import RegexValidator
 from django.contrib.admin.widgets import FilteredSelectMultiple
 
-from environment.constants import MACHINE_TYPE_SPECIFICATION
 from environment.entities import (
-    InstanceType,
     ResearchWorkspace,
     SharedWorkspace,
     SharedBucket,
 )
 
-from environment.models import BucketSharingInvite, CloudGroup
+from environment.models import BucketSharingInvite, VMInstance, CloudGroup
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 User = apps.get_model("user", "User")
@@ -56,12 +54,6 @@ class CreateWorkspaceForm(forms.Form):
 
 
 class CreateResearchEnvironmentForm(forms.Form):
-    AVAILABLE_MACHINE_TYPES = [
-        ("n1-standard-2", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_2]),
-        ("n1-standard-4", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_4]),
-        ("n1-standard-8", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_8]),
-        ("n1-standard-16", MACHINE_TYPE_SPECIFICATION[InstanceType.N1_STANDARD_16]),
-    ]
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
@@ -80,9 +72,9 @@ class CreateResearchEnvironmentForm(forms.Form):
     )
     workspace_region = forms.CharField(widget=forms.HiddenInput())
     project_id = forms.ChoiceField(label="Project")
-    machine_type = forms.ChoiceField(
+    machine_type = forms.ModelChoiceField(
         label="Instance type",
-        choices=AVAILABLE_MACHINE_TYPES,
+        queryset=VMInstance.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     environment_type = forms.ChoiceField(
@@ -125,6 +117,9 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
+        self.fields["machine_type"].queryset = VMInstance.objects.filter(
+            region__region=selected_workspace.region.value
+        )
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
@@ -177,9 +172,9 @@ class CreateSharedBucketForm(forms.Form):
         **kwargs,
     ):
         super(CreateSharedBucketForm, self).__init__(*args, **kwargs)
-        self.fields[
-            "workspace_project_id"
-        ].initial = selected_shared_workspace.gcp_project_id
+        self.fields["workspace_project_id"].initial = (
+            selected_shared_workspace.gcp_project_id
+        )
         self.fields["workspace_project_id"].disabled = True
 
 

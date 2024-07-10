@@ -64,6 +64,7 @@ from environment.models import (
     CloudGroup,
     Workflow,
     BucketSharingInvite,
+    VMInstance,
 )
 from environment.utilities import inner_join_iterators, left_join_iterators
 
@@ -314,7 +315,7 @@ def _create_workbench_kwargs(
     user: User,
     project: PublishedProject,
     workspace_project_id: str,
-    machine_type: str,
+    machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
@@ -326,7 +327,9 @@ def _create_workbench_kwargs(
         "user_email": user_email,
         "workspace_project_id": workspace_project_id,
         "workbench_type": workbench_type,
-        "machine_type": machine_type,
+        "machine_type": machine_type.get_instance_value(),
+        "memory": machine_type.memory,
+        "cpu": machine_type.cpu,
         "dataset_identifier": _project_data_group(project),
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
@@ -342,7 +345,7 @@ def create_research_environment(
     user: User,
     project: PublishedProject,
     workspace_project_id: str,
-    machine_type: str,
+    machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
@@ -728,7 +731,7 @@ def cpu_usage(workspaces: Iterable[ResearchWorkspace]) -> int:
             workbench, "machine_type"
         )  # HACK: Workbench scaffoldings do not have the machine type attribute.
     ]
-    return sum(workbench.machine_type.cpus() for workbench in workbenches)
+    return sum(workbench.cpu for workbench in workbenches)
 
 
 def exceeded_quotas(user) -> Iterable[str]:
