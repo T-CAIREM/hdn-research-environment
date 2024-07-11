@@ -9,7 +9,6 @@ def load_initial_vminstances_data(_apps, _schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("environment", "0015_gcpregion_instancetype_vminstance"),
     ]

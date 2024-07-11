@@ -291,8 +291,7 @@ def create_research_environment(request, workspace_id):
     region = Region(selected_workspace.region)
     instances = VMInstance.objects.filter(region__region=region.value)
     projected_costs = [
-        ProjectedWorkbenchCost(instance.id, instance.price)
-        for instance in instances
+        ProjectedWorkbenchCost(instance.id, instance.price) for instance in instances
     ]
     instance_projected_cost[region] = projected_costs
 
