@@ -320,7 +320,7 @@ class AddRolesToCloudGroupForm(forms.Form):
         self.fields["cloud_group_name"].initial = cloud_group_name
         self.fields["cloud_group_name"].disabled = True
         self.fields["roles_list"].choices = [
-            (role.full_name, role.full_name) for role in available_roles
+            (role.full_name, role.title) for role in available_roles
         ]
 
 
@@ -352,4 +352,4 @@ class RemoveRolesFromCloudGroupForm(forms.Form):
         super(RemoveRolesFromCloudGroupForm, self).__init__(*args, **kwargs)
         self.fields["cloud_group_name"].initial = cloud_group_name
         self.fields["cloud_group_name"].disabled = True
-        self.fields["roles_list"].choices = [(role, role) for role in available_roles]
+        self.fields["roles_list"].choices = [(role.full_name, role.title) for role in available_roles]
