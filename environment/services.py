@@ -928,7 +928,8 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
     response = api.get_datasets_monitoring_data()
     if not response.ok:
-        error_message = response.json()
+        error_message = response.json()["error"]
+        logger.error(f"GetMonitoringDatasetsFailed: {error_message}")
         raise GetMonitoringDatasetsFailed(error_message)
 
     return deserialize_datasets_monitoring_data(response.json())
