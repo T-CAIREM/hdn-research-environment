@@ -19,6 +19,7 @@ from environment.entities import (
     WorkspaceType,
     QuotaInfo,
     CloudRole,
+    DatasetsMonitoringEntry,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -185,4 +186,16 @@ def deserialize_cloud_roles(data: dict) -> Iterable[CloudRole]:
             description=role_object["description"],
         )
         for role_object in data
+    ]
+
+
+def deserialize_datasets_monitoring_data(data) -> Iterable[DatasetsMonitoringEntry]:
+    return [
+        DatasetsMonitoringEntry(
+            dataset_identifier=entry["dataset_identifier"],
+            instance_type=entry["instance_type"],
+            total_time=entry["total_time"],
+            user_email=entry["user_email"],
+        )
+        for entry in data
     ]

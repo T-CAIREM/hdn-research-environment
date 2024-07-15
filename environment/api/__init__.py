@@ -93,6 +93,11 @@ def list_quotas_data(region: str, workspace_project_id: str) -> Request:
 
 
 @api_request
+def get_datasets_monitoring_data() -> Request:
+    return Request("GET", url=f"/monitoring/datasets")
+
+
+@api_request
 def create_workbench(
     user_email: str,
     workbench_type: str,

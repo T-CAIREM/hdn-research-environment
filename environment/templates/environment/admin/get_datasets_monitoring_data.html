@@ -1,0 +1,42 @@
+{% extends "console/base_console.html" %}
+
+{% load static %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/datasets_monitoring_data.css' %}">
+{% endblock %}
+
+{% block local_js_top %}
+<script src="{% static 'environment/js/search_datasets_monitoring_data.js' %}"></script>
+{% endblock %}
+
+{% block title %}Datasets Monitoring Data{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+      Datasets Time Usage
+    </h1>
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search...">
+    <table id="monitoringTable">
+        <thead>
+            <tr>
+                <th>Dataset Name</th>
+                <th>User Email</th>
+                <th>Instance Type</th>
+                <th>Total Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in monitoring_data %}
+            <tr>
+                <td>{{ data.dataset_identifier }}</td>
+                <td>{{ data.user_email }}</td>
+                <td>{{ data.instance_type }}</td>
+                <td>{{ data.total_time }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

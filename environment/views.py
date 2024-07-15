@@ -908,3 +908,14 @@ def remove_roles_from_cloud_group(request, cloud_group_id):
     return render(
         request, "environment/admin/remove_roles_from_cloud_group.html", context=context
     )
+
+
+@login_required
+@cloud_identity_required
+@console_permission_required("user.can_view_admin_console")
+def get_datasets_monitoring_data(request):
+    monitoring_data = services.get_datasets_monitoring_data()
+    context = {"monitoring_data": monitoring_data}
+    return render(
+        request, "environment/admin/get_datasets_monitoring_data.html", context=context
+    )

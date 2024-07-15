@@ -143,4 +143,9 @@ urlpatterns = [
         views.remove_roles_from_cloud_group,
         name="remove_roles_from_cloud_group",
     ),
+    path(
+        "console/monitoring/datasets",
+        views.get_datasets_monitoring_data,
+        name="get_datasets_monitoring_data",
+    ),
 ]

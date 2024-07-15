@@ -184,3 +184,11 @@ class QuotaInfo:
     limit: int
     usage: int
     usage_percentage: float
+
+
+@dataclass
+class DatasetsMonitoringEntry:
+    dataset_identifier: str
+    instance_type: str
+    total_time: str
+    user_email: str
