@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("environment", "0014_googlegroup_cloudidentity_user_groups"),
     ]

@@ -172,9 +172,9 @@ class CreateSharedBucketForm(forms.Form):
         **kwargs,
     ):
         super(CreateSharedBucketForm, self).__init__(*args, **kwargs)
-        self.fields["workspace_project_id"].initial = (
-            selected_shared_workspace.gcp_project_id
-        )
+        self.fields[
+            "workspace_project_id"
+        ].initial = selected_shared_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
 
 

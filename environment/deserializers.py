@@ -133,8 +133,7 @@ def deserialize_workspaces(
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data)
-        if WorkspaceType(workspace_data.get("type"))
-        == WorkspaceType.SHARED_WORKSPACE
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
