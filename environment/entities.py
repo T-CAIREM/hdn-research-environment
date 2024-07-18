@@ -177,6 +177,9 @@ class CloudRole:
     title: str
     description: str
 
+    def __str__(self):
+        return self.title
+
 
 @dataclass
 class QuotaInfo:
