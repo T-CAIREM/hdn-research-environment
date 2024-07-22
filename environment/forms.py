@@ -12,6 +12,8 @@ from environment.entities import (
     SharedBucket,
 )
 
+from django.conf import settings
+
 from environment.models import BucketSharingInvite, VMInstance, CloudGroup
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -300,7 +302,7 @@ class AddRolesToCloudGroupForm(forms.Form):
 
     class Media:
         css = {
-            "all": ("/static/admin/css/widgets.css",),
+            "all": ("admin/css/widgets.css",),
         }
         js = ("/admin/jsi18n",)
 
@@ -333,7 +335,7 @@ class RemoveRolesFromCloudGroupForm(forms.Form):
 
     class Media:
         css = {
-            "all": ("/static/admin/css/widgets.css",),
+            "all": ("admin/css/widgets.css",),
         }
         js = ("/admin/jsi18n",)
 
