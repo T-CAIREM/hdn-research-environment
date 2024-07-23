@@ -92,8 +92,11 @@
 
     var socket = io("{{ websocket_url }}", {
       pingInterval: 25000,
-      pingTimeout: 60000,
+      pingTimeout: 300000,
       reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
     });
 
     socket.on('workflow_update', function(data) {
@@ -101,9 +104,12 @@
     });
 
     socket.on("disconnect", (reason) => {
-      if (reason === "io server disconnect") {
+      if (reason === "transport close") {
         // the disconnection was initiated by the server, you need to reconnect manually
         socket.connect();
+        {% for workflow in workflows %}
+          socket.emit("join", "{{ workflow.execution_resource_name }}");
+        {% endfor %}
       }
     });
 
