@@ -76,7 +76,11 @@
 <script>
     function refreshCards(executionId) {
         fetchNewCards(executionId)
-        .then(html => $("#environment-tabs").html(html));
+        .then(html => {
+          if (html) {
+              $("#environment-tabs").html(html);
+            };
+         });
     }
 
     function pollExecutionStatus(executionId) {
