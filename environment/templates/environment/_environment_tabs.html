@@ -92,7 +92,7 @@
 
     var socket = io("{{ websocket_url }}", {
       pingInterval: 25000,
-      pingTimeout: 300000,
+      pingTimeout: 60000,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
@@ -107,10 +107,13 @@
       if (reason === "transport close") {
         // the disconnection was initiated by the server, you need to reconnect manually
         socket.connect();
+      }
+    });
+
+    socket.on('connect', function() {
         {% for workflow in workflows %}
           socket.emit("join", "{{ workflow.execution_resource_name }}");
         {% endfor %}
-      }
     });
 
     function disconnectSocket() {
@@ -122,7 +125,6 @@
     };
 
     {% for workflow in workflows %}
-        socket.emit("join", "{{ workflow.execution_resource_name }}");
         pollExecutionStatus("{{ workflow.execution_resource_name }}");
     {% endfor %}
 </script>
