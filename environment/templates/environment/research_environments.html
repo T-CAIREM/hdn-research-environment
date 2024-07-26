@@ -4,6 +4,9 @@
   {{ block.super }}
 
   <script>
+    let isModalOpen = false;
+    let cardsToRefresh = [];
+
     function fetchNewCards(executionId) {
       const baseUrl = "{% url 'research_environments_partial' %}";
       const fetchUrl = executionId ? `${baseUrl}?execution_resource_name=${executionId}` : baseUrl;
