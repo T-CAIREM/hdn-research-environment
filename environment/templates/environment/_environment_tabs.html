@@ -79,13 +79,11 @@
     });
 
     $(document).on('hidden.bs.modal', '.modal', function () {
-      if (cardsToRefresh.length > 0) {
-        cardsToRefresh.forEach(executionId => {
-            pollExecutionStatus(executionId);
-        });
+      if (cardToRefresh !== "") {
+        pollExecutionStatus(cardToRefresh);
       }
 
-      cardsToRefresh = [];
+      cardToRefresh = "";
       isModalOpen = false;
     });
 
@@ -121,7 +119,7 @@
 
     socket.on('workflow_update', function(data) {
         if (isModalOpen) {
-           cardsToRefresh.push(data.workbench_activity_id);
+           cardToRefresh = data.workbench_activity_id;
            return;
         }
 

@@ -5,7 +5,7 @@
 
   <script>
     let isModalOpen = false;
-    let cardsToRefresh = [];
+    let cardToRefresh = "";
 
     function fetchNewCards(executionId) {
       const baseUrl = "{% url 'research_environments_partial' %}";
