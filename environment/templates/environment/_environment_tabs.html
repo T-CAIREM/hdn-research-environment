@@ -74,6 +74,20 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js" integrity="sha512-luMnTJZ7oEchNDZAtQhgjomP1eZefnl82ruTH/3Oj/Yu5qYtwL7+dVRccACS/Snp1lFXq188XFipHKYE75IaQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
+    $(document).on('show.bs.modal', '.modal', function () {
+      isModalOpen = true;
+    });
+
+    $(document).on('hidden.bs.modal', '.modal', function () {
+      if (cardToRefresh !== "") {
+        pollExecutionStatus(cardToRefresh);
+      }
+
+      cardToRefresh = "";
+      isModalOpen = false;
+    });
+
+
     function refreshCards(executionId) {
         fetchNewCards(executionId)
         .then(html => {
@@ -104,7 +118,12 @@
     });
 
     socket.on('workflow_update', function(data) {
-        refreshCards(data.workbench_activity_id);
+        if (isModalOpen) {
+           cardToRefresh = data.workbench_activity_id;
+           return;
+        }
+
+        pollExecutionStatus(data.workbench_activity_id);
     });
 
     socket.on("disconnect", (reason) => {
