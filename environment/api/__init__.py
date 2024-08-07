@@ -375,3 +375,14 @@ def add_roles_to_cloud_group(group_name: str, role_list: list) -> Request:
 def remove_roles_from_cloud_group(group_name: str, role_list: list) -> Request:
     json = {"group_name": group_name, "role_list": role_list}
     return Request("POST", url="/group/roles/remove", json=json)
+
+
+@api_request
+def update_workspace_billing_account(
+    workspace_project_id: str, billing_account_id: str
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "billing_account_id": billing_account_id,
+    }
+    return Request("POST", url="/workspace/update_billing", json=json)

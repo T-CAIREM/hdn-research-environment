@@ -35,6 +35,7 @@ from environment.forms import (
     RemoveUserFromCloudGroupForm,
     AddRolesToCloudGroupForm,
     RemoveRolesFromCloudGroupForm,
+    UpdateWorkspaceBillingAccountForm,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -919,3 +920,36 @@ def get_datasets_monitoring_data(request):
     return render(
         request, "environment/admin/get_datasets_monitoring_data.html", context=context
     )
+
+
+@login_required
+@cloud_identity_required
+@billing_account_required
+def update_workspace_billing_account(request, workspace_project_id):
+    billing_accounts_list = services.get_billing_accounts_list(request.user)
+
+    if request.method == "POST":
+        print(request.POST)
+        form = UpdateWorkspaceBillingAccountForm(
+            request.POST,
+            workspace_project_id=workspace_project_id,
+            billing_accounts_list=billing_accounts_list,
+        )
+        if form.is_valid():
+            services.update_workspace_billing_account(
+                form.cleaned_data["workspace_project_id"],
+                form.cleaned_data["billing_account_id"],
+            )
+            messages.success(
+                request,
+                f"Billing account updated for workspace {workspace_project_id}",
+            )
+            return redirect("research_environments")
+    else:
+        form = UpdateWorkspaceBillingAccountForm(
+            workspace_project_id=workspace_project_id,
+            billing_accounts_list=billing_accounts_list,
+        )
+
+    context = {"form": form, "workspace_project_id": workspace_project_id}
+    return render(request, "environment/update_workspace_billing_account.html", context)

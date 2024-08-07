@@ -132,3 +132,7 @@ class GetGroupsIAMRolesFailed(Exception):
 
 class GetMonitoringDatasetsFailed(Exception):
     pass
+
+
+class UpdateWorkspaceBillingAccountFailed(Exception):
+    pass

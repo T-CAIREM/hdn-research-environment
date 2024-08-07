@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load project_templatetags %}
+
+{% block title %}Create Billing Account{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/creation_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Update Workspace Billing Account for {{ workspace_project_id }}</h2>
+    <form class="single-submit-form" action="{% url 'update_workspace_billing_account' workspace_project_id=workspace_project_id %}" method="post" style="width: 24rem;">
+        {% csrf_token %}
+        {{ form }}
+        <button class="btn btn-primary mt-3" type="submit">
+            Submit
+        </button>
+    </form>
+</div>
+{% endblock %}
