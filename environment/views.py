@@ -96,11 +96,15 @@ def research_environments(request):
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
     running_workflows = services.get_running_workflows(request.user)
+    billing_account_id_to_name_map = {
+        acc["id"]: acc["name"] for acc in billing_accounts_list
+    }
 
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
+        "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
     }
@@ -925,7 +929,9 @@ def get_datasets_monitoring_data(request):
 @login_required
 @cloud_identity_required
 @billing_account_required
-def update_workspace_billing_account(request, workspace_project_id):
+def update_workspace_billing_account(
+    request, workspace_project_id, current_billing_account_id
+):
     billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     if request.method == "POST":
@@ -951,5 +957,12 @@ def update_workspace_billing_account(request, workspace_project_id):
             billing_accounts_list=billing_accounts_list,
         )
 
-    context = {"form": form, "workspace_project_id": workspace_project_id}
+    current_billing_account = [
+        acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
+    ][0]
+    context = {
+        "form": form,
+        "workspace_project_id": workspace_project_id,
+        "current_billing_account": current_billing_account,
+    }
     return render(request, "environment/update_workspace_billing_account.html", context)

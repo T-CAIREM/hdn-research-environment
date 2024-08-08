@@ -50,7 +50,10 @@ class CreateWorkspaceForm(forms.Form):
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
         self.fields["billing_account_id"].choices = [
-            (billing_account["id"], billing_account["name"])
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
             for billing_account in billing_accounts_list
         ]
 
@@ -142,7 +145,10 @@ class CreateSharedWorkspaceForm(forms.Form):
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateSharedWorkspaceForm, self).__init__(*args, **kwargs)
         self.fields["billing_account_id"].choices = [
-            (billing_account["id"], billing_account["name"])
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
             for billing_account in billing_accounts_list
         ]
 
@@ -368,6 +374,9 @@ class UpdateWorkspaceBillingAccountForm(forms.Form):
         super(UpdateWorkspaceBillingAccountForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = workspace_project_id
         self.fields["billing_account_id"].choices = [
-            (billing_account["id"], billing_account["name"])
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
             for billing_account in billing_accounts_list
         ]
