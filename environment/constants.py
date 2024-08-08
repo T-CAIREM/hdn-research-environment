@@ -5,8 +5,6 @@ from environment.entities import (
     Region,
 )
 
-from environment.models import VMInstance
-
 MAX_RUNNING_WORKSPACES = 4
 
 MAX_CPU_USAGE = 32

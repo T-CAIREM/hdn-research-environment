@@ -965,3 +965,13 @@ def update_workspace_billing_account(
         "current_billing_account": current_billing_account,
     }
     return render(request, "environment/update_workspace_billing_account.html", context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_available_gpu_accelerators_partial(request):
+    vm_instance_id = request.GET.get("vm_instance")
+    gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
+    context = {"gpu_accelerators": gpu_accelerators}
+    return render(request, "environment/gpu_accelerator_partial.html", context=context)
