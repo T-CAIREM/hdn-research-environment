@@ -935,7 +935,6 @@ def update_workspace_billing_account(
     billing_accounts_list = services.get_billing_accounts_list(request.user)
 
     if request.method == "POST":
-        print(request.POST)
         form = UpdateWorkspaceBillingAccountForm(
             request.POST,
             workspace_project_id=workspace_project_id,
