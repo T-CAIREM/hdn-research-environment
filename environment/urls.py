@@ -148,4 +148,9 @@ urlpatterns = [
         views.get_datasets_monitoring_data,
         name="get_datasets_monitoring_data",
     ),
+    path(
+        "workspace/<workspace_project_id>/update_billing/<current_billing_account_id>/",
+        views.update_workspace_billing_account,
+        name="update_workspace_billing_account",
+    ),
 ]

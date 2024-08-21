@@ -50,7 +50,10 @@ class CreateWorkspaceForm(forms.Form):
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
         self.fields["billing_account_id"].choices = [
-            (billing_account["id"], billing_account["name"])
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
             for billing_account in billing_accounts_list
         ]
 
@@ -142,7 +145,10 @@ class CreateSharedWorkspaceForm(forms.Form):
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateSharedWorkspaceForm, self).__init__(*args, **kwargs)
         self.fields["billing_account_id"].choices = [
-            (billing_account["id"], billing_account["name"])
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
             for billing_account in billing_accounts_list
         ]
 
@@ -351,4 +357,26 @@ class RemoveRolesFromCloudGroupForm(forms.Form):
         self.fields["cloud_group_name"].disabled = True
         self.fields["roles_list"].choices = [
             (role.full_name, role.title) for role in available_roles
+        ]
+
+
+class UpdateWorkspaceBillingAccountForm(forms.Form):
+    billing_account_id = forms.ChoiceField(label="Choose Billing Account")
+    workspace_project_id = forms.CharField(widget=forms.HiddenInput())
+
+    def __init__(
+        self,
+        *args,
+        workspace_project_id: str,
+        billing_accounts_list: Iterable[str],
+        **kwargs,
+    ):
+        super(UpdateWorkspaceBillingAccountForm, self).__init__(*args, **kwargs)
+        self.fields["workspace_project_id"].initial = workspace_project_id
+        self.fields["billing_account_id"].choices = [
+            (
+                billing_account["id"],
+                f"{billing_account['name']}, {billing_account['id']}",
+            )
+            for billing_account in billing_accounts_list
         ]

@@ -61,6 +61,7 @@ from environment.exceptions import (
     RemoveRolesFromCloudGroupFailed,
     GetGroupsIAMRolesFailed,
     GetMonitoringDatasetsFailed,
+    UpdateWorkspaceBillingAccountFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -936,3 +937,15 @@ def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
         raise GetMonitoringDatasetsFailed(error_message)
 
     return deserialize_datasets_monitoring_data(response.json())
+
+
+def update_workspace_billing_account(
+    workspace_project_id: str, billing_account_id: str
+):
+    response = api.update_workspace_billing_account(
+        workspace_project_id, billing_account_id
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"UpdateWorkspaceBillingAccountFailed: {error_message}")
+        raise UpdateWorkspaceBillingAccountFailed(error_message)
