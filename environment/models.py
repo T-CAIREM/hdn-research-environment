@@ -28,6 +28,15 @@ MACHINE_TYPE_CHOICES = (
     ("ultragpu", "Ultra GPU"),
 )
 
+# GCP  GPU memory types
+GPU_MEMORY_TYPES = {
+    ("GDDR5", "GDDR5"),
+    ("GDDR6", "GDDR6"),
+    ("HBM2", "HBM2"),
+    ("HBM2e", "HBM2e"),
+    ("HBM3", "HBM3"),
+}
+
 
 class CloudGroup(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -123,6 +132,17 @@ class GCPRegion(models.Model):
         return self.region
 
 
+class GPUAccelerator(models.Model):
+    name = models.CharField(max_length=64)
+    memory_per_core = models.IntegerField()
+    region = models.ForeignKey(GCPRegion, on_delete=models.CASCADE)
+    price = models.FloatField()
+    memory_type = models.CharField(max_length=32, choices=GPU_MEMORY_TYPES)
+
+    def __str__(self):
+        return f"{self.name.replace('-', ' ').title()} ({self.memory_per_core} GB {self.memory_type}) - {self.region.region}"
+
+
 class VMInstance(models.Model):
     instance_type = models.ForeignKey(InstanceType, on_delete=models.CASCADE)
     machine_type = models.CharField(max_length=32, choices=MACHINE_TYPE_CHOICES)
@@ -130,7 +150,7 @@ class VMInstance(models.Model):
     memory = models.FloatField()
     region = models.ForeignKey(GCPRegion, on_delete=models.CASCADE)
     price = models.FloatField()
-    gpu_attachable = models.BooleanField(default=False)
+    gpu_accelerators = models.ManyToManyField(GPUAccelerator, blank=True)
 
     def get_instance_value(self):
         return f"{self.instance_type.value}-{self.machine_type}-{self.cpu}"

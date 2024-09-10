@@ -153,4 +153,9 @@ urlpatterns = [
         views.update_workspace_billing_account,
         name="update_workspace_billing_account",
     ),
+    path(
+        "gpu-accelerators/",
+        views.get_available_gpu_accelerators_partial,
+        name="get_available_gpu_accelerators_partial",
+    ),
 ]

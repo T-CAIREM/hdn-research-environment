@@ -14,7 +14,12 @@ from environment.entities import (
 
 from django.conf import settings
 
-from environment.models import BucketSharingInvite, VMInstance, CloudGroup
+from environment.models import (
+    BucketSharingInvite,
+    VMInstance,
+    CloudGroup,
+    GPUAccelerator,
+)
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 User = apps.get_model("user", "User")
@@ -63,10 +68,6 @@ class CreateResearchEnvironmentForm(forms.Form):
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
     ]
-    AVAILABLE_GPU_ACCELERATOR_TYPES = [
-        ("", "Machine without GPU attached"),
-        ("nvidia-tesla-t4", "Nvidia Tesla T4 (16 GB GDDR6)"),
-    ]
 
     workspace_project_id = forms.CharField(
         label="Selected workspace",
@@ -94,9 +95,9 @@ class CreateResearchEnvironmentForm(forms.Form):
         ),
         initial=0,
     )
-    gpu_accelerator = forms.ChoiceField(
+    gpu_accelerator = forms.ModelChoiceField(
         label="GPU Accelerator",
-        choices=AVAILABLE_GPU_ACCELERATOR_TYPES,
+        queryset=GPUAccelerator.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
         required=False,
     )
