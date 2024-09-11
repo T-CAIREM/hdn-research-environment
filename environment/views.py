@@ -135,6 +135,9 @@ def research_environments_partial(request):
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
     running_workflows = services.get_running_workflows(request.user)
+    billing_account_id_to_name_map = {
+        acc["id"]: acc["name"] for acc in billing_accounts_list
+    }
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -142,6 +145,7 @@ def research_environments_partial(request):
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
+        "billing_account_id_to_name_map": billing_account_id_to_name_map,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
