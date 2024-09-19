@@ -110,7 +110,7 @@
 
     var socket = io("{{ websocket_url }}", {
       pingInterval: 25000,
-      pingTimeout: 300000,
+      pingTimeout: 60000,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
