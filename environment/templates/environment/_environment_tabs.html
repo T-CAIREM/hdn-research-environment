@@ -118,7 +118,6 @@
     });
 
     socket.on('workflow_update', function(data) {
-        console.log("workflow_update received");
         if (isModalOpen) {
            cardToRefresh = data.workbench_activity_id;
            return;
@@ -128,8 +127,6 @@
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("DISCONNECTED");
-      console.log(reason);
       if (reason === "transport close") {
         // the disconnection was initiated by the server, you need to reconnect manually
         socket.connect();
