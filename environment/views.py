@@ -21,7 +21,7 @@ from environment.decorators import (
     billing_account_required,
     console_permission_required,
 )
-from environment.entities import WorkflowStatus, WorkspaceStatus, Region
+from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -157,6 +157,11 @@ def research_environments_partial(request):
             "recent_workflow_succeeded": workflow.status == WorkflowStatus.SUCCESS,
             "workflow_finished_message": workflow.error_information,
         }
+
+        # remove workspace from active workspaces if it was just deleted successfully
+        if workflow_state_context["recent_workflow_succeeded"] and workflow.type == WorkflowType.WORKSPACE_DELETION:
+            context["workspaces_with_workbenches"] = [w for w in context["workspaces_with_workbenches"] if w.gcp_project_id != workflow.workspace_id]
+
         context = {**context, **workflow_state_context}
 
     return render(
