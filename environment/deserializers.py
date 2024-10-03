@@ -73,7 +73,7 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
         type=WorkflowType(workflow_data["build_type"]),
         status=WorkflowStatus(workflow_data["status"]),
         error_information=workflow_data["error"],
-        workspace_id=workflow_data["workspace_id"]
+        workspace_id=workflow_data["workspace_id"],
     )
 
 
