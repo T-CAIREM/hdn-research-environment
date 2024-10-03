@@ -162,6 +162,9 @@ def research_environments_partial(request):
         if workflow_state_context["recent_workflow_succeeded"] and workflow.type == WorkflowType.WORKSPACE_DELETION:
             context["workspaces_with_workbenches"] = [w for w in context["workspaces_with_workbenches"] if w.gcp_project_id != workflow.workspace_id]
 
+        if workflow_state_context["recent_workflow_succeeded"] and workflow.type == WorkflowType.SHARED_WORKSPACE_DELETION:
+            context["shared_workspaces"] = [w for w in context["shared_workspaces"] if w.gcp_project_id != workflow.workspace_id]
+
         context = {**context, **workflow_state_context}
 
     return render(
