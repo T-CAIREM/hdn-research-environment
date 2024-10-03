@@ -36,7 +36,7 @@
                                         Billing Account:
                                     </span>
                                     <span class="d-inline font-weight-normal">
-                                        {{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }}
+                                        ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
                                     </span>
                                 </small>
                             {% endif %}
