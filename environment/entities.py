@@ -86,6 +86,7 @@ class Workflow:
     type: WorkflowType
     status: WorkflowStatus
     error_information: str
+    workspace_id: str
 
     def display_type(self) -> str:
         action_string = self.type.value.replace("_", " ")

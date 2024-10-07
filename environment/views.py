@@ -21,7 +21,7 @@ from environment.decorators import (
     billing_account_required,
     console_permission_required,
 )
-from environment.entities import WorkflowStatus, WorkspaceStatus, Region
+from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -151,12 +151,29 @@ def research_environments_partial(request):
     execution_resource_name = request.GET.get("execution_resource_name")
     if execution_resource_name:
         workflow = services.get_execution(execution_resource_name)
+        success = workflow.status == WorkflowStatus.SUCCESS
         workflow_state_context = {
             "recent_workflow": workflow,
             "recent_workflow_failed": workflow.status == WorkflowStatus.FAILURE,
-            "recent_workflow_succeeded": workflow.status == WorkflowStatus.SUCCESS,
+            "recent_workflow_succeeded": success,
             "workflow_finished_message": workflow.error_information,
         }
+
+        # remove workspace from active workspaces if it was just deleted successfully
+        if success and workflow.type == WorkflowType.WORKSPACE_DELETION:
+            context["workspaces_with_workbenches"] = [
+                workspace
+                for workspace in context["workspaces_with_workbenches"]
+                if workspace.gcp_project_id != workflow.workspace_id
+            ]
+
+        if success and workflow.type == WorkflowType.SHARED_WORKSPACE_DELETION:
+            context["shared_workspaces"] = [
+                workspace
+                for workspace in context["shared_workspaces"]
+                if workspace.gcp_project_id != workflow.workspace_id
+            ]
+
         context = {**context, **workflow_state_context}
 
     return render(
