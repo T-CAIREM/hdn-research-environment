@@ -813,7 +813,7 @@ def delete_cloud_group(request):
 def cloud_groups(request):
     q = request.GET.get("q")
     cloud_identity_list = (
-        CloudIdentity.objects.filter(user__icontains=q)
+        CloudIdentity.objects.filter(user__username__icontains=q)
         if q
         else CloudIdentity.objects.all()
     )
