@@ -68,7 +68,10 @@ class GPUAcceleratorField(forms.ModelChoiceField):
         return value
 
     def validate(self, value):
-        if value not in GPUAccelerator.objects.all().values_list("name", flat=True) and value != "":
+        if (
+            value not in GPUAccelerator.objects.all().values_list("name", flat=True)
+            and value != ""
+        ):
             raise ValidationError(f"{value} is not a valid choice")
 
 
