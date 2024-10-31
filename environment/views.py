@@ -22,6 +22,7 @@ from environment.decorators import (
     console_permission_required,
 )
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
+from environment.exceptions import CreateCloudGroupFailed
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -788,10 +789,19 @@ def create_cloud_group(request):
     if request.method == "POST":
         form = AddCloudGroupForm(request.POST)
         if form.is_valid():
-            services.create_cloud_group(
-                form.cleaned_data["name"], form.cleaned_data["description"]
-            )
-            return redirect("cloud_groups")
+            try:
+                services.create_cloud_group(
+                    form.cleaned_data["name"], form.cleaned_data["description"]
+                )
+                return redirect("cloud_groups")
+            except CreateCloudGroupFailed as error:
+                context = {"form": form, "error_message": error}
+                return render(
+                    request,
+                    "environment/admin/create_cloud_user_group.html",
+                    context=context,
+                )
+
     context = {"form": form}
     return render(
         request, "environment/admin/create_cloud_user_group.html", context=context

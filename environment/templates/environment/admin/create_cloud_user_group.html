@@ -14,6 +14,11 @@
 
 {% block content %}
 <h1>Cloud Group Creation Form</h1>
+{% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+{% endif %}
 <hr>
 <div class="card mb-3">
   <div class="card-body">
