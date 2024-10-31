@@ -3,7 +3,7 @@ from typing import Iterable
 from django import forms
 from django.apps import apps
 from django.utils.safestring import mark_safe
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, ValidationError
 from django.contrib.admin.widgets import FilteredSelectMultiple
 
 from environment.entities import (
@@ -63,6 +63,17 @@ class CreateWorkspaceForm(forms.Form):
         ]
 
 
+class GPUAcceleratorField(forms.ModelChoiceField):
+    def to_python(self, value):
+        return value
+
+    def validate(self, value):
+        if value != "" and value not in GPUAccelerator.objects.all().values_list(
+            "name", flat=True
+        ):
+            raise ValidationError(f"{value} is not a valid choice")
+
+
 class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
@@ -95,7 +106,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         ),
         initial=0,
     )
-    gpu_accelerator = forms.ModelChoiceField(
+    gpu_accelerator = GPUAcceleratorField(
         label="GPU Accelerator",
         queryset=GPUAccelerator.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
