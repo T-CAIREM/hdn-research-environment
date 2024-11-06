@@ -20,6 +20,7 @@ from environment.decorators import (
     require_PATCH,
     billing_account_required,
     console_permission_required,
+    try_except_context_decorator,
 )
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
 from environment.exceptions import CreateCloudGroupFailed
@@ -55,6 +56,7 @@ ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
 
 @require_http_methods(["GET", "POST"])
+@try_except_context_decorator
 @login_required
 def identity_provisioning(request):
     if user_has_cloud_identity(request.user):
@@ -185,6 +187,7 @@ def research_environments_partial(request):
 
 
 @require_http_methods(["GET", "POST"])
+@try_except_context_decorator
 @login_required
 @cloud_identity_required
 @billing_account_required
@@ -214,6 +217,7 @@ def create_workspace(request):
 
 
 @require_http_methods(["GET", "POST"])
+@try_except_context_decorator
 @login_required
 @cloud_identity_required
 @billing_account_required
@@ -781,6 +785,7 @@ def remove_user_from_cloud_group(request, user_id):
 
 
 @login_required
+@try_except_context_decorator
 @cloud_identity_required
 @console_permission_required("user.can_view_admin_console")
 def create_cloud_group(request):
@@ -789,18 +794,10 @@ def create_cloud_group(request):
     if request.method == "POST":
         form = AddCloudGroupForm(request.POST)
         if form.is_valid():
-            try:
-                services.create_cloud_group(
-                    form.cleaned_data["name"], form.cleaned_data["description"]
-                )
-                return redirect("cloud_groups")
-            except CreateCloudGroupFailed as error:
-                context = {"form": form, "error_message": error}
-                return render(
-                    request,
-                    "environment/admin/create_cloud_user_group.html",
-                    context=context,
-                )
+            services.create_cloud_group(
+                form.cleaned_data["name"], form.cleaned_data["description"]
+            )
+            return redirect("cloud_groups")
 
     context = {"form": form}
     return render(
@@ -809,6 +806,7 @@ def create_cloud_group(request):
 
 
 @login_required
+@try_except_context_decorator
 @cloud_identity_required
 @console_permission_required("user.can_view_admin_console")
 def delete_cloud_group(request):
@@ -879,6 +877,7 @@ def cloud_groups_management_partial(request):
 
 
 @login_required
+@try_except_context_decorator
 @cloud_identity_required
 @console_permission_required("user.can_view_admin_console")
 def add_roles_to_cloud_group(request, cloud_group_id):
@@ -919,6 +918,7 @@ def add_roles_to_cloud_group(request, cloud_group_id):
 
 @login_required
 @cloud_identity_required
+@try_except_context_decorator
 @console_permission_required("user.can_view_admin_console")
 def remove_roles_from_cloud_group(request, cloud_group_id):
     cloud_group = CloudGroup.objects.get(id=cloud_group_id)
@@ -948,6 +948,7 @@ def remove_roles_from_cloud_group(request, cloud_group_id):
 
 @login_required
 @cloud_identity_required
+@try_except_context_decorator
 @console_permission_required("user.can_view_admin_console")
 def get_datasets_monitoring_data(request):
     monitoring_data = services.get_datasets_monitoring_data()
@@ -958,6 +959,7 @@ def get_datasets_monitoring_data(request):
 
 
 @login_required
+@try_except_context_decorator
 @cloud_identity_required
 @billing_account_required
 def update_workspace_billing_account(
