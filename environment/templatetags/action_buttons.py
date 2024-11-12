@@ -94,7 +94,9 @@ def environment_modal_button(
     }
     if button_type == "modal_instance":
         MACHINE_TYPE_SPECIFICATION = {}
-        for instance in VMInstance.objects.all():
+        for instance in VMInstance.objects.filter(
+            region__region=environment.region.value
+        ):
             MACHINE_TYPE_SPECIFICATION[instance.get_instance_value()] = instance
         result_data["instances_dict"] = MACHINE_TYPE_SPECIFICATION
 
