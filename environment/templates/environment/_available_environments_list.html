@@ -112,7 +112,7 @@
                                                             {% else %}
                                                                 {% environment_modal_button environment=environment button_type="modal_start" %}
                                                             {% endif %}
-                                                            {% environment_modal_button environment=environment button_type="modal_instance" %}
+                                                            {% environment_modal_button environment=environment gcp_project_id=workspace.gcp_project_id button_type="modal_instance" %}
                                                             {% environment_modal_button environment=environment button_type="modal_destroy" %}
                                                         {% endif %}
                                                     </div>

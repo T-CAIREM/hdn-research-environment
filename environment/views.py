@@ -271,6 +271,9 @@ def create_research_environment(request, workspace_id):
         if workspace.gcp_project_id == workspace_id
     )
     projects = services.get_available_projects(request.user)
+    cpu_quota = services.get_cpu_quota(
+        selected_workspace.region.value, selected_workspace.gcp_project_id
+    )
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
@@ -278,6 +281,7 @@ def create_research_environment(request, workspace_id):
             selected_workspace=selected_workspace,
             projects_list=projects,
             buckets_list=shared_buckets,
+            cpu_quota=cpu_quota,
         )
         if form.is_valid():
             selected_workbench = form.cleaned_data["machine_type"]
@@ -312,6 +316,7 @@ def create_research_environment(request, workspace_id):
             selected_workspace=selected_workspace,
             projects_list=projects,
             buckets_list=shared_buckets,
+            cpu_quota=cpu_quota,
         )
 
     instance_projected_cost = {}

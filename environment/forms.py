@@ -10,6 +10,7 @@ from environment.entities import (
     ResearchWorkspace,
     SharedWorkspace,
     SharedBucket,
+    QuotaInfo,
 )
 
 from django.conf import settings
@@ -124,18 +125,19 @@ class CreateResearchEnvironmentForm(forms.Form):
         selected_workspace: ResearchWorkspace,
         projects_list: Iterable[PublishedProject],
         buckets_list: Iterable[SharedBucket],
+        cpu_quota: QuotaInfo,
         **kwargs,
     ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
         self.fields["workspace_region"].initial = selected_workspace.region.value
-
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
+        available_cpus = cpu_quota.limit - cpu_quota.usage
         self.fields["machine_type"].queryset = VMInstance.objects.filter(
-            region__region=selected_workspace.region.value
+            region__region=selected_workspace.region.value, cpu__lt=available_cpus
         )
 
         self.fields["shared_bucket"].choices = [

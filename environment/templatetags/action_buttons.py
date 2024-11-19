@@ -12,6 +12,8 @@ from environment.entities import (
     SharedBucket,
 )
 
+from environment.services import get_cpu_quota
+
 from environment.models import VMInstance
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -80,6 +82,7 @@ button_types = {
 def environment_modal_button(
     environment: ResearchEnvironment,
     button_type: str,
+    gcp_project_id: str = None,
 ) -> dict:
     data = button_types[button_type]
     result_data = {
@@ -93,9 +96,12 @@ def environment_modal_button(
         "action_button_type": data["action_button_type"],
     }
     if button_type == "modal_instance":
+        cpu_quota = get_cpu_quota(environment.region.value, gcp_project_id)
+        available_cpus = cpu_quota.limit - cpu_quota.usage
+
         MACHINE_TYPE_SPECIFICATION = {}
         for instance in VMInstance.objects.filter(
-            region__region=environment.region.value
+            region__region=environment.region.value, cpu__lt=available_cpus
         ):
             MACHINE_TYPE_SPECIFICATION[instance.get_instance_value()] = instance
         result_data["instances_dict"] = MACHINE_TYPE_SPECIFICATION

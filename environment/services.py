@@ -550,6 +550,19 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
     return deserialize_quotas(response.json())
 
 
+def get_cpu_quota(workspace_project_id: str, region: str) -> QuotaInfo:
+    response = api.list_quotas_data(workspace_project_id, region)
+    return next(
+        iter(
+            [
+                quota
+                for quota in deserialize_quotas(response.json())
+                if quota.metric_name == "CPUs"
+            ]
+        )
+    )
+
+
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
     response = api.get_shared_workspaces(user.cloud_identity.email)
     return deserialize_shared_workspaces(response.json())
