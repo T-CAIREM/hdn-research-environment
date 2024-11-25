@@ -51,7 +51,15 @@
                 "X-CSRFToken": csrfToken,
                 "Content-Type": "application/json",
             },
-        }).then(response => response.json())
+        }).then(response =>
+       {
+       if (response.ok)
+       {
+        return response.json();
+       } else {
+        throw response.json();
+       }
+       })
           .then(json => fetchNewCards())
           .then(html => {
             $(".modal").on("hidden.bs.modal", (e) => {
@@ -60,6 +68,12 @@
               };
             });
             $(".modal").modal("hide");
+          }).catch(errorResponseJson => {
+            $(".modal").modal("hide");
+            errorResponseJson.then(message => {
+            console.log(message.error)
+            $("#environment-tabs").prepend(`<div class='alert alert-danger' role='alert'>${message.error}</div>`);
+            });
           })
       }
   })();
