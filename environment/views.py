@@ -58,7 +58,6 @@ User = get_user_model()
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
 
-
 @require_http_methods(["GET", "POST"])
 @login_required
 def identity_provisioning(request):
