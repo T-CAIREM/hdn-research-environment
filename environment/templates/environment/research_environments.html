@@ -71,8 +71,8 @@
           }).catch(errorResponseJson => {
             $(".modal").modal("hide");
             errorResponseJson.then(message => {
-            console.log(message.error)
             $("#environment-tabs").prepend(`<div class='alert alert-danger' role='alert'>${message.error}</div>`);
+            $(".inside-modal-button").prop("disabled", false);
             });
           })
       }
