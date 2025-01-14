@@ -225,6 +225,7 @@ class BucketSharingForm(forms.Form):
             owner=self.invitation_owner,
             user_contact_email=user_email,
             is_consumed=False,
+            is_revoked=False,
             shared_bucket_name=self.shared_bucket_name,
         ):
             raise forms.ValidationError(
