@@ -1,6 +1,7 @@
 from django.urls import path
 
 from environment import views
+from environment import react_views
 
 urlpatterns = [
     path("", views.research_environments, name="research_environments"),
@@ -157,5 +158,10 @@ urlpatterns = [
         "gpu-accelerators/",
         views.get_available_gpu_accelerators_partial,
         name="get_available_gpu_accelerators_partial",
+    ),
+    path(
+        "api/workspaces",
+        react_views.get_workspaces_list,
+        name="react_views.get_workspaces_list",
     ),
 ]
