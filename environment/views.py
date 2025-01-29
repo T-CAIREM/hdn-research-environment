@@ -22,7 +22,11 @@ from environment.decorators import (
     console_permission_required,
 )
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
-from environment.exceptions import CreateCloudGroupFailed
+from environment.exceptions import (
+    CreateCloudGroupFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+)
+
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -598,14 +602,17 @@ def start_stopped_environment(request):
 @cloud_identity_required
 def change_environment_machine_type(request):
     data = json.loads(request.body)
-    services.change_environment_machine_type(
-        user=request.user,
-        workspace_project_id=data["gcp_project_id"],
-        machine_type=data["machine_type"],
-        workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
-    )
-    return JsonResponse({})
+    try:
+        services.change_environment_machine_type(
+            user=request.user,
+            workspace_project_id=data["gcp_project_id"],
+            machine_type=data["machine_type"],
+            workbench_type=data["environment_type"],
+            workbench_resource_id=data["instance_name"],
+        )
+        return JsonResponse({})
+    except ChangeEnvironmentInstanceTypeFailed as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @require_DELETE
