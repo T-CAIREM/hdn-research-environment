@@ -31,21 +31,23 @@
                                 {{ workspace.gcp_project_id }}
                             </h6>
                             {% if workspace.gcp_billing_id %}
-                                <small>
-                                    <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
-                                        Billing Account:
-                                    </span>
-                                    <span class="d-inline font-weight-normal">
-                                        ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
-                                    </span>
-                                </small>
-                                <small class="d-block">
-                                    <span style="padding-top: 0.375rem;">
-                                        <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
-                                            Change billing account
-                                        </a>
-                                    </span>
-                                </small>
+                                {% if workspace.is_owner %}
+                                    <small>
+                                        <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
+                                            Billing Account:
+                                        </span>
+                                        <span class="d-inline font-weight-normal">
+                                            ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
+                                        </span>
+                                    </small>
+                                    <small class="d-block">
+                                        <span style="padding-top: 0.375rem;">
+                                            <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
+                                                Change billing account
+                                            </a>
+                                        </span>
+                                    </small>
+                                {% endif %}
                             {% endif %}
                         </div>
                         {% if not workspace.status.value == "created" %}
