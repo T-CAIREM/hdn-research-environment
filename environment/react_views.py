@@ -65,4 +65,6 @@ ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 def get_workspaces_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
     workspaces = services.get_workspaces_list(user)
-    return JsonResponse({"code": 200, "workspaces": serializers.serialize_workspaces(workspaces)})
+    return JsonResponse(
+        {"code": 200, "workspaces": serializers.serialize_workspaces(workspaces)}
+    )
