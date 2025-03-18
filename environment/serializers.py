@@ -2,7 +2,7 @@ from typing import Iterable
 from django.forms.models import model_to_dict
 
 
-from environment.entities import ResearchWorkspace
+from environment.entities import ResearchWorkspace, ResearchEnvironment
 
 
 def serialize_workspaces(workspaces: Iterable[ResearchWorkspace]):
@@ -22,7 +22,7 @@ def serialize_workspace_details(workspace: ResearchWorkspace):
         }
 
 
-def serialize_workbench(workbench):
+def serialize_workbench(workbench: ResearchEnvironment):
     return {
             "gcp_identifier": workbench.gcp_identifier,
             "dataset_identifier": workbench.dataset_identifier,
