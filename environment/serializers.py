@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Iterable, Union
 from django.forms.models import model_to_dict
 
@@ -5,6 +6,7 @@ from environment.entities import (
     ResearchWorkspace,
     ResearchEnvironment,
     EntityScaffolding,
+    SharedWorkspace,
 )
 
 
@@ -59,4 +61,21 @@ def serialize_entity_scaffolding(entity_scaffolding: EntityScaffolding):
     return {
         "gcp_project_id": entity_scaffolding.gcp_project_id,
         "status": entity_scaffolding.status.value,
+    }
+
+
+def serialize_shared_workspaces(shared_workspaces: Iterable[SharedWorkspace]):
+    return [
+        serialize_shared_workspace_details(shared_workspace)
+        for shared_workspace in shared_workspaces
+    ]
+
+
+def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
+    return {
+        "gcp_project_id": shared_workspace.gcp_project_id,
+        "gcp_billing_id": shared_workspace.gcp_billing_id,
+        "is_owner": shared_workspace.is_owner,
+        "status": shared_workspace.status.value,
+        "buckets": [asdict(bucket) for bucket in shared_workspace.buckets],
     }

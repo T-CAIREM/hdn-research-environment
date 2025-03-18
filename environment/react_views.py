@@ -27,3 +27,19 @@ def get_workspaces_list(request):
     return JsonResponse(
         {"code": 200, "workspaces": serializers.serialize_workspaces(workspaces)}
     )
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_shared_workspaces_list(request):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    shared_workspaces = services.get_shared_workspaces_list(user)
+    return JsonResponse(
+        {
+            "code": 200,
+            "shared_workspaces": serializers.serialize_shared_workspaces(
+                shared_workspaces
+            ),
+        }
+    )
