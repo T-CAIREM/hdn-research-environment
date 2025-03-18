@@ -1,8 +1,5 @@
 from typing import Iterable
-from dataclasses import asdict
-import json
 from django.forms.models import model_to_dict
-from django.core.serializers.json import DjangoJSONEncoder
 
 
 from environment.entities import ResearchWorkspace
@@ -16,20 +13,17 @@ def serialize_workspaces(workspaces: Iterable[ResearchWorkspace]):
 
 
 def serialize_workspace_details(workspace: ResearchWorkspace):
-    return json.dumps(
-        {
+    return {
             "region": workspace.region.value,
             "gcp_project_id": workspace.gcp_project_id,
             "gcp_billing_id": workspace.gcp_billing_id,
             "status": workspace.status.value,
             "workbenches": [serialize_workbench(wb) for wb in workspace.workbenches],
         }
-    )
 
 
 def serialize_workbench(workbench):
-    return json.dumps(
-        {
+    return {
             "gcp_identifier": workbench.gcp_identifier,
             "dataset_identifier": workbench.dataset_identifier,
             "url": workbench.url,
@@ -43,6 +37,4 @@ def serialize_workbench(workbench):
             "machine_type": workbench.machine_type,
             "disk_size": workbench.disk_size,
             "gpu_accelerator_type": workbench.gpu_accelerator_type,
-        },
-        cls=DjangoJSONEncoder,
-    )
+        }
