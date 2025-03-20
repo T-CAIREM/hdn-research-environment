@@ -104,6 +104,9 @@ def research_environments(request):
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
     }
+    should_display_google_link = (
+        CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
+    )
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -112,6 +115,7 @@ def research_environments(request):
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
+        "should_display_google_link": should_display_google_link,
     }
 
     return render(
@@ -143,6 +147,9 @@ def research_environments_partial(request):
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
     }
+    should_display_google_link = (
+        CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
+    )
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -151,6 +158,7 @@ def research_environments_partial(request):
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
+        "should_display_google_link": should_display_google_link,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")

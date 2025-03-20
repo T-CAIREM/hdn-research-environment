@@ -67,7 +67,16 @@
                                 <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                             </div>
                         {% else %}
-                            {% workspace_destroy_modal_button workspace=workspace %}
+                            <div class="d-flex flex-column align-items-end px-4 mb-3">
+                                <div class="mb-2">
+                                    {% workspace_destroy_modal_button workspace=workspace %}
+                                </div>
+                                {% if should_display_google_link %}
+                                    <a class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/welcome?&project={{ workspace.gcp_project_id }}">
+                                      Go to Google console
+                                    </a>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </div>
                 </div>
