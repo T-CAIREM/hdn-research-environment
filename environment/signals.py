@@ -33,6 +33,7 @@ Event = apps.get_model("events", "Event")
 
 EventApplication = apps.get_model("events", "EventApplication")
 
+
 @receiver(post_save, sender=BillingAccountSharingInvite)
 @receiver(post_save, sender=CloudIdentity)
 def consume_billing_account_sharing_invites(sender, created, instance, **kwargs):
@@ -133,7 +134,7 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
 @receiver(post_init, sender=EventApplication)
 def memoize_original_application_status(instance, **kwargs):
     """Store the original status to detect changes"""
-    instance._original_status = getattr(instance, 'status', None)
+    instance._original_status = getattr(instance, "status", None)
 
 
 @receiver(post_save, sender=EventApplication)
@@ -141,9 +142,9 @@ def handle_event_billing_account_on_approval(instance, **kwargs):
     """When an application is approved, share the event's billing account with the user if possible"""
     # Early return if conditions aren't met
     if not (
-            instance.status == instance.EventApplicationStatus.APPROVED and
-            instance._original_status != instance.EventApplicationStatus.APPROVED and
-            instance.event.gcp_billing_id
+        instance.status == instance.EventApplicationStatus.APPROVED
+        and instance._original_status != instance.EventApplicationStatus.APPROVED
+        and instance.event.gcp_billing_id
     ):
         return
 
@@ -159,24 +160,29 @@ def handle_event_billing_account_on_approval(instance, **kwargs):
             share_billing_account(
                 owner_email=event.host.cloud_identity.email,
                 user_email=cloud_identity.email,
-                billing_account_id=event.gcp_billing_id
+                billing_account_id=event.gcp_billing_id,
             )
-            logger.info(f"Billing account {event.gcp_billing_id} shared with {user.username} immediately")
+            logger.info(
+                f"Billing account {event.gcp_billing_id} shared with {user.username} immediately"
+            )
         except Exception as e:
-            logger.error(f"Error sharing billing account immediately: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error sharing billing account immediately: {str(e)}", exc_info=True
+            )
     else:
         # User doesn't have cloud identity yet, store in cache
         cache_key = f"{CACHE_KEY_PREFIX}{user.id}"
         pending_shares = cache.get(cache_key, [])
 
         # Check if this event share is already pending
-        if not any(share['event_id'] == event.id for share in pending_shares):
-            pending_shares.append({
-                'event_id': event.id,
-                'billing_account_id': event.gcp_billing_id
-            })
+        if not any(share["event_id"] == event.id for share in pending_shares):
+            pending_shares.append(
+                {"event_id": event.id, "billing_account_id": event.gcp_billing_id}
+            )
             cache.set(cache_key, pending_shares, timeout=CACHE_TIMEOUT)
-            logger.info(f"Cached pending billing share for user {user.username}, event {event.title}")
+            logger.info(
+                f"Cached pending billing share for user {user.username}, event {event.title}"
+            )
 
 
 @receiver(post_save, sender=CloudIdentity)
@@ -197,7 +203,7 @@ def process_pending_billing_shares(instance, **kwargs):
         return
 
     # Collect event IDs to fetch in a single query
-    event_ids = [share['event_id'] for share in pending_shares]
+    event_ids = [share["event_id"] for share in pending_shares]
     events_map = {event.id: event for event in Event.objects.filter(id__in=event_ids)}
 
     logger.info(f"Found {len(pending_shares)} pending billing shares")
@@ -205,11 +211,13 @@ def process_pending_billing_shares(instance, **kwargs):
     successful_shares = []
 
     for share in pending_shares:
-        event_id = share['event_id']
+        event_id = share["event_id"]
         event = events_map.get(event_id)
 
         if not event:
-            logger.warning(f"Event {event_id} no longer exists, removing from pending shares")
+            logger.warning(
+                f"Event {event_id} no longer exists, removing from pending shares"
+            )
             successful_shares.append(share)
             continue
 
@@ -220,21 +228,25 @@ def process_pending_billing_shares(instance, **kwargs):
             share_billing_account(
                 owner_email=host_email,
                 user_email=cloud_identity_email,
-                billing_account_id=share['billing_account_id']
+                billing_account_id=share["billing_account_id"],
             )
 
             # Mark as successful
             successful_shares.append(share)
-            logger.info(f"Successfully shared billing account {share['billing_account_id']} with {user.username}")
+            logger.info(
+                f"Successfully shared billing account {share['billing_account_id']} with {user.username}"
+            )
         except Exception as e:
             logger.error(
                 f"Error processing pending billing share for event {event_id}, user {user.username}: {str(e)}",
-                exc_info=True
+                exc_info=True,
             )
 
     # Remove successful shares from cache
     if successful_shares:
-        remaining_shares = [share for share in pending_shares if share not in successful_shares]
+        remaining_shares = [
+            share for share in pending_shares if share not in successful_shares
+        ]
         if remaining_shares:
             cache.set(cache_key, remaining_shares, timeout=CACHE_TIMEOUT)
         else:
