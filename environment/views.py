@@ -24,7 +24,8 @@ from environment.decorators import (
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
 from environment.exceptions import (
     CreateCloudGroupFailed,
-    ChangeEnvironmentInstanceTypeFailed, EnvironmentCreationFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    EnvironmentCreationFailed,
 )
 
 from environment.forms import (
@@ -48,7 +49,8 @@ from environment.models import (
     BucketSharingInvite,
     VMInstance,
     CloudGroup,
-    CloudIdentity, GPUAccelerator,
+    CloudIdentity,
+    GPUAccelerator,
 )
 from environment.utilities import user_has_cloud_identity
 
@@ -308,7 +310,9 @@ def create_research_environment(request, workspace_id):
                         workbench_type=form.cleaned_data["environment_type"],
                         disk_size=form.cleaned_data.get("disk_size"),
                         gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
-                        sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
+                        sharing_bucket_identifiers=form.cleaned_data.get(
+                            "shared_bucket"
+                        ),
                     )
                     messages.info(
                         request,
@@ -320,8 +324,12 @@ def create_research_environment(request, workspace_id):
                         request,
                         str(e).replace(
                             form.cleaned_data.get("gpu_accelerator"),
-                            str(GPUAccelerator.objects.get(name=form.cleaned_data.get("gpu_accelerator")))
-                        )
+                            str(
+                                GPUAccelerator.objects.get(
+                                    name=form.cleaned_data.get("gpu_accelerator")
+                                )
+                            ),
+                        ),
                     )
             else:
                 messages.error(

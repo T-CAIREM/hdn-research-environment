@@ -6,19 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('environment', '0016_remove_vminstance_gpu_attachable_gpuaccelerator_and_more'),
+        (
+            "environment",
+            "0016_remove_vminstance_gpu_attachable_gpuaccelerator_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='gpuaccelerator',
-            name='display_name',
-            field=models.CharField(default='Nvidia Tesla T4', max_length=64),
+            model_name="gpuaccelerator",
+            name="display_name",
+            field=models.CharField(default="Nvidia Tesla T4", max_length=64),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='gpuaccelerator',
-            name='memory_type',
-            field=models.CharField(choices=[('GDDR6', 'GDDR6'), ('HBM2e', 'HBM2e'), ('GDDR5', 'GDDR5'), ('HBM2', 'HBM2'), ('HBM3', 'HBM3')], max_length=32),
+            model_name="gpuaccelerator",
+            name="memory_type",
+            field=models.CharField(
+                choices=[
+                    ("GDDR6", "GDDR6"),
+                    ("HBM2e", "HBM2e"),
+                    ("GDDR5", "GDDR5"),
+                    ("HBM2", "HBM2"),
+                    ("HBM3", "HBM3"),
+                ],
+                max_length=32,
+            ),
         ),
     ]
