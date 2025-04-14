@@ -134,13 +134,14 @@ class GCPRegion(models.Model):
 
 class GPUAccelerator(models.Model):
     name = models.CharField(max_length=64)
+    display_name = models.CharField(max_length=64)
     memory_per_core = models.IntegerField()
     region = models.ForeignKey(GCPRegion, on_delete=models.CASCADE)
     price = models.FloatField()
     memory_type = models.CharField(max_length=32, choices=GPU_MEMORY_TYPES)
 
     def __str__(self):
-        return f"{self.name.replace('-', ' ').title()} ({self.memory_per_core} GB {self.memory_type}) - {self.region.region}"
+        return f"{self.display_name.title()} ({self.memory_per_core} GB {self.memory_type}) - {self.region.region}"
 
 
 class VMInstance(models.Model):
