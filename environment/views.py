@@ -322,14 +322,7 @@ def create_research_environment(request, workspace_id):
                 except EnvironmentCreationFailed as e:
                     messages.error(
                         request,
-                        str(e).replace(
-                            form.cleaned_data.get("gpu_accelerator"),
-                            str(
-                                GPUAccelerator.objects.get(
-                                    name=form.cleaned_data.get("gpu_accelerator")
-                                )
-                            ),
-                        ),
+                        str(e)
                     )
             else:
                 messages.error(
