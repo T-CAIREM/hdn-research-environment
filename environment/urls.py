@@ -184,4 +184,9 @@ urlpatterns = [
         react_views.get_billing_accounts_list,
         name="react_views.get_billing_accounts_list",
     ),
+    path(
+        "api/user",
+        react_views.get_user,
+        name="react_views.get_user",
+    ),
 ]

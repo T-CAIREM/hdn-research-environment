@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from typing import Iterable, Union
 from django.forms.models import model_to_dict
+from django.contrib.auth import get_user_model
 
 from environment.entities import (
     ResearchWorkspace,
@@ -8,6 +9,8 @@ from environment.entities import (
     EntityScaffolding,
     SharedWorkspace,
 )
+
+User = get_user_model()
 
 
 def serialize_workspaces(
@@ -79,3 +82,7 @@ def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
         "status": shared_workspace.status.value,
         "buckets": [asdict(bucket) for bucket in shared_workspace.buckets],
     }
+
+
+def serialize_user(user: User):
+    return model_to_dict(user, fields=["id", "username"])
