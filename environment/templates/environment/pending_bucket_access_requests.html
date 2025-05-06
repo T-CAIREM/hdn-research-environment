@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Pending Bucket Access Requests{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<style>
+  .request-card {
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .request-header {
+    background-color: #f8f9fa;
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+  }
+  .request-body {
+    padding: 15px;
+  }
+  .request-info {
+    margin-bottom: 15px;
+  }
+  .permissions-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    color: #212529;
+    margin-left: 0.5rem;
+  }
+  .request-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .request-actions .btn {
+    margin-left: 10px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .empty-state-icon {
+    font-size: 48px;
+    color: #dee2e6;
+    margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+  
+  <div class="jumbotron">
+    <h1>Pending Bucket Access Requests</h1>
+    <p class="lead">
+      Manage requests from users who want to access your shared buckets.
+    </p>
+  </div>
+
+  {% if pending_requests %}
+    {% for request in pending_requests %}
+      <div class="card request-card">
+        <div class="request-header">
+          Request from <strong>{{ request.accessor_email }}</strong>
+          {% if request.requested_permissions == "read" %}
+            <span class="permissions-badge bg-info text-white">Read Only</span>
+          {% elif request.requested_permissions == "read_write" %}
+            <span class="permissions-badge bg-warning text-dark">Read and Write</span>
+          {% endif %}
+        </div>
+        <div class="request-body">
+          <div class="request-info">
+            <div class="row">
+              <div class="col-md-12">
+                <p><strong>Bucket Name:</strong> {{ request.bucket_name }}</p>
+                <p><strong>Request ID:</strong> {{ request.request_id }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button type="button" class="btn btn-outline-danger" 
+                    onclick="processRequestDecision({{ request.request_id }}, '{{ request.bucket_name }}', 'rejected')">
+              Reject
+            </button>
+            <button type="button" class="btn btn-success" 
+                    onclick="processRequestDecision({{ request.request_id }}, '{{ request.bucket_name }}', 'approved')">
+              Approve
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <div class="card-body empty-state">
+        <div class="empty-state-icon">
+          <i class="fa fa-inbox"></i>
+        </div>
+        <h4>No Pending Requests</h4>
+        <p class="text-muted">You don't have any pending access requests for your shared buckets.</p>
+      </div>
+    </div>
+  {% endif %}
+  
+  <div class="mt-4 mb-5 text-center">
+    <a href="{% url 'research_environments' %}" class="btn btn-primary">
+      <i class="fa fa-arrow-left mr-2"></i> Back to Environments
+    </a>
+  </div>
+
+  <!-- Hidden form for processing decisions -->
+  <form id="decision-form" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" id="request_id" name="request_id">
+    <input type="hidden" id="bucket_name" name="bucket_name">
+    <input type="hidden" id="decision" name="decision">
+  </form>
+</div>
+{% endblock %}
+
+{% block local_js_bottom %}
+<script>
+  function processRequestDecision(requestId, bucketName, decision) {
+    // First, find which workspace this bucket belongs to
+    // We'll make an AJAX call to get this information
+    $.ajax({
+      url: "{% url 'get_bucket_workspace' %}",
+      data: { 
+        'bucket_name': bucketName 
+      },
+      success: function(data) {
+        if (data.workspace_id) {
+          // We have the workspace ID, now we can proceed
+          window.location.href = `{% url 'respond_to_bucket_access_request' request_id=0 decision='placeholder' %}`
+            .replace('0', requestId)
+            .replace('placeholder', decision) + 
+            `?bucket_name=${bucketName}&workspace_id=${data.workspace_id}`;
+        } else {
+          alert("Could not determine workspace for this bucket. Please try again.");
+        }
+      },
+      error: function() {
+        alert("An error occurred. Please try again.");
+      }
+    });
+  }
+</script>
+{% endblock %}

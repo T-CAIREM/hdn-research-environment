@@ -201,3 +201,19 @@ def delete_group_modal_button(
         "cloud_group_name": cloud_group_name,
     }
     return result_data
+
+
+@register.inclusion_tag("tag/request_access_button.html")
+def request_access_button(
+    bucket_name: str,
+    workspace_project_id: str,
+    button_class: str = "btn-secondary",
+    button_text: str = "Request Access",
+) -> dict:
+    result_data = {
+    "bucket_name": bucket_name,
+    "workspace_project_id": workspace_project_id,
+    "button_class": button_class,
+    "button_text": button_text,
+    }
+    return result_data

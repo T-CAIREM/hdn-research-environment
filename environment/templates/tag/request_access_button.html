@@ -1,0 +1,5 @@
+{% load static %}
+
+<a href="{% url 'request_bucket_access' workspace_id=workspace_project_id bucket_name=bucket_name %}" class="btn btn-sm {{ button_class|default:'btn-primary' }} m-1">
+  {{ button_text|default:'Request Access' }}
+</a>

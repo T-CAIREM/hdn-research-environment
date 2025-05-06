@@ -273,6 +273,69 @@ def share_bucket(
 
 
 @api_request
+def request_shared_bucket_access(
+    accessor_email: str,
+    bucket_name: str,
+    workspace_project_id: str,
+    requested_permissions: str,
+) -> Request:
+    json = {
+        "accesor_email": accessor_email,
+        "bucket_name": bucket_name,
+        "project_id": workspace_project_id,
+        "requested_permissions": requested_permissions,
+    }
+    return Request("POST", url="/sharing/bucket/request_access", json=json)
+
+
+@api_request
+def get_pending_shared_bucket_requests(
+    sharer_email: str,
+) -> Request:
+    return Request(
+        "GET",
+        url="/sharing/bucket/pending_requests",
+        params={"sharer_email": sharer_email},
+    )
+
+
+@api_request
+def shared_bucket_request(
+    request_id: int,
+    sharer_email: str,
+    bucket_name: str,
+    workspace_project_id: str,
+    decision: str,
+) -> Request:
+    json = {
+        "request_id": request_id,
+        "sharer_email": sharer_email,
+        "bucket_name": bucket_name,
+        "project_id": workspace_project_id,
+        "decision": decision,
+    }
+    return Request("PATCH", url="/sharing/bucket/request_access", json=json)
+
+
+@api_request
+def shared_bucket_request_decision(
+    request_id: int,
+    sharer_email: str,
+    bucket_name: str,
+    workspace_project_id: str,
+    decision: str,
+) -> Request:
+    json = {
+        "request_id": request_id,
+        "sharer_email": sharer_email,
+        "bucket_name": bucket_name,
+        "project_id": workspace_project_id,
+        "decision": decision,
+    }
+    return Request("PATCH", url="/sharing/bucket/request_access/", json=json)
+
+
+@api_request
 def revoke_shared_bucket_access(
     owner_email: str, user_email: str, bucket_name: str
 ) -> Request:

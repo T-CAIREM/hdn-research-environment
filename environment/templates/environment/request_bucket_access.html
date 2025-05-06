@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Request Bucket Access{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<style>
+  .permissions-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    cursor: pointer;
+  }
+  .permissions-card:hover {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+  }
+  .permissions-card.selected {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+  .permissions-card-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+  }
+  .permissions-card-body {
+    padding: 15px;
+  }
+  .permissions-choice {
+    margin-bottom: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+  
+  <div class="jumbotron">
+    <h1>Request Bucket Access</h1>
+    <p class="lead">
+      Request access to the shared bucket <strong>{{ bucket_name }}</strong>
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Bucket Details</h5>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p><strong>Bucket Name:</strong> {{ bucket_name }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Workspace ID:</strong> {{ workspace_id }}</p>
+        </div>
+      </div>
+
+      <h5 class="card-title">Access Request</h5>
+      <form action="{% url 'request_bucket_access' workspace_id=workspace_id bucket_name=bucket_name %}" method="post">
+        {% csrf_token %}
+        
+        {{ form.bucket_name }}
+        {{ form.workspace_project_id }}
+        
+        <div class="form-group">
+          <label class="form-label">Select Permission Level:</label>
+          
+          <div class="permissions-options">
+            {% for choice in form.requested_permissions.field.choices %}
+              <div class="permissions-card" onclick="selectPermission('{{ choice.0 }}')">
+                <div class="permissions-card-header">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="requested_permissions" id="permission_{{ choice.0 }}" value="{{ choice.0 }}" {% if forloop.first %}checked{% endif %}>
+                    <label class="form-check-label" for="permission_{{ choice.0 }}">
+                      {{ choice.1 }}
+                    </label>
+                  </div>
+                </div>
+                <div class="permissions-card-body">
+                  {% if choice.0 == "read" %}
+                    <p>With read-only access, you can:</p>
+                    <ul>
+                      <li>View and download files in the bucket</li>
+                      <li>List contents of the bucket</li>
+                    </ul>
+                    <p class="text-muted">You cannot upload, modify, or delete files.</p>
+                  {% elif choice.0 == "read_write" %}
+                    <p>With read and write access, you can:</p>
+                    <ul>
+                      <li>View and download files in the bucket</li>
+                      <li>Upload new files to the bucket</li>
+                      <li>Modify or delete existing files</li>
+                      <li>Create directories within the bucket</li>
+                    </ul>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        
+        <div class="form-group mt-4">
+          <button class="btn btn-primary" type="submit">
+            Submit Request
+          </button>
+          <a href="{% url 'research_environments' %}" class="btn btn-outline-secondary ml-2">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block local_js_bottom %}
+<script>
+  function selectPermission(value) {
+    // Update the radio button
+    document.getElementById('permission_' + value).checked = true;
+    
+    // Update visual selection
+    document.querySelectorAll('.permissions-card').forEach(card => {
+      card.classList.remove('selected');
+    });
+    document.getElementById('permission_' + value).closest('.permissions-card').classList.add('selected');
+  }
+  
+  // Initialize
+  document.addEventListener('DOMContentLoaded', function() {
+    const checkedRadio = document.querySelector('input[name="requested_permissions"]:checked');
+    if (checkedRadio) {
+      selectPermission(checkedRadio.value);
+    }
+  });
+</script>
+{% endblock %}

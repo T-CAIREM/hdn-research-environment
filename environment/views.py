@@ -25,6 +25,9 @@ from environment.entities import WorkflowStatus, WorkspaceStatus, Region, Workfl
 from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
+    RequestBucketAccessFailed,
+    GetPendingBucketRequestsFailed,
+    RespondToBucketRequestFailed
 )
 
 from environment.forms import (
@@ -41,6 +44,7 @@ from environment.forms import (
     AddRolesToCloudGroupForm,
     RemoveRolesFromCloudGroupForm,
     UpdateWorkspaceBillingAccountForm,
+    RequestBucketAccessForm
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -96,10 +100,14 @@ def research_environments(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
+        other_buckets_future = executor.submit(
+            services.get_other_available_buckets, request.user
+        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
+    other_available_buckets = other_buckets_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -110,6 +118,7 @@ def research_environments(request):
 
     context = {
         "shared_workspaces": shared_workspaces,
+        "other_available_buckets": other_available_buckets,
         "workspaces_with_workbenches": workspaces,
         "billing_accounts_list": billing_accounts_list,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
@@ -388,6 +397,149 @@ def create_shared_bucket(request, workspace_id):
         "form": form,
     }
     return render(request, "environment/create_shared_bucket.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+def request_bucket_access(request, workspace_id, bucket_name):
+    """View for requesting access to a shared bucket."""
+    if request.method == "POST":
+        form = RequestBucketAccessForm(request.POST)
+        if form.is_valid():
+            try:
+                services.request_bucket_access(
+                    user=request.user,
+                    bucket_name=form.cleaned_data["bucket_name"],
+                    workspace_project_id=form.cleaned_data["workspace_project_id"],
+                    requested_permissions=form.cleaned_data["requested_permissions"],
+                )
+                messages.success(
+                    request,
+                    f"Your access request for bucket '{bucket_name}' has been submitted."
+                )
+                return redirect("research_environments")
+            except RequestBucketAccessFailed as e:
+                messages.error(request, f"Failed to request access: {str(e)}")
+    else:
+        form = RequestBucketAccessForm(initial={
+            "bucket_name": bucket_name,
+            "workspace_project_id": workspace_id,
+        })
+
+    context = {
+        "form": form,
+        "bucket_name": bucket_name,
+        "workspace_id": workspace_id,
+    }
+    return render(request, "environment/request_bucket_access.html", context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_bucket_workspace(request):
+    """Get the workspace ID for a given bucket."""
+    bucket_name = request.GET.get('bucket_name')
+    if not bucket_name:
+        return JsonResponse({'error': 'Bucket name is required'}, status=400)
+
+    # Get all shared workspaces
+    shared_workspaces = services.get_shared_workspaces_list(request.user)
+
+    # Find the workspace that contains this bucket
+    workspace_id = None
+    for workspace in shared_workspaces:
+        for bucket in workspace.buckets:
+            if bucket.name == bucket_name and bucket.is_owner:
+                workspace_id = workspace.gcp_project_id
+                break
+        if workspace_id:
+            break
+
+    if not workspace_id:
+        return JsonResponse({'error': 'Workspace not found for bucket'}, status=404)
+
+    return JsonResponse({'workspace_id': workspace_id})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def pending_bucket_access_requests(request):
+    """View for listing pending bucket access requests."""
+    try:
+        pending_requests = services.get_pending_bucket_access_requests(
+            user=request.user
+        )
+
+        context = {
+            "pending_requests": pending_requests,
+        }
+        return render(request, "environment/pending_bucket_access_requests.html", context)
+    except GetPendingBucketRequestsFailed as e:
+        messages.error(request, f"Failed to fetch pending requests: {str(e)}")
+        return redirect("research_environments")
+
+
+@require_http_methods(["POST"])
+@login_required
+@cloud_identity_required
+def respond_to_bucket_access_request(request, request_id, decision):
+    """View for responding to a bucket access request."""
+    if decision not in ["approved", "rejected", "cancelled"]:
+        raise Http404("Invalid decision")
+    
+    try:
+        # First, get information about the bucket
+        pending_requests = services.get_pending_bucket_access_requests(request.user)
+        
+        # Find the specific request
+        bucket_request = next((r for r in pending_requests if r['request_id'] == request_id), None)
+        if not bucket_request:
+            messages.error(request, "Request not found or already processed.")
+            return redirect("pending_bucket_access_requests")
+        
+        # Get the bucket name from the request
+        bucket_name = bucket_request['bucket_name']
+        
+        # Now we need to find which workspace this bucket belongs to
+        shared_workspaces = services.get_shared_workspaces_list(request.user)
+        workspace_id = None
+        
+        # Find the workspace that contains this bucket
+        for workspace in shared_workspaces:
+            for bucket in workspace.buckets:
+                if bucket.name == bucket_name and bucket.is_owner:
+                    workspace_id = workspace.gcp_project_id
+                    break
+            if workspace_id:
+                break
+        
+        if not workspace_id:
+            messages.error(request, f"Could not determine workspace for bucket '{bucket_name}'.")
+            return redirect("pending_bucket_access_requests")
+        
+        # Now we have all the information needed to respond to the request
+        services.respond_to_bucket_access_request(
+            user=request.user,
+            request_id=request_id,
+            bucket_name=bucket_name,
+            workspace_project_id=workspace_id,
+            decision=decision,
+        )
+        
+        if decision == "approved":
+            messages.success(request, f"Access request for {bucket_name} approved.")
+        elif decision == "rejected":
+            messages.info(request, f"Access request for {bucket_name} rejected.")
+        else:
+            messages.info(request, f"Access request for {bucket_name} cancelled.")
+            
+    except (GetPendingBucketRequestsFailed, RespondToBucketRequestFailed) as e:
+        messages.error(request, f"Failed to process request: {str(e)}")
+    
+    return redirect("pending_bucket_access_requests")
 
 
 @require_http_methods(["GET", "POST"])

@@ -158,4 +158,24 @@ urlpatterns = [
         views.get_available_gpu_accelerators_partial,
         name="get_available_gpu_accelerators_partial",
     ),
+    path(
+        "bucket/<workspace_id>/<bucket_name>/request-access/",
+        views.request_bucket_access,
+        name="request_bucket_access",
+    ),
+    path(
+        "bucket/pending-requests/",
+        views.pending_bucket_access_requests,
+        name="pending_bucket_access_requests",
+    ),
+    path(
+        "bucket/request/<int:request_id>/<str:decision>/",
+        views.respond_to_bucket_access_request,
+        name="respond_to_bucket_access_request",
+    ),
+    path(
+        "bucket/get-workspace/",
+        views.get_bucket_workspace,
+        name="get_bucket_workspace",
+    ),
 ]

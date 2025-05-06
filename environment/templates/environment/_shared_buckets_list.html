@@ -1,4 +1,5 @@
 {% load action_buttons %}
+{% load environment_templatetags %}
 
 {% if recent_workflow %}
     {% if recent_workflow_failed %}
@@ -14,21 +15,26 @@
     {% endif %}
 {% endif %}
 
-<div class="d-flex flex-column align-items-end px-4 mb-3">
-    <a class="btn btn-primary btn-sm" href="{% url 'create_shared_workspace' %}">
-      + Shared Workspace
-    </a>
+<div class="d-flex justify-content-between align-items-center px-4 mb-3">
+    <div>
+        <!-- "Create Shared Workspace" button -->
+        <a class="btn btn-primary btn-sm" href="{% url 'create_shared_workspace' %}">
+            <i class="fa fa-plus mr-1"></i> Shared Workspace
+        </a>
+    </div>
 </div>
 
 <div id="accordion">
     {% if shared_workspaces %}
         {% for workspace in shared_workspaces %}
-            <div class="card">
-                <div class="card-header py-3" id="{{ heading }}">
+            <div class="card mb-3">
+                <div class="card-header py-3" id="workspace-heading-{{ forloop.counter }}">
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="mb-0">
-                                {{ workspace.gcp_project_id }}
+                                <a data-toggle="collapse" href="#workspace-collapse-{{ forloop.counter }}" aria-expanded="true" aria-controls="workspace-collapse-{{ forloop.counter }}" class="collapsed">
+                                    {{ workspace.gcp_project_id }}
+                                </a>
                             </h6>
                             {% if workspace.gcp_billing_id %}
                                 {% if workspace.is_owner %}
@@ -41,11 +47,9 @@
                                         </span>
                                     </small>
                                     <small class="d-block">
-                                        <span style="padding-top: 0.375rem;">
-                                            <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
-                                                Change billing account
-                                            </a>
-                                        </span>
+                                        <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
+                                            Change billing account
+                                        </a>
                                     </small>
                                 {% endif %}
                             {% endif %}
@@ -58,61 +62,102 @@
                                 <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                             </div>
                         {% else %}
-                            {% shared_workspace_destroy_modal_button shared_workspace=workspace %}
+                            <div>
+                                {% if workspace.is_owner %}
+                                    <a class="btn btn-info btn-sm mr-2" href="{% url 'pending_bucket_access_requests' %}">
+                                        <i class="fa fa-bell mr-1"></i> Pending Requests
+                                    </a>
+                                {% endif %}
+                                {% shared_workspace_destroy_modal_button shared_workspace=workspace %}
+                            </div>
                         {% endif %}
                     </div>
                 </div>
+                
                 {% if workspace.status.value == "created" %}
-                    <div class="card-body">
-                        {% if workspace.buckets %}
-                            <ul class="list-group list-group-flush">
-                                {% for bucket in workspace.buckets %}
-                                    <li class="list-group-item">
-                                        <div class="row">
-                                            <div class="col-md-8">
-                                                <p>
-                                                    {{ bucket.name }}
-                                                </p>
+                    <div id="workspace-collapse-{{ forloop.counter }}" class="collapse" aria-labelledby="workspace-heading-{{ forloop.counter }}" data-parent="#accordion">
+                        <div class="card-body">
+                            {% if workspace.buckets %}
+                                <h6 class="border-bottom pb-2 mb-3">Your Buckets</h6>
+                                <ul class="list-group list-group-flush">
+                                    {% for bucket in workspace.buckets %}
+                                        <li class="list-group-item">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <p class="mb-1 font-weight-bold">{{ bucket.name }}</p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    {% if bucket.is_owner %}
+                                                        <span class="badge badge-success">Owner</span>
+                                                    {% elif bucket.is_admin %}
+                                                        <span class="badge badge-primary">Admin</span>
+                                                    {% else %}
+                                                        <span class="badge badge-info">Shared with you</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-4 text-right">
+                                                    {% if bucket.is_owner %}
+                                                        {% delete_shared_bucket_modal_button shared_bucket=bucket %}
+                                                        <a href="{% url 'manage_shared_bucket' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
+                                                            Manage
+                                                        </a>
+                                                    {% elif bucket.is_admin %}
+                                                        <a href="{% url 'manage_shared_bucket_files' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
+                                                            Manage Files
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
                                             </div>
-                                            <div class="col-md-3">
-                                            {% if bucket.is_owner %}
-                                                {% delete_shared_bucket_modal_button shared_bucket=bucket %}
-                                                <a href="{% url 'manage_shared_bucket' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
-                                                    Manage
-                                                </a>
-                                            {% elif bucket.is_admin %}
-                                                <a href="{% url 'manage_shared_bucket_files' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
-                                                    Manage files
-                                                </a>
-                                            {% else %}
-                                                Shared
-                                            {% endif %}
-                                            </div>
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <div class="text-center">
-                                You don't have any buckets in this workspace.<br>
-                                Create one using the button below.
-                            </div>
-                        {% endif %}
-                        {% if workspace.is_owner %}
-                        <div class="row mt-3">
-                            <a class="m-auto" href="{% url 'create_shared_bucket' workspace_id=workspace.gcp_project_id %}">
-                                Create shared bucket
-                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p class="mb-0">You don't have any buckets in this workspace.</p>
+                                    {% if workspace.is_owner %}
+                                        <p class="mb-0">Create one using the button below.</p>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if other_available_buckets %}
+                                <h6 class="border-bottom pb-2 mb-3 mt-4">Other Available Buckets</h6>
+                                <ul class="list-group list-group-flush">
+                                    {% for bucket in other_available_buckets %}
+                                        {% if bucket.workspace_id == workspace.gcp_project_id %}
+                                            <li class="list-group-item">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <p class="mb-0">{{ bucket.name }}</p>
+                                                    </div>
+                                                    <div class="col-md-6 text-right">
+                                                        <a href="{% url 'request_bucket_access' workspace_id=workspace.gcp_project_id bucket_name=bucket.name %}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fa fa-key mr-1"></i> Request Access
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                            
+                            {% if workspace.is_owner %}
+                                <div class="mt-4 text-center">
+                                    <a class="btn btn-primary btn-sm" href="{% url 'create_shared_bucket' workspace_id=workspace.gcp_project_id %}">
+                                        <i class="fa fa-plus mr-1"></i> Create Shared Bucket
+                                    </a>
+                                </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                 {% endif %}
             </div>
         {% endfor %}
     {% else %}
-        <div class="text-center" style="margin-top: -3rem;">
-            You don't have any shared workspaces yet.<br>
-            Create one before creating a bucket.
+        <div class="alert alert-info text-center">
+            <p>You don't have any shared workspaces yet.</p>
+            <p>Create one using the button above.</p>
         </div>
     {% endif %}
 </div>

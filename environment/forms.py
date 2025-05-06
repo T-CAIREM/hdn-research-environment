@@ -233,6 +233,24 @@ class BucketSharingForm(forms.Form):
             )
 
 
+class RequestBucketAccessForm(forms.Form):
+    PERMISSIONS = [
+        ("read", "Read Only"),
+        ("read_write", "Read and Write"),
+    ]
+    bucket_name = forms.CharField(widget=forms.HiddenInput())
+    workspace_project_id = forms.CharField(widget=forms.HiddenInput())
+    requested_permissions = forms.ChoiceField(
+        label="Requested Permissions", 
+        choices=PERMISSIONS,
+        widget=forms.RadioSelect(attrs={"class": "permissions-choice"})
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
+
+
 class AddUserToCloudGroupForm(forms.Form):
     username = forms.CharField(
         label="Selected User",

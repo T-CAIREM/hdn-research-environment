@@ -62,6 +62,9 @@ from environment.exceptions import (
     GetGroupsIAMRolesFailed,
     GetMonitoringDatasetsFailed,
     UpdateWorkspaceBillingAccountFailed,
+    RequestBucketAccessFailed,
+    RespondToBucketRequestFailed,
+    GetPendingBucketRequestsFailed
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -261,6 +264,60 @@ def invite_user_to_shared_bucket(
     site_domain = get_current_site(request).domain
     mailers.send_bucket_sharing_confirmation(site_domain=site_domain, invite=invite)
     return invite
+
+
+def request_bucket_access(
+    user: User,
+    bucket_name: str,
+    workspace_project_id: str,
+    requested_permissions: str,
+):
+    """Request access to a bucket."""
+    response = api.request_shared_bucket_access(
+        accessor_email=user.cloud_identity.email,
+        bucket_name=bucket_name,
+        workspace_project_id=workspace_project_id,
+        requested_permissions=requested_permissions,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"RequestBucketAccessFailed: {error_message}")
+        raise RequestBucketAccessFailed(error_message)
+
+    return response.json()
+
+def get_pending_bucket_access_requests(user: User):
+    response = api.get_pending_shared_bucket_requests(
+        sharer_email=user.cloud_identity.email
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"GetPendingBucketRequestsFailed: {error_message}")
+        raise GetPendingBucketRequestsFailed(error_message)
+
+    return response.json()
+
+
+def respond_to_bucket_access_request(
+    user: User,
+    request_id: int,
+    bucket_name: str,
+    workspace_project_id: str,
+    decision: str,
+):
+    response = api.shared_bucket_request_decision(
+        request_id=request_id,
+        sharer_email=user.cloud_identity.email,
+        bucket_name=bucket_name,
+        workspace_project_id=workspace_project_id,
+        decision=decision,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"RespondToBucketRequestFailed: {error_message}")
+        raise RespondToBucketRequestFailed(error_message)
+
+    return response.json()
 
 
 def create_workspace(user: User, billing_account_id: str, region: str):
@@ -561,6 +618,18 @@ def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedB
         for shared_workspace in shared_workspaces
         for bucket in shared_workspace.buckets
     ]
+
+
+def get_other_available_buckets(user: User) -> Iterable[dict]:
+    """Get list of buckets that the user doesn't have access to but could request access."""
+    response = api.get_pending_shared_bucket_requests(user.cloud_identity.email)
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"GetPendingSharedBucketRequestsFailed: {error_message}")
+        # Return empty list instead of raising exception to avoid breaking the main page
+        return []
+
+    return response.json()
 
 
 def stop_running_environment(
