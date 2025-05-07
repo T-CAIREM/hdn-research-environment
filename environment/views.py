@@ -44,7 +44,8 @@ from environment.forms import (
     AddRolesToCloudGroupForm,
     RemoveRolesFromCloudGroupForm,
     UpdateWorkspaceBillingAccountForm,
-    RequestBucketAccessForm
+    RequestBucketAccessForm,
+    AttachBucketToProjectForm,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -53,6 +54,7 @@ from environment.models import (
     VMInstance,
     CloudGroup,
     CloudIdentity,
+    ProjectResource,
 )
 from environment.utilities import user_has_cloud_identity
 
@@ -115,6 +117,26 @@ def research_environments(request):
     should_display_google_link = (
         CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
     )
+    
+    # Get all bucket names across all workspaces
+    all_bucket_names = []
+    for workspace in shared_workspaces:
+        for bucket in workspace.buckets:
+            all_bucket_names.append(bucket.name)
+    
+    # Also add buckets from other_available_buckets
+    for bucket in other_available_buckets:
+        all_bucket_names.append(bucket.get('name'))
+    
+    # Get all project resources for these buckets
+    project_resources = ProjectResource.objects.filter(
+        bucket_name__in=all_bucket_names
+    ).select_related('project')
+    
+    # Create a mapping of bucket_name to project_resource
+    bucket_project_map = {
+        resource.bucket_name: resource for resource in project_resources
+    }
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -125,6 +147,7 @@ def research_environments(request):
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "should_display_google_link": should_display_google_link,
+        "bucket_project_map": bucket_project_map,
     }
 
     return render(
@@ -433,6 +456,111 @@ def request_bucket_access(request, workspace_id, bucket_name):
         "workspace_id": workspace_id,
     }
     return render(request, "environment/request_bucket_access.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@cloud_identity_required
+def attach_bucket_to_project(request, workspace_id, bucket_name):
+    """Attach a shared bucket to a project."""
+    
+    # Check if the bucket is already attached to a project
+    existing_resource = ProjectResource.objects.filter(bucket_name=bucket_name).first()
+    if existing_resource:
+        messages.warning(
+            request, 
+            f"This bucket is already attached to project: {existing_resource.project.title}"
+        )
+        return redirect("research_environments")
+    
+    # Check if the user has access to this bucket
+    shared_workspaces = services.get_shared_workspaces_list(request.user)
+    has_access = False
+    for workspace in shared_workspaces:
+        if workspace.gcp_project_id == workspace_id:
+            for bucket in workspace.buckets:
+                if bucket.name == bucket_name and (bucket.is_owner or bucket.is_admin):
+                    has_access = True
+                    break
+            if has_access:
+                break
+    
+    if not has_access:
+        messages.error(
+            request, 
+            "You don't have permission to attach this bucket to a project."
+        )
+        return redirect("research_environments")
+    
+    if request.method == "POST":
+        form = AttachBucketToProjectForm(
+            request.POST, 
+            user=request.user,
+            bucket_name=bucket_name,
+            workspace_id=workspace_id
+        )
+        
+        if form.is_valid():
+            project = form.cleaned_data["project"]
+            
+            # Create the project resource
+            ProjectResource.objects.create(
+                project=project,
+                project_id=str(project.id),
+                bucket_name=bucket_name
+            )
+            
+            messages.success(
+                request, 
+                f"Bucket '{bucket_name}' successfully attached to project '{project.title}'"
+            )
+            return redirect("research_environments")
+    else:
+        form = AttachBucketToProjectForm(
+            user=request.user,
+            bucket_name=bucket_name,
+            workspace_id=workspace_id
+        )
+    
+    context = {
+        "form": form,
+        "bucket_name": bucket_name,
+        "workspace_id": workspace_id
+    }
+    
+    return render(request, "environment/attach_bucket_to_project.html", context)
+
+
+@require_http_methods(["POST"])
+@login_required
+@cloud_identity_required
+def detach_bucket_from_project(request, resource_id):
+    """Detach a bucket from a project."""
+    try:
+        resource = ProjectResource.objects.get(id=resource_id)
+        
+        # Check if user has access to this project
+        if not resource.project.is_accessible_by(request.user):
+            messages.error(
+                request, 
+                "You don't have permission to detach this bucket from the project."
+            )
+            return redirect("research_environments")
+        
+        bucket_name = resource.bucket_name
+        project_title = resource.project.title
+        
+        # Delete the resource
+        resource.delete()
+        
+        messages.success(
+            request, 
+            f"Bucket '{bucket_name}' successfully detached from project '{project_title}'"
+        )
+    except ProjectResource.DoesNotExist:
+        messages.error(request, "Project resource not found.")
+    
+    return redirect("research_environments")
 
 
 @require_GET

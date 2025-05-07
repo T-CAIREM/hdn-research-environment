@@ -58,6 +58,22 @@ class CloudIdentity(models.Model):
     user_groups = models.ManyToManyField(CloudGroup)
 
 
+class ProjectResource(models.Model):
+    project = models.OneToOneField(
+        "project.PublishedProject", related_name="project_resource", 
+        on_delete=models.CASCADE
+    )
+    project_id = models.CharField(max_length=50, unique=True)
+    bucket_name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return f"{self.project.title} - {self.bucket_name}"
+    
+    class Meta:
+        verbose_name = "Project Resource"
+        verbose_name_plural = "Project Resources"    
+
+
 class BillingAccountSharingInvite(models.Model):
     owner = models.ForeignKey(
         "user.User",

@@ -83,10 +83,23 @@
                                     {% for bucket in workspace.buckets %}
                                         <li class="list-group-item">
                                             <div class="row">
-                                                <div class="col-md-4">
+                                                <div class="col-md-3">
                                                     <p class="mb-1 font-weight-bold">{{ bucket.name }}</p>
+                                                    
+                                                    {% with project_resource=bucket_project_map|get_dict_value:bucket.name %}
+                                                        {% if project_resource %}
+                                                            <span class="badge badge-primary">
+                                                                <i class="fa fa-link mr-1"></i> 
+                                                                Attached to project: 
+                                                                <a href="{% url 'published_project' project_resource.project.slug project_resource.project.version %}" 
+                                                                   class="text-white" target="_blank">
+                                                                    {{ project_resource.project.title }}
+                                                                </a>
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endwith %}
                                                 </div>
-                                                <div class="col-md-4">
+                                                <div class="col-md-3">
                                                     {% if bucket.is_owner %}
                                                         <span class="badge badge-success">Owner</span>
                                                     {% elif bucket.is_admin %}
@@ -95,7 +108,24 @@
                                                         <span class="badge badge-info">Shared with you</span>
                                                     {% endif %}
                                                 </div>
-                                                <div class="col-md-4 text-right">
+                                                <div class="col-md-6 text-right">
+                                                    {% with project_resource=bucket_project_map|get_dict_value:bucket.name %}
+                                                        {% if project_resource %}
+                                                            <form method="post" action="{% url 'detach_bucket_from_project' resource_id=project_resource.id %}" 
+                                                                  class="d-inline" onsubmit="return confirm('Are you sure you want to detach this bucket from the project?');">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                    <i class="fa fa-unlink mr-1"></i> Detach from Project
+                                                                </button>
+                                                            </form>
+                                                        {% elif bucket.is_owner or bucket.is_admin %}
+                                                            <a href="{% url 'attach_bucket_to_project' workspace_id=workspace.gcp_project_id bucket_name=bucket.name %}" 
+                                                               class="btn btn-sm btn-outline-primary">
+                                                                <i class="fa fa-link mr-1"></i> Attach to Project
+                                                            </a>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                    
                                                     {% if bucket.is_owner %}
                                                         {% delete_shared_bucket_modal_button shared_bucket=bucket %}
                                                         <a href="{% url 'manage_shared_bucket' shared_workspace_name=workspace.gcp_project_id shared_bucket_name=bucket.name %}" class="btn btn-sm btn-primary">
@@ -129,6 +159,19 @@
                                                 <div class="row">
                                                     <div class="col-md-6">
                                                         <p class="mb-0">{{ bucket.name }}</p>
+                                                        
+                                                        {% with project_resource=bucket_project_map|get_dict_value:bucket.name %}
+                                                            {% if project_resource %}
+                                                                <span class="badge badge-primary">
+                                                                    <i class="fa fa-link mr-1"></i> 
+                                                                    Attached to project: 
+                                                                    <a href="{% url 'published_project' project_resource.project.slug project_resource.project.version %}" 
+                                                                       class="text-white" target="_blank">
+                                                                        {{ project_resource.project.title }}
+                                                                    </a>
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endwith %}
                                                     </div>
                                                     <div class="col-md-6 text-right">
                                                         <a href="{% url 'request_bucket_access' workspace_id=workspace.gcp_project_id bucket_name=bucket.name %}" class="btn btn-sm btn-outline-secondary">

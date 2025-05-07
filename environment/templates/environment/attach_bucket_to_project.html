@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Attach Bucket to Project{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<style>
+  .project-card {
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+  }
+  .project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  .project-card.selected {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+  .project-card-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+  }
+  .project-card-body {
+    padding: 15px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+  
+  <div class="jumbotron">
+    <h1>Attach Bucket to Project</h1>
+    <p class="lead">
+      Associate the bucket <strong>{{ bucket_name }}</strong> with a project for easier access management.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Bucket Details</h5>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p><strong>Bucket Name:</strong> {{ bucket_name }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Workspace ID:</strong> {{ workspace_id }}</p>
+        </div>
+      </div>
+
+      <h5 class="card-title">Select Project</h5>
+      
+      {% if form.project.field.queryset.exists %}
+        <form action="{% url 'attach_bucket_to_project' workspace_id=workspace_id bucket_name=bucket_name %}" method="post">
+          {% csrf_token %}
+          
+          {{ form.bucket_name }}
+          {{ form.workspace_id }}
+          
+          <div class="form-group mb-4">
+            <label for="id_project">Select a project to attach this bucket to:</label>
+            {{ form.project }}
+          </div>
+          
+          <div class="form-group mt-4">
+            <button class="btn btn-primary" type="submit">
+              Attach to Project
+            </button>
+            <a href="{% url 'research_environments' %}" class="btn btn-outline-secondary ml-2">
+              Cancel
+            </a>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-warning">
+          <p>You don't have any projects available for attachment. Possible reasons:</p>
+          <ul>
+            <li>You don't have access to any projects</li>
+            <li>All your accessible projects already have buckets attached to them</li>
+          </ul>
+          <p>Please create a new project or detach an existing bucket from a project first.</p>
+          
+          <div class="mt-3">
+            <a href="{% url 'research_environments' %}" class="btn btn-primary">
+              Back to Environments
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

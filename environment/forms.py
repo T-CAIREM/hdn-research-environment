@@ -19,6 +19,7 @@ from environment.models import (
     VMInstance,
     CloudGroup,
     GPUAccelerator,
+    ProjectResource,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -231,6 +232,33 @@ class BucketSharingForm(forms.Form):
             raise forms.ValidationError(
                 "Invitation has been already sent to this email address"
             )
+
+
+class AttachBucketToProjectForm(forms.Form):
+    project = forms.ModelChoiceField(
+        queryset=PublishedProject.objects.none(),
+        label="Select Project",
+        empty_label="-- Select a Project --",
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    bucket_name = forms.CharField(widget=forms.HiddenInput())
+    workspace_id = forms.CharField(widget=forms.HiddenInput())
+    
+    def __init__(self, *args, user=None, bucket_name=None, workspace_id=None, **kwargs):
+        super(AttachBucketToProjectForm, self).__init__(*args, **kwargs)
+        
+        if user:
+            # Get only projects accessible by this user that don't already have a resource attached
+            existing_project_ids = ProjectResource.objects.values_list('project_id', flat=True)
+            self.fields['project'].queryset = PublishedProject.objects.accessible_by(user).exclude(
+                id__in=existing_project_ids
+            )
+        
+        if bucket_name:
+            self.fields['bucket_name'].initial = bucket_name
+            
+        if workspace_id:
+            self.fields['workspace_id'].initial = workspace_id
 
 
 class RequestBucketAccessForm(forms.Form):
