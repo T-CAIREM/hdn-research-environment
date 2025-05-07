@@ -242,23 +242,19 @@ class AttachBucketToProjectForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"})
     )
     bucket_name = forms.CharField(widget=forms.HiddenInput())
-    workspace_id = forms.CharField(widget=forms.HiddenInput())
+    workspace_project_id = forms.CharField(widget=forms.HiddenInput())
     
-    def __init__(self, *args, user=None, bucket_name=None, workspace_id=None, **kwargs):
+    def __init__(self, *args, user=None, bucket_name=None, workspace_project_id=None, **kwargs):
         super(AttachBucketToProjectForm, self).__init__(*args, **kwargs)
-        
+
         if user:
-            # Get only projects accessible by this user that don't already have a resource attached
-            existing_project_ids = ProjectResource.objects.values_list('project_id', flat=True)
-            self.fields['project'].queryset = PublishedProject.objects.accessible_by(user).exclude(
-                id__in=existing_project_ids
-            )
-        
+            self.fields['project'].queryset = PublishedProject.objects.accessible_by(user)
+
         if bucket_name:
             self.fields['bucket_name'].initial = bucket_name
-            
-        if workspace_id:
-            self.fields['workspace_id'].initial = workspace_id
+
+        if workspace_project_id:
+            self.fields['workspace_project_id'].initial = workspace_project_id
 
 
 class RequestBucketAccessForm(forms.Form):

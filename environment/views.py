@@ -461,7 +461,7 @@ def request_bucket_access(request, workspace_id, bucket_name):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
-def attach_bucket_to_project(request, workspace_id, bucket_name):
+def attach_bucket_to_project(request, workspace_project_id, bucket_name):
     """Attach a shared bucket to a project."""
     
     # Check if the bucket is already attached to a project
@@ -477,7 +477,7 @@ def attach_bucket_to_project(request, workspace_id, bucket_name):
     shared_workspaces = services.get_shared_workspaces_list(request.user)
     has_access = False
     for workspace in shared_workspaces:
-        if workspace.gcp_project_id == workspace_id:
+        if workspace.gcp_project_id == workspace_project_id:
             for bucket in workspace.buckets:
                 if bucket.name == bucket_name and (bucket.is_owner or bucket.is_admin):
                     has_access = True
@@ -497,7 +497,7 @@ def attach_bucket_to_project(request, workspace_id, bucket_name):
             request.POST, 
             user=request.user,
             bucket_name=bucket_name,
-            workspace_id=workspace_id
+            workspace_project_id=workspace_project_id
         )
         
         if form.is_valid():
@@ -519,13 +519,13 @@ def attach_bucket_to_project(request, workspace_id, bucket_name):
         form = AttachBucketToProjectForm(
             user=request.user,
             bucket_name=bucket_name,
-            workspace_id=workspace_id
+            workspace_project_id=workspace_project_id
         )
     
     context = {
         "form": form,
         "bucket_name": bucket_name,
-        "workspace_id": workspace_id
+        "workspace_project_id": workspace_project_id
     }
     
     return render(request, "environment/attach_bucket_to_project.html", context)

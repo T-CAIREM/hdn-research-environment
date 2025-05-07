@@ -59,7 +59,7 @@
       <h5 class="card-title">Select Project</h5>
       
       {% if form.project.field.queryset.exists %}
-        <form action="{% url 'attach_bucket_to_project' workspace_id=workspace_id bucket_name=bucket_name %}" method="post">
+        <form action="{% url 'attach_bucket_to_project' workspace_project_id=workspace_id bucket_name=bucket_name %}" method="post">
           {% csrf_token %}
           
           {{ form.bucket_name }}

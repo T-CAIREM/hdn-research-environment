@@ -63,7 +63,7 @@ class ProjectResource(models.Model):
         "project.PublishedProject", related_name="project_resource", 
         on_delete=models.CASCADE
     )
-    project_id = models.CharField(max_length=50, unique=True)
+    workspace_project_id = models.CharField(max_length=50, unique=True)
     bucket_name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):

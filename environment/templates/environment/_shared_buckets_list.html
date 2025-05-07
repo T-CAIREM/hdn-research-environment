@@ -119,7 +119,7 @@
                                                                 </button>
                                                             </form>
                                                         {% elif bucket.is_owner or bucket.is_admin %}
-                                                            <a href="{% url 'attach_bucket_to_project' workspace_id=workspace.gcp_project_id bucket_name=bucket.name %}" 
+                                                            <a href="{% url 'attach_bucket_to_project' workspace_project_id=workspace.gcp_project_id bucket_name=bucket.name %}" 
                                                                class="btn btn-sm btn-outline-primary">
                                                                 <i class="fa fa-link mr-1"></i> Attach to Project
                                                             </a>
