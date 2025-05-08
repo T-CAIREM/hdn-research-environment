@@ -174,7 +174,7 @@ urlpatterns = [
         name="respond_to_bucket_access_request",
     ),
     path(
-        "bucket/<workspace_id>/<bucket_name>/attach-to-project/",
+        "bucket/<workspace_project_id>/<bucket_name>/attach-to-project/",
         views.attach_bucket_to_project,
         name="attach_bucket_to_project",
     ),

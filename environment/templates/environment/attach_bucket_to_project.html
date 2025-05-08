@@ -52,24 +52,47 @@
           <p><strong>Bucket Name:</strong> {{ bucket_name }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Workspace ID:</strong> {{ workspace_id }}</p>
+          <p><strong>Workspace ID:</strong> {{ workspace_project_id }}</p>
         </div>
       </div>
 
       <h5 class="card-title">Select Project</h5>
       
       {% if form.project.field.queryset.exists %}
-        <form action="{% url 'attach_bucket_to_project' workspace_project_id=workspace_id bucket_name=bucket_name %}" method="post">
+        <form action="{% url 'attach_bucket_to_project' workspace_project_id=workspace_project_id bucket_name=bucket_name %}" method="post">
           {% csrf_token %}
-          
-          {{ form.bucket_name }}
-          {{ form.workspace_id }}
+
+          {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                  {% for error in form.non_field_errors %}
+                      <p>{{ error }}</p>
+                  {% endfor %}
+              </div>
+          {% endif %}          
+
+          <!-- {{ form.bucket_name }}
+          {{ form.workspace_project_id }}
           
           <div class="form-group mb-4">
             <label for="id_project">Select a project to attach this bucket to:</label>
             {{ form.project }}
-          </div>
-          
+          </div> -->
+
+        {% for field in form %}
+            <div class="form-group mb-3">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="invalid-feedback" style="display: block; color: red;"> <!-- Make errors visible -->
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}                    
+
           <div class="form-group mt-4">
             <button class="btn btn-primary" type="submit">
               Attach to Project

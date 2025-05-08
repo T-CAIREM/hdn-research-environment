@@ -12,6 +12,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth import get_user_model
 
+import logging
+
 import environment.constants as constants
 import environment.services as services
 from environment.decorators import (
@@ -59,7 +61,7 @@ from environment.models import (
 from environment.utilities import user_has_cloud_identity
 
 User = get_user_model()
-
+logger = logging.getLogger(__name__)
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
@@ -102,14 +104,11 @@ def research_environments(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
-        other_buckets_future = executor.submit(
-            services.get_other_available_buckets, request.user
-        )
+        # We'll handle other_buckets differently
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
-    other_available_buckets = other_buckets_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -118,25 +117,49 @@ def research_environments(request):
         CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
     )
     
-    # Get all bucket names across all workspaces
+    # Get all bucket names across all workspaces - with defensive coding
     all_bucket_names = []
     for workspace in shared_workspaces:
-        for bucket in workspace.buckets:
-            all_bucket_names.append(bucket.name)
+        if hasattr(workspace, 'buckets'):
+            for bucket in workspace.buckets:
+                if hasattr(bucket, 'name'):
+                    all_bucket_names.append(bucket.name)
     
-    # Also add buckets from other_available_buckets
-    for bucket in other_available_buckets:
-        all_bucket_names.append(bucket.get('name'))
+    # Create an empty map as a fallback
+    bucket_project_map = {}
     
-    # Get all project resources for these buckets
-    project_resources = ProjectResource.objects.filter(
-        bucket_name__in=all_bucket_names
-    ).select_related('project')
+    # Only try to get project resources if we have buckets
+    if all_bucket_names:
+        try:
+            # This is the risky part - wrap in try/except
+            from environment.models import ProjectResource
+            
+            # Get all project resources for these buckets with safer queries
+            project_resources = ProjectResource.objects.filter(
+                bucket_name__in=all_bucket_names
+            ).select_related('project')
+            
+            # Create a mapping of bucket_name to project_resource
+            bucket_project_map = {
+                resource.bucket_name: resource for resource in project_resources
+            }
+        except (ImportError, AttributeError, Exception) as e:
+            # Log the error but continue
+            logger.error(f"Error fetching project resources: {str(e)}")
+            bucket_project_map = {}  # Fallback to empty dict
     
-    # Create a mapping of bucket_name to project_resource
-    bucket_project_map = {
-        resource.bucket_name: resource for resource in project_resources
-    }
+    # Use a simple structure for other_available_buckets that the template can handle
+    other_available_buckets = []
+    try:
+        # Try to get other buckets but handle failure gracefully
+        other_buckets = services.get_other_available_buckets(request.user)
+        
+        # Make sure each bucket has the expected attributes
+        for bucket in other_buckets:
+            if isinstance(bucket, dict) and 'name' in bucket and 'workspace_id' in bucket:
+                other_available_buckets.append(bucket)
+    except Exception as e:
+        logger.error(f"Error fetching other available buckets: {str(e)}")
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -183,6 +206,26 @@ def research_environments_partial(request):
         CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
     )
 
+    all_bucket_names = []
+    if shared_workspaces:
+        for workspace in shared_workspaces:
+            if hasattr(workspace, 'buckets') and workspace.buckets:
+                for bucket in workspace.buckets:
+                    if hasattr(bucket, 'name'):
+                        all_bucket_names.append(bucket.name)    
+    bucket_project_map = {}
+    if all_bucket_names:
+        try:
+            project_resources = ProjectResource.objects.filter(
+                bucket_name__in=all_bucket_names
+            ).select_related('project')
+            bucket_project_map = {
+                resource.bucket_name: resource for resource in project_resources
+            }
+        except Exception as e:
+            logger.error(f"Error fetching project resources in partial view: {str(e)}")
+            bucket_project_map = {}
+
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
@@ -191,6 +234,7 @@ def research_environments_partial(request):
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "should_display_google_link": should_display_google_link,
+        "bucket_project_map": bucket_project_map,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
