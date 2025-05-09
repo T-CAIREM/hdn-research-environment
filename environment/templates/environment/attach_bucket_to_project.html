@@ -52,7 +52,7 @@
           <p><strong>Bucket Name:</strong> {{ bucket_name }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Workspace ID:</strong> {{ workspace_project_id }}</p>
+          <p><strong>Workspace ID:</strong> {{ workspace_id }}</p>
         </div>
       </div>
 
@@ -61,47 +61,37 @@
       {% if form.project.field.queryset.exists %}
         <form action="{% url 'attach_bucket_to_project' workspace_project_id=workspace_project_id bucket_name=bucket_name %}" method="post">
           {% csrf_token %}
-
-          {% if form.non_field_errors %}
+            
+            {% if form.non_field_errors %}
               <div class="alert alert-danger">
-                  {% for error in form.non_field_errors %}
-                      <p>{{ error }}</p>
-                  {% endfor %}
+                {% for error in form.non_field_errors %}
+                  {{ error }}
+                {% endfor %}
               </div>
-          {% endif %}          
-
-          <!-- {{ form.bucket_name }}
-          {{ form.workspace_project_id }}
-          
-          <div class="form-group mb-4">
-            <label for="id_project">Select a project to attach this bucket to:</label>
-            {{ form.project }}
-          </div> -->
-
-        {% for field in form %}
-            <div class="form-group mb-3">
+            {% endif %}
+            
+            {% for field in form %}
+              <div class="form-group">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% if field.help_text %}
-                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                  <small class="form-text text-muted">{{ field.help_text|safe }}</small>
                 {% endif %}
-                {% for error in field.errors %}
-                    <div class="invalid-feedback" style="display: block; color: red;"> <!-- Make errors visible -->
-                        {{ error }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endfor %}                    
-
-          <div class="form-group mt-4">
-            <button class="btn btn-primary" type="submit">
-              Attach to Project
+                {% if field.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in field.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            
+            <button class="btn btn-primary mt-3" type="submit">
+              Attach bucket
             </button>
-            <a href="{% url 'research_environments' %}" class="btn btn-outline-secondary ml-2">
-              Cancel
-            </a>
-          </div>
-        </form>
+
+          </form>
       {% else %}
         <div class="alert alert-warning">
           <p>You don't have any projects available for attachment. Possible reasons:</p>
