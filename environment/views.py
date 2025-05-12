@@ -475,16 +475,33 @@ def request_bucket_access(request, workspace_project_id, bucket_name):
         form = RequestBucketAccessForm(request.POST)
         if form.is_valid():
             try:
-                services.request_bucket_access(
+                requested_permissions = form.cleaned_data["requested_permissions"]
+                
+                request_id = services.request_bucket_access(
                     user=request.user,
                     bucket_name=form.cleaned_data["bucket_name"],
                     workspace_project_id=form.cleaned_data["workspace_project_id"],
-                    requested_permissions=form.cleaned_data["requested_permissions"],
+                    requested_permissions=requested_permissions,
                 )
-                messages.success(
-                    request,
-                    f"Your access request for bucket '{bucket_name}' has been submitted."
-                )
+                
+                if requested_permissions == "read":
+                    services.respond_to_bucket_access_request(
+                        user=request.user,
+                        request_id=request_id,
+                        bucket_name=bucket_name,
+                        workspace_project_id=workspace_project_id,
+                        decision="approved",
+                    )
+                    messages.success(
+                        request,
+                        f"Your read access request for bucket '{bucket_name}' has been automatically approved."
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Your access request for bucket '{bucket_name}' has been submitted and is pending approval."
+                    )
+                
                 return redirect("research_environments")
             except RequestBucketAccessFailed as e:
                 messages.error(request, f"Failed to request access: {str(e)}")
@@ -500,7 +517,6 @@ def request_bucket_access(request, workspace_project_id, bucket_name):
         "workspace_project_id": workspace_project_id,
     }
     return render(request, "environment/request_bucket_access.html", context)
-
 
 @require_http_methods(["GET", "POST"])
 @login_required
@@ -680,8 +696,7 @@ def respond_to_bucket_access_request(request, request_id, decision):
         if not workspace_id:
             messages.error(request, f"Could not determine workspace for bucket '{bucket_name}'.")
             return redirect("pending_bucket_access_requests")
-        
-        # Now we have all the information needed to respond to the request
+
         services.respond_to_bucket_access_request(
             user=request.user,
             request_id=request_id,

@@ -85,18 +85,20 @@
                   {% if choice.0 == "read" %}
                     <p>With read-only access, you can:</p>
                     <ul>
-                      <li>View and download files in the bucket</li>
-                      <li>List contents of the bucket</li>
+                      <li>View and connect files in the bucket to your workspace</li>
                     </ul>
                     <p class="text-muted">You cannot upload, modify, or delete files.</p>
                   {% elif choice.0 == "read_write" %}
                     <p>With read and write access, you can:</p>
                     <ul>
-                      <li>View and download files in the bucket</li>
+                      <li>View and connect files in the bucket to your workspace</li>
                       <li>Upload new files to the bucket</li>
                       <li>Modify or delete existing files</li>
                       <li>Create directories within the bucket</li>
                     </ul>
+                    <p class="text-muted">You cannot delete the bucket itself.</p>
+                    <p> Please select this option if you have connected with the project owner and have their prior approval.</p>
+
                   {% endif %}
                 </div>
               </div>
