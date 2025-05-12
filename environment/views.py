@@ -469,7 +469,7 @@ def create_shared_bucket(request, workspace_id):
 @require_http_methods(["GET", "POST"])
 @login_required
 @cloud_identity_required
-def request_bucket_access(request, workspace_id, bucket_name):
+def request_bucket_access(request, workspace_project_id, bucket_name):
     """View for requesting access to a shared bucket."""
     if request.method == "POST":
         form = RequestBucketAccessForm(request.POST)
@@ -491,13 +491,13 @@ def request_bucket_access(request, workspace_id, bucket_name):
     else:
         form = RequestBucketAccessForm(initial={
             "bucket_name": bucket_name,
-            "workspace_project_id": workspace_id,
+            "workspace_project_id": workspace_project_id,
         })
 
     context = {
         "form": form,
         "bucket_name": bucket_name,
-        "workspace_id": workspace_id,
+        "workspace_project_id": workspace_project_id,
     }
     return render(request, "environment/request_bucket_access.html", context)
 
@@ -528,7 +528,7 @@ def attach_bucket_to_project(request, workspace_project_id, bucket_name):
                     break
             if has_access:
                 break
-    
+
     if not has_access:
         messages.error(
             request, 
@@ -546,8 +546,6 @@ def attach_bucket_to_project(request, workspace_project_id, bucket_name):
         
         if form.is_valid():
             project = form.cleaned_data["project"]
-            
-            # Create the project resource
             ProjectResource.objects.create(
                 project=project,
                 project_id=str(project.id),
@@ -584,7 +582,7 @@ def detach_bucket_from_project(request, resource_id):
         resource = ProjectResource.objects.get(id=resource_id)
         
         # Check if user has access to this project
-        if not resource.project.is_accessible_by(request.user):
+        if not resource.project.accessible_by(request.user):
             messages.error(
                 request, 
                 "You don't have permission to detach this bucket from the project."

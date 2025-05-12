@@ -159,7 +159,7 @@ urlpatterns = [
         name="get_available_gpu_accelerators_partial",
     ),
     path(
-        "bucket/<workspace_id>/<bucket_name>/request-access/",
+        "bucket/<workspace_project_id>/<bucket_name>/request-access/",
         views.request_bucket_access,
         name="request_bucket_access",
     ),
