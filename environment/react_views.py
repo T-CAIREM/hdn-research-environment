@@ -9,14 +9,10 @@ from django.contrib.auth import get_user_model
 from environment.forms import (
     CreateWorkspaceForm,
     CreateSharedWorkspaceForm,
-
 )
 import environment.services as services
 import environment.serializers as serializers
-from environment.decorators import (
-    cloud_identity_required,
-    require_DELETE
-)
+from environment.decorators import cloud_identity_required, require_DELETE
 
 User = get_user_model()
 
