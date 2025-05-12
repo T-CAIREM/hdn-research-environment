@@ -199,6 +199,14 @@ urlpatterns = [
         react_views.delete_shared_workspace,
         name="react_views.delete_shared_workspace",
     ),
-    path("api/workspace/create", react_views.create_workspace, name="react_views.create_workspace"),
-    path("api/workspace/delete", react_views.delete_workspace, name="react_views.delete_workspace"),
+    path(
+        "api/workspace/create",
+        react_views.create_workspace,
+        name="react_views.create_workspace",
+    ),
+    path(
+        "api/workspace/delete",
+        react_views.delete_workspace,
+        name="react_views.delete_workspace",
+    ),
 ]
