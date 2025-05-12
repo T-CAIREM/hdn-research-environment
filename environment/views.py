@@ -579,19 +579,10 @@ def attach_bucket_to_project(request, workspace_project_id, bucket_name):
 def detach_bucket_from_project(request, resource_id):
     """Detach a bucket from a project."""
     try:
-        resource = ProjectResource.objects.get(id=resource_id)
-        
-        # Check if user has access to this project
-        if not resource.project.accessible_by(request.user):
-            messages.error(
-                request, 
-                "You don't have permission to detach this bucket from the project."
-            )
-            return redirect("research_environments")
-        
+        resource = ProjectResource.objects.get(id=resource_id)        
         bucket_name = resource.bucket_name
         project_title = resource.project.title
-        
+
         # Delete the resource
         resource.delete()
         
