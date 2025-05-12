@@ -123,7 +123,7 @@ def create_shared_workspace(request):
 @require_DELETE
 @login_required
 @cloud_identity_required
-def delete_workspace(request):
+def delete_shared_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     services.delete_shared_workspace(
