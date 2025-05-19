@@ -4,7 +4,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_GET, require_POST, require_DELETE
+from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth import get_user_model
 from environment.forms import (
     CreateWorkspaceForm,
