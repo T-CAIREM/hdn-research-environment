@@ -1,18 +1,14 @@
 from typing import Iterable, Union
 from dataclasses import asdict
-from typing import Iterable
 from django.forms.models import model_to_dict
 
 from environment.entities import (
-    ResearchWorkspace,
     ResearchEnvironment,
     EntityScaffolding,
-)
-
-from environment.entities import (
     ResearchWorkspace,
     SharedWorkspace,
 )
+
 
 def serialize_workspaces(
     workspaces: Iterable[Union[ResearchWorkspace, EntityScaffolding]]
@@ -68,9 +64,11 @@ def serialize_entity_scaffolding(entity_scaffolding: EntityScaffolding):
     }
 
 
-def serialize_shared_workspaces(shared_workspaces: Iterable[SharedWorkspace]):
+def serialize_shared_workspaces(shared_workspaces: Iterable[Union[SharedWorkspace,EntityScaffolding]]):
     return [
         serialize_shared_workspace_details(shared_workspace)
+        if isinstance(shared_workspaces, SharedWorkspace)
+        else serialize_entity_scaffolding(shared_workspace)
         for shared_workspace in shared_workspaces
     ]
 
