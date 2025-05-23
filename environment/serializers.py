@@ -69,7 +69,7 @@ def serialize_shared_workspaces(
 ):
     return [
         serialize_shared_workspace_details(shared_workspace)
-        if isinstance(shared_workspaces, SharedWorkspace)
+        if isinstance(shared_workspace, SharedWorkspace)
         else serialize_entity_scaffolding(shared_workspace)
         for shared_workspace in shared_workspaces
     ]
