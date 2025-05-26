@@ -70,7 +70,7 @@ def create_workspace(request):
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
     form = CreateWorkspaceForm(
-        request.POST, billing_accounts_list=billing_accounts_list
+        data, billing_accounts_list=billing_accounts_list
     )
     if form.is_valid():
         services.create_workspace(
@@ -106,7 +106,7 @@ def create_shared_workspace(request):
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
     form = CreateSharedWorkspaceForm(
-        request.POST, billing_accounts_list=billing_accounts_list
+        data, billing_accounts_list=billing_accounts_list
     )
     if form.is_valid():
         services.create_shared_workspace(
