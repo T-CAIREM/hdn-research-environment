@@ -8,6 +8,7 @@ from environment.entities import (
     ResearchWorkspace,
     SharedWorkspace,
 )
+from environment.models import VMInstance, GPUAccelerator
 
 User = get_user_model()
 
@@ -66,3 +67,15 @@ def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
 
 def serialize_user(user: User):
     return model_to_dict(user, fields=["id", "username"])
+
+
+def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
+    return [model_to_dict(vm_instance) for vm_instance in vm_instances]
+
+
+def serialize_gpu_accelerators(gpu_accelerators: Iterable[GPUAccelerator]):
+    return [model_to_dict(accelerator) for accelerator in gpu_accelerators]
+
+
+def serialize_projects(projects):
+    return [model_to_dict(project) for project in projects]

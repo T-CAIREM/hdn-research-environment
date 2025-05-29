@@ -199,4 +199,19 @@ urlpatterns = [
         react_views.delete_workspace,
         name="react_views.delete_workspace",
     ),
+    path(
+        "api/available-projects",
+        react_views.get_available_projects,
+        name="react_views.get_available_projects",
+    ),
+    path(
+        "api/available-resources",
+        react_views.get_environment_resource_options,
+        name="react_views.get_environment_resource_options",
+    ),
+    path(
+        "api/environment/create/<workspace_id>",
+        react_views.create_research_environment,
+        name="react_views.create_research_environment",
+    ),
 ]

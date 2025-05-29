@@ -136,3 +136,11 @@ class GetMonitoringDatasetsFailed(Exception):
 
 class UpdateWorkspaceBillingAccountFailed(Exception):
     pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass

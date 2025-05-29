@@ -386,3 +386,13 @@ def update_workspace_billing_account(
         "billing_account_id": billing_account_id,
     }
     return Request("POST", url="/workspace/update_billing", json=json)
+
+
+@api_request
+def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
+    return Request("POST", url=f"/workspace/{email}/{workspace_project_id}")
+
+
+@api_request
+def get_shared_bucket(bucket_name: str, email: str) -> Request:
+    return Request("POST", url=f"/sharing/{email}/{bucket_name}")
