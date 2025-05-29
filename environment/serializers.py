@@ -14,6 +14,7 @@ from environment.models import (
     VMInstance,
     BucketSharingInvite,
     BillingAccountSharingInvite,
+    GPUAccelerator,
 )
 
 User = get_user_model()
@@ -106,6 +107,10 @@ def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
         }
         for vm in vm_instances
     ]
+
+
+def serialize_gpu_accelerators(gpu_accelerators: Iterable[GPUAccelerator]):
+    return [model_to_dict(accelerator) for accelerator in gpu_accelerators]
 
 
 def serialize_projects(projects):
