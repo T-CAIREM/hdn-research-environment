@@ -214,4 +214,16 @@ urlpatterns = [
         react_views.create_research_environment,
         name="react_views.create_research_environment",
     ),
+    path("api/environment/delete", react_views.delete_research_environment, name="react_views.delete_research_environment"),
+    path(
+        "api/environment/stop",
+        react_views.stop_running_environment,
+        name="react_views.stop_running_environment",
+    ),
+    path(
+        "api/environment/start",
+        react_views.start_stopped_environment,
+        name="react_views.start_stopped_environment",
+    ),
+
 ]
