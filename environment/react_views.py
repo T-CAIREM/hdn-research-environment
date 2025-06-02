@@ -2,6 +2,7 @@ import concurrent
 from collections import namedtuple
 
 from environment.entities import WorkspaceStatus
+from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
 from environment.models import VMInstance, GPUAccelerator
 import json
 
@@ -18,7 +19,7 @@ from environment.forms import (
 from django.apps import apps
 import environment.services as services
 import environment.serializers as serializers
-from environment.decorators import cloud_identity_required, require_DELETE
+from environment.decorators import cloud_identity_required, require_DELETE, require_PATCH
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -201,3 +202,67 @@ def create_research_environment(request, workspace_project_id):
         return HttpResponse(status=202)
     else:
         return HttpResponse(status=400)
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_research_environment(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    services.delete_environment(
+        user=user,
+        workspace_project_id=data["gcp_project_id"],
+        workbench_type=data["environment_type"],
+        workbench_resource_id=data["instance_name"],
+    )
+    return HttpResponse(status=202)
+
+
+@require_PATCH
+@login_required
+@cloud_identity_required
+def stop_running_environment(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    services.stop_running_environment(
+        workbench_type=data["environment_type"],
+        workbench_resource_id=data["instance_name"],
+        user=user,
+        workspace_project_id=data["gcp_project_id"],
+    )
+    return HttpResponse(status=200)
+
+
+@require_PATCH
+@login_required
+@cloud_identity_required
+def start_stopped_environment(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    services.start_stopped_environment(
+        user=user,
+        workbench_type=data["environment_type"],
+        workbench_resource_id=data["instance_name"],
+        workspace_project_id=data["gcp_project_id"],
+    )
+    return HttpResponse(status=200)
+
+
+@require_PATCH
+@login_required
+@cloud_identity_required
+def change_environment_machine_type(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    try:
+        services.change_environment_machine_type(
+            user=user,
+            workspace_project_id=data["gcp_project_id"],
+            machine_type=data["machine_type"],
+            workbench_type=data["environment_type"],
+            workbench_resource_id=data["instance_name"],
+        )
+        return HttpResponse(status=202)
+    except ChangeEnvironmentInstanceTypeFailed as e:
+        return JsonResponse({"error": str(e)}, status=500)
