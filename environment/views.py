@@ -564,7 +564,7 @@ def attach_bucket_to_project(request, workspace_project_id, bucket_name):
             project = form.cleaned_data["project"]
             ProjectResource.objects.create(
                 project=project,
-                project_id=str(project.id),
+                workspace_project_id=str(workspace_project_id),
                 bucket_name=bucket_name
             )
             
