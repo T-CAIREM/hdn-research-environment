@@ -38,6 +38,7 @@ class EnvironmentType(Enum):
     UNKNOWN = "unknown"
     JUPYTER = "jupyter"
     RSTUDIO = "rstudio"
+    COLLABORATIVE = "collaborative"
 
     @classmethod
     def from_string_or_none(cls, maybe_string: Optional[str]) -> "EnvironmentType":

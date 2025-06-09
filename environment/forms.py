@@ -78,6 +78,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
+        ("collaborative", "Collaborative"),
     ]
 
     workspace_project_id = forms.CharField(
