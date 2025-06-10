@@ -130,7 +130,6 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
         self.fields["workspace_region"].initial = selected_workspace.region.value
-
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
@@ -145,6 +144,12 @@ class CreateResearchEnvironmentForm(forms.Form):
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
         return None if gpu_accelerator == "" else gpu_accelerator
+
+    def clean_workspace_region(self):
+        workspace_region = self.cleaned_data.get("workspace_region")
+        if workspace_region:
+            return workspace_region
+        return self.fields["workspace_region"].initial
 
 
 class ShareBillingAccountForm(forms.Form):
