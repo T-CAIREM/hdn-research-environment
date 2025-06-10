@@ -146,7 +146,7 @@ def deserialize_workspaces(
 
 
 def deserialize_simplified_workspace(data: dict):
-    return deserialize_workspace_details(data)
+    return deserialize_simplified_workspace_details(data)
 
 
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:

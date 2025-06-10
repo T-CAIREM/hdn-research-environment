@@ -220,7 +220,7 @@ urlpatterns = [
         name="react_views.get_environment_resource_options",
     ),
     path(
-        "api/environment/create/<workspace_id>",
+        "api/environment/create/<workspace_project_id>",
         react_views.create_research_environment,
         name="react_views.create_research_environment",
     ),
@@ -234,6 +234,11 @@ urlpatterns = [
         "api/environment/start",
         react_views.start_stopped_environment,
         name="react_views.start_stopped_environment",
+    ),
+    path(
+        "api/environment/update",
+        react_views.change_environment_machine_type,
+        name="react_views.change_environment_machine_type",
     ),
 
 ]

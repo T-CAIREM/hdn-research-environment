@@ -137,17 +137,14 @@ def delete_shared_workspace(request):
 
 
 @require_GET
-def get_environment_resource_options():
+def get_environment_resource_options(request):
     serialized_available_instances = serializers.serialize_vm_instances(
         VMInstance.objects.all()
     )
-    serialized_available_gpu_accelerators = serializers.serialize_gpu_accelerators(
-        GPUAccelerator.objects.all()
-    )
+
     return JsonResponse(
         {
             "instances": serialized_available_instances,
-            "accelerators": serialized_available_gpu_accelerators,
         }
     )
 
@@ -172,23 +169,27 @@ def create_research_environment(request, workspace_project_id):
             services.get_simplified_workspace, workspace_project_id, request.user
         )
         get_shared_bucket_feature = executor.submit(
-            services.get_shared_bucket, data.bucket_name, request.user
+            services.get_shared_bucket, data.get("shared_bucket"), request.user
         )
     workspace = workspace_get_feature.result()
     shared_bucket = get_shared_bucket_feature.result()
+    print("abcde", data)
 
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
-    project = PublishedProject.objects.get(data.project_id)
-
+    project = PublishedProject.objects.get(id=data["project_id"])
+    print(workspace)
     form = CreateResearchEnvironmentForm(
         data,
         selected_workspace=workspace,
         projects_list=[project],
-        buckets_list=[shared_bucket],
+        buckets_list=[shared_bucket] if shared_bucket is not None else [],
     )
+    print(form["gpu_accelerator"].value())
+    # print(form["workspace_region"].value())
+
+    print("form",form.errors)
     if form.is_valid():
-        project = services.get_project(form.cleaned_data["project_id"])
         services.create_research_environment(
             user=user,
             project=project,
@@ -214,7 +215,7 @@ def delete_research_environment(request):
         user=user,
         workspace_project_id=data["gcp_project_id"],
         workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
+        workbench_resource_id=data["instance_id"],
     )
     return HttpResponse(status=202)
 
@@ -227,7 +228,7 @@ def stop_running_environment(request):
     user = User.objects.get(id=data.get("user_id"))
     services.stop_running_environment(
         workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
+        workbench_resource_id=data["instance_id"],
         user=user,
         workspace_project_id=data["gcp_project_id"],
     )
@@ -243,7 +244,7 @@ def start_stopped_environment(request):
     services.start_stopped_environment(
         user=user,
         workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
+        workbench_resource_id=data["instance_id"],
         workspace_project_id=data["gcp_project_id"],
     )
     return HttpResponse(status=200)

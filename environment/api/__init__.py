@@ -464,9 +464,9 @@ def clear_all_notifications(
 
 @api_request
 def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
-    return Request("POST", url=f"/workspace/{email}/{workspace_project_id}")
+    return Request("GET", url=f"/workspace/{email}/{workspace_project_id}")
 
 
 @api_request
 def get_shared_bucket(bucket_name: str, email: str) -> Request:
-    return Request("POST", url=f"/sharing/{email}/{bucket_name}")
+    return Request("GET", url=f"/sharing/{email}/{bucket_name}")

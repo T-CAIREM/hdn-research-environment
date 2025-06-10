@@ -90,12 +90,17 @@ def serialize_user(user: User):
 
 
 def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
-    return [model_to_dict(vm_instance) for vm_instance in vm_instances]
-
-
-def serialize_gpu_accelerators(gpu_accelerators: Iterable[GPUAccelerator]):
-    return [model_to_dict(accelerator) for accelerator in gpu_accelerators]
+    return [
+        {
+            **model_to_dict(vm),
+            "name": vm.get_instance_value(),
+            "gpu_accelerators": [
+                model_to_dict(gpu) for gpu in vm.gpu_accelerators.all()
+            ],
+        }
+        for vm in vm_instances
+    ]
 
 
 def serialize_projects(projects):
-    return [model_to_dict(project) for project in projects]
+    return [model_to_dict(project, fields=["id", "slug", "version"]) for project in projects]

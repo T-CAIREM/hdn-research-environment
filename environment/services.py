@@ -1072,6 +1072,8 @@ def get_simplified_workspace(workspace_project_id: str, user: User):
 
 
 def get_shared_bucket(bucket_name: str, user: User):
+    if not bucket_name:
+        return
     response = api.get_shared_bucket(bucket_name, user.cloud_identity.email)
     if not response.ok:
         error_message = response.json()["error"]
