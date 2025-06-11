@@ -332,7 +332,7 @@ def _create_workbench_kwargs(
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
-    sharing_bucket_identifiers: Optional[str] = None,
+    sharing_bucket_identifiers: Optional[list[str]] = None,
 ) -> dict:
     user_email = user.cloud_identity.email
 
@@ -347,7 +347,9 @@ def _create_workbench_kwargs(
         "disk_size": disk_size,
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
-        "sharing_bucket_identifiers": sharing_bucket_identifiers.split(","),
+        "sharing_bucket_identifiers": (
+            sharing_bucket_identifiers if sharing_bucket_identifiers else []
+        ),
         "user_groups": list(
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
@@ -362,7 +364,7 @@ def create_research_environment(
     workbench_type: str,
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
-    sharing_bucket_identifiers: Optional[str] = None,
+    sharing_bucket_identifiers: Optional[list[str]] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
