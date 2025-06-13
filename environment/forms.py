@@ -112,9 +112,9 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"}),
         required=False,
     )
-    shared_bucket = forms.ChoiceField(
+    shared_bucket = forms.MultipleChoiceField(
         label="Shared Bucket",
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.SelectMultiple(attrs={"class": "form-control"}),
         required=False,
     )
 
