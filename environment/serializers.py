@@ -94,6 +94,7 @@ def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
         {
             **model_to_dict(vm),
             "name": vm.get_instance_value(),
+            "region": vm.region.region,
             "gpu_accelerators": [
                 model_to_dict(gpu) for gpu in vm.gpu_accelerators.all()
             ],
