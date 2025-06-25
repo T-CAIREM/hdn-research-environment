@@ -9,6 +9,7 @@
 {% block local_js_top %}
 <script src="{% static 'environment/js/pricing_change.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
+<script src="{% static 'environment/js/add_user_panel.js' %}"></script>
 {% endblock %}
 
 {% block local_css %}
@@ -28,6 +29,7 @@
           <form class="single-submit-form" action="{% url 'create_research_environment' selected_workspace.gcp_project_id %}" method="post" style="width: 24rem;">
             {% csrf_token %}
             {{ form }}
+            <input type="hidden" id="users-list" name="users_list" value="">
             <button class="btn btn-primary mt-3" type="submit">
               Create environment
             </button>
@@ -35,6 +37,21 @@
         </div>
       </div>
       <div class="card billing-information">
+        <div class="container mt-4 collaborative-panel hidden">
+          <h5 class="mb-3">Add Collaborators</h5>
+          <form id="add-user-form" class="mb-3">
+            <div class="form-group">
+              <label for="user-email">Add User Email</label>
+              <input type="email" id="user-email" class="form-control" placeholder="Enter user email" required>
+              <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2">Add User</button>
+          </form>
+          <h6>Added Users</h6>
+          <ul id="user-list" class="list-group">
+            <li class="list-group-item text-muted">No users added yet.</li>
+          </ul>
+        </div>
         <div class="card-body">
           <h3 class="card-title">
             Projected Costs
@@ -112,6 +129,24 @@
     $("#id_machine_type").change(function () {
       fetchGpuAccelerators();
     });
+
+    const environmentTypeRadios = document.querySelectorAll(".environment-type input");
+    const collaborativePanel = document.querySelector(".collaborative-panel");
+
+    function toggleCollaborativePanel() {
+      const selectedType = document.querySelector(".environment-type input:checked");
+      if (selectedType && selectedType.value === "collaborative") {
+        collaborativePanel.classList.remove("hidden");
+      } else {
+        collaborativePanel.classList.add("hidden");
+      }
+    }
+
+    environmentTypeRadios.forEach((radio) => {
+      radio.addEventListener("change", toggleCollaborativePanel);
+    });
+
+    toggleCollaborativePanel();
   });
 </script>
 

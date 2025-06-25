@@ -333,6 +333,7 @@ def _create_workbench_kwargs(
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
+    collaborators: Optional[list[str]] = None,
 ) -> dict:
     user_email = user.cloud_identity.email
 
@@ -353,6 +354,7 @@ def _create_workbench_kwargs(
         "user_groups": list(
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
+        "collaborators": collaborators,
     }
 
 
@@ -365,6 +367,7 @@ def create_research_environment(
     disk_size: int,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
+    collaborators: Optional[list[str]] = None,
 ) -> str:
     kwargs = _create_workbench_kwargs(
         user,
@@ -375,6 +378,7 @@ def create_research_environment(
         disk_size,
         gpu_accelerator_type,
         sharing_bucket_identifiers,
+        collaborators,
     )
     response = api.create_workbench(**kwargs)
     if not response.ok:
