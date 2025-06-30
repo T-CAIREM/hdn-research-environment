@@ -388,3 +388,43 @@ def update_workspace_billing_account(
         "billing_account_id": billing_account_id,
     }
     return Request("POST", url="/workspace/update_billing", json=json)
+
+
+@api_request
+def get_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+    }
+    return Request("GET", url="/workbench/get-collaborators", json=json)
+
+
+@api_request
+def add_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+    collaborators: list[str],
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborators": collaborators,
+    }
+    return Request("POST", url="/workbench/add-collaborators", json=json)
+
+
+@api_request
+def remove_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+    collaborators: list[str],
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborators": collaborators,
+    }
+    return Request("POST", url="/workbench/remove-collaborators", json=json)

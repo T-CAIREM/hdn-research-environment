@@ -652,6 +652,82 @@ def delete_environment(request):
     return JsonResponse({})
 
 
+@login_required
+@cloud_identity_required
+def manage_collaborative_environment(request, workspace_project_id, environment_name):
+    if not services.is_environment_owner(
+        request.user, workspace_project_id, environment_name
+    ):
+        raise Http404()
+
+    active_environments = services.get_active_environments(request.user)
+    environment = next(
+        (
+            env
+            for env in active_environments
+            if env.gcp_identifier == environment_name
+            and env.workspace_name == workspace_project_id
+        ),
+        None,
+    )
+    if not environment:
+        raise Http404()
+
+    message = None
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                success = services.add_workbench_collaborator(
+                    workspace_project_id=workspace_project_id,
+                    service_account_name=environment.service_account_name,
+                    collaborator_email=collaborator_email,
+                )
+                if success:
+                    messages.success(
+                        request,
+                        f"Successfully added collaborator: {collaborator_email}",
+                    )
+                else:
+                    messages.error(
+                        request, f"Failed to add collaborator: {collaborator_email}"
+                    )
+
+        elif action == "remove_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                success = services.remove_workbench_collaborator(
+                    workspace_project_id=workspace_project_id,
+                    service_account_name=environment.service_account_name,
+                    collaborator_email=collaborator_email,
+                )
+                if success:
+                    messages.success(
+                        request,
+                        f"Successfully removed collaborator: {collaborator_email}",
+                    )
+                else:
+                    messages.error(
+                        request, f"Failed to remove collaborator: {collaborator_email}"
+                    )
+
+    collaborators = services.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=environment.service_account_name,
+    )
+
+    context = {
+        "environment": environment,
+        "workspace_project_id": workspace_project_id,
+        "environment_name": environment_name,
+        "collaborators": collaborators,
+    }
+
+    return render(request, "environment/manage_collaborative_environment.html", context)
+
+
 @require_DELETE
 @login_required
 @cloud_identity_required

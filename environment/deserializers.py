@@ -60,6 +60,7 @@ def deserialize_research_environments(
                 workbench["dataset_identifier"], projects
             ),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+            service_account_name=workbench.get("service_account_name"),
         )
         if workbench.get("type") == "Workbench"
         else deserialize_entity_scaffolding(workbench)

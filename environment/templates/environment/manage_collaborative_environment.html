@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Manage Collaborators{% endblock %}
+
+{% block local_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/management_views.css' %}">
+<style>
+  .collaborators-card {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  .list-title {
+    margin-bottom: 15px;
+  }
+</style>
+{% endblock %}
+
+{% block local_js_top %}
+<script src="{% static 'environment/js/cookie.js' %}"></script>
+<script src="{% static 'environment/js/forms.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% include "message_snippet.html" %}
+  <h3 class="mb-4 jumbotron">
+    Manage Collaborators
+  </h3>
+
+  <div class="container-body">
+    <div class="card" style="height: fit-content; width: 42rem;">
+      <div class="card-body">
+        <div id="environment-details-card">
+          <h5 class="card-title">
+            Environment Details
+          </h5>
+          <div>
+            <b>Environment Name:</b> <i>{{ environment_name }}</i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="width: 100%;">
+      <div class="card-body">
+        <div id="new-collaborator-card">
+          <h5 class="card-title">
+            Add Collaborator
+          </h5>
+
+          <form id="add-collaborator-form" method="post" style="width: 24rem;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_collaborator">
+            <div class="form-group">
+              <label for="collaborator_email">Collaborator Email</label>
+              <input type="email" id="collaborator_email" name="collaborator_email" class="form-control" placeholder="Enter user email" required>
+              <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary mt-3">Add Collaborator</button>
+          </form>
+        </div>
+
+        <div id="collaborators-list-card" class="mt-5">
+          <h5 class="card-title">
+            Collaborators
+          </h5>
+          <ul id="collaborators-list" class="list-group list-group-flush">
+            <li class="list-group-item">
+              <div class="row">
+                <div class="col-md-8">
+                  <strong>
+                    Email
+                  </strong>
+                </div>
+                <div class="col-md-4">
+                  <strong>
+                    Actions
+                  </strong>
+                </div>
+              </div>
+            </li>
+            {% if collaborators %}
+              {% for collaborator in collaborators %}
+              <li class="list-group-item">
+                <div class="row">
+                  <div class="col-md-8">
+                    {{ collaborator }}
+                  </div>
+                  <div class="col-md-4">
+                    <form method="post" style="display: inline-block;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="remove_collaborator">
+                      <input type="hidden" name="collaborator_email" value="{{ collaborator }}">
+                      <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                    </form>
+                  </div>
+                </div>
+              </li>
+              {% endfor %}
+            {% else %}
+              <li class="list-group-item">
+                <div class="alert alert-info mb-0">
+                  No collaborators assigned to this environment yet.
+                </div>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+        <a href="{% url 'research_environments' %}" class="btn btn-primary mt-4">Back to Environments</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const addCollaboratorForm = document.getElementById('add-collaborator-form');
+    const emailInput = document.getElementById('collaborator_email');
+
+    addCollaboratorForm.addEventListener('submit', function(event) {
+      const email = emailInput.value.trim();
+
+      if (!email.endsWith('@healthdatanexus.ai')) {
+        event.preventDefault();
+        alert('Please enter a valid email ending with @healthdatanexus.ai');
+        return false;
+      }
+
+      return true;
+    });
+  });
+</script>
+{% endblock %}
+
+{% block local_js_bottom %}{% endblock %}

@@ -46,6 +46,11 @@ urlpatterns = [
         name="create_research_environment",
     ),
     path(
+        "environment/manage/<workspace_project_id>/<environment_name>",
+        views.manage_collaborative_environment,
+        name="manage_collaborative_environment",
+    ),
+    path(
         "execution/check-status",
         views.check_execution_status,
         name="check_execution_status",

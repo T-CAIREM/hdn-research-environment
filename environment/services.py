@@ -156,6 +156,18 @@ def is_shared_bucket_admin(
     )
 
 
+def is_environment_owner(
+    user: User, workspace_project_id: str, environment_name: str
+) -> bool:
+    # TODO: to nie dziala na razie, to trzeba z labelem zrobic wteyd nie bediz trzeba uzywac get active
+    active_environments = get_active_environments(user)
+    return any(
+        environment.gcp_identifier == environment_name
+        and environment.workspace_name == workspace_project_id
+        for environment in active_environments
+    )
+
+
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
     return owner.owner_billingaccountsharinginvite_set.filter(
         billing_account_id=billing_account_id, is_revoked=False
@@ -433,7 +445,20 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
         logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
         raise GetAvailableEnvironmentsFailed(error_message)
 
-    all_environments = deserialize_research_environments(response.json())
+    # TODO: rozwiazniae tymczasowe nadpisalem an ten moment inna funkcje
+    workspace_data = response.json()
+    projects = PublishedProject.objects.all()
+    all_environments = []
+
+    for workspace in workspace_data:
+        if "workbenches" in workspace:
+            gcp_project_id = workspace.get("gcp_project_id", "")
+            region = workspace.get("region", DEFAULT_REGION)
+            environments = deserialize_research_environments(
+                workspace["workbenches"], gcp_project_id, region, projects
+            )
+            all_environments.extend(environments)
+
     return [environment for environment in all_environments if environment.is_active]
 
 
@@ -955,3 +980,54 @@ def update_workspace_billing_account(
         error_message = response.json()["error"]
         logger.error(f"UpdateWorkspaceBillingAccountFailed: {error_message}")
         raise UpdateWorkspaceBillingAccountFailed(error_message)
+
+
+def get_workbench_collaborators(
+    workspace_project_id: str, service_account_name: str
+) -> list:
+    response = api.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to fetch collaborators")
+        logger.error(f"Failed to get workbench collaborators: {error_message}")
+        return []
+
+    collaborators_data = response.json()
+    return collaborators_data.get("collaborators", [])
+
+
+def add_workbench_collaborator(
+    workspace_project_id: str, service_account_name: str, collaborator_email: str
+):
+    response = api.add_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborators=[collaborator_email],
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to add collaborator")
+        logger.error(f"Failed to add workbench collaborator: {error_message}")
+        return False
+
+    return True
+
+
+def remove_workbench_collaborator(
+    workspace_project_id: str, service_account_name: str, collaborator_email: str
+):
+    response = api.remove_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborators=[collaborator_email],
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to remove collaborator")
+        logger.error(f"Failed to remove workbench collaborator: {error_message}")
+        return False
+
+    return True
