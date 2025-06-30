@@ -8,7 +8,11 @@ from environment.entities import (
     ResearchWorkspace,
     SharedWorkspace,
 )
-from environment.models import VMInstance, GPUAccelerator
+from environment.models import (
+    VMInstance,
+    BucketSharingInvite,
+    BillingAccountSharingInvite,
+)
 
 User = get_user_model()
 
@@ -84,4 +88,46 @@ def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
 
 
 def serialize_projects(projects):
-    return [model_to_dict(project, fields=["id", "slug", "version"]) for project in projects]
+    return [
+        model_to_dict(project, fields=["id", "slug", "version"]) for project in projects
+    ]
+
+
+def serialize_bucket_sharing_invitations(
+    bucket_sharing_invitations: Iterable[BucketSharingInvite],
+):
+    return [
+        model_to_dict(
+            bucket_sharing_invitation,
+            fields=[
+                "id",
+                "user_contact_email",
+                "is_consumed",
+                "is_revoked",
+                "permissions",
+                "owner",
+                "user",
+            ],
+        )
+        for bucket_sharing_invitation in bucket_sharing_invitations
+    ]
+
+
+def serialize_billing_sharing_invitations(
+    billing_sharing_invitations: Iterable[BillingAccountSharingInvite],
+):
+    return [
+        model_to_dict(
+            billing_sharing_invitation,
+            fields=[
+                "id",
+                "user_contact_email",
+                "is_consumed",
+                "is_revoked",
+                "billing_account_id",
+                "owner",
+                "user",
+            ],
+        )
+        for billing_sharing_invitation in billing_sharing_invitations
+    ]
