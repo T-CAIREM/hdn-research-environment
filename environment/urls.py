@@ -224,7 +224,11 @@ urlpatterns = [
         react_views.create_research_environment,
         name="react_views.create_research_environment",
     ),
-    path("api/environment/delete", react_views.delete_research_environment, name="react_views.delete_research_environment"),
+    path(
+        "api/environment/delete",
+        react_views.delete_research_environment,
+        name="react_views.delete_research_environment",
+    ),
     path(
         "api/environment/stop",
         react_views.stop_running_environment,
@@ -240,5 +244,59 @@ urlpatterns = [
         react_views.change_environment_machine_type,
         name="react_views.change_environment_machine_type",
     ),
-
+    path(
+        "api/sharing/bucket/create/<workspace_id>",
+        react_views.create_shared_bucket,
+        name="react_views.create_shared_bucket",
+    ),
+    path(
+        "api/sharing/bucket/delete",
+        react_views.delete_shared_bucket,
+        name="react_views.delete_shared_bucket",
+    ),
+    path(
+        "api/sharing/share/<shared_workspace_name>/<shared_bucket_name>",
+        react_views.share_bucket,
+        name="react_views.share_bucket",
+    ),
+    path(
+        "api/sharing/confirm",
+        react_views.confirm_bucket_sharing,
+        name="react_views.confirm_bucket_sharing",
+    ),
+    path(
+        "api/sharing/revoke/<shared_workspace_name>/<shared_bucket_name>",
+        react_views.revoke_shared_bucket_access,
+        name="react_views.revoke_shared_bucket_access",
+    ),
+    path(
+        "api/sharing",
+        react_views.get_bucket_sharing_invitation,
+        name="react_views.get_bucket_sharing_invitation",
+    ),
+    path(
+        "api/sharing/shares",
+        react_views.get_bucket_shares,
+        name="react_views.get_bucket_shares",
+    ),
+    path(
+        "api/billing/share/<billing_account_id>",
+        react_views.share_billing_account,
+        name="react_views.share_billing_account",
+    ),
+    path(
+        "api/billing/confirm",
+        react_views.confirm_bucket_sharing,
+        name="react_views.confirm_bucket_sharing",
+    ),
+    path(
+        "api/billing/revoke/<billing_account_id>",
+        react_views.revoke_billing_account_access,
+        name="react_views.revoke_billing_account_access",
+    ),
+    path(
+        "api/billing/shares",
+        react_views.get_billing_shares,
+        name="react_views.get_billing_shares",
+    ),
 ]

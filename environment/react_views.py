@@ -3,23 +3,31 @@ from collections import namedtuple
 
 from environment.entities import WorkspaceStatus
 from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
-from environment.models import VMInstance, GPUAccelerator
+from environment.models import VMInstance, GPUAccelerator, BucketSharingInvite
+from rest_framework.response import Response
 import json
 
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth import get_user_model
 from environment.forms import (
     CreateWorkspaceForm,
     CreateSharedWorkspaceForm,
     CreateResearchEnvironmentForm,
+    CreateSharedBucketForm,
+    BucketSharingForm,
+    ShareBillingAccountForm,
 )
 from django.apps import apps
 import environment.services as services
 import environment.serializers as serializers
-from environment.decorators import cloud_identity_required, require_DELETE, require_PATCH
+from environment.decorators import (
+    cloud_identity_required,
+    require_DELETE,
+    require_PATCH,
+)
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -173,22 +181,17 @@ def create_research_environment(request, workspace_project_id):
         )
     workspace = workspace_get_feature.result()
     shared_bucket = get_shared_bucket_feature.result()
-    print("abcde", data)
 
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
     project = PublishedProject.objects.get(id=data["project_id"])
-    print(workspace)
     form = CreateResearchEnvironmentForm(
         data,
         selected_workspace=workspace,
         projects_list=[project],
         buckets_list=[shared_bucket] if shared_bucket is not None else [],
     )
-    print(form["gpu_accelerator"].value())
-    # print(form["workspace_region"].value())
 
-    print("form",form.errors)
     if form.is_valid():
         services.create_research_environment(
             user=user,
@@ -267,3 +270,192 @@ def change_environment_machine_type(request):
         return HttpResponse(status=202)
     except ChangeEnvironmentInstanceTypeFailed as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def create_shared_bucket(request, workspace_id):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    shared_workspace = services.get_simplified_workspace(workspace_id, user)
+
+    if not shared_workspace.status == WorkspaceStatus.CREATED:
+        return HttpResponse("Workspace is not available", status=406)
+
+    form = CreateSharedBucketForm(
+        request.POST, selected_shared_workspace=shared_workspace
+    )
+    if form.is_valid():
+        services.create_shared_buket(
+            user=user,
+            region=form.cleaned_data["region"],
+            user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
+            workspace_project_id=form.cleaned_data["workspace_project_id"],
+        )
+        return HttpResponse(status=202)
+    else:
+        return HttpResponse(status=400)
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_shared_bucket(request):
+    data = json.loads(request.body)
+    services.delete_shared_bucket(bucket_name=data["bucket_name"])
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def share_bucket(request, shared_workspace_name, shared_bucket_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    shared_workspace = services.get_simplified_workspace(shared_workspace_name, user)
+    if not services.is_shared_bucket_owner([shared_workspace], shared_bucket_name):
+        raise Http404()
+
+    bucket_sharing_form = BucketSharingForm(
+        request.POST,
+        invitation_owner=user,
+        shared_bucket_name=shared_bucket_name,
+    )
+    if bucket_sharing_form.is_valid():
+        services.invite_user_to_shared_bucket(
+            request=request,
+            owner=user,
+            user_email=bucket_sharing_form.cleaned_data["user_email"],
+            shared_bucket_name=shared_bucket_name,
+            shared_workspace_name=shared_workspace_name,
+            permissions=bucket_sharing_form.cleaned_data["user_permissions"],
+        )
+        return HttpResponse(status=200)
+    else:
+        return HttpResponse(status=400)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_bucket_shares(request, shared_bucket_name):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    bucket_shares = services.get_owned_shares_of_bucket(
+        owner=user, shared_bucket_name=shared_bucket_name
+    )
+    return JsonResponse(
+        {
+            "bucket_sharing_invites": serializers.serialize_bucket_sharing_invitations(
+                bucket_shares
+            )
+        },
+        status=200,
+    )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def revoke_shared_bucket_access(request, shared_workspace_name, shared_bucket_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    shared_workspace = services.get_simplified_workspace(shared_workspace_name, user)
+    if not services.is_shared_bucket_owner([shared_workspace], shared_bucket_name):
+        raise Http404()
+    services.revoke_shared_bucket_access(request.POST["share_id"])
+
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+def confirm_bucket_sharing(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    token = request.POST["token"]
+    services.consume_bucket_sharing_token(user=user, token=token)
+    return HttpResponse(status=200)
+
+
+@require_GET
+@login_required
+def get_bucket_sharing_invitation(request):
+    token = request.GET.get("token")
+    if not token:
+        return Response("The invitation is either invalid or expired.", status=400)
+
+    invite = BucketSharingInvite.objects.select_related("owner").get(
+        token=token, is_revoked=False
+    )
+    return JsonResponse(
+        {
+            "bucket_sharing_invite": serializers.serialize_bucket_sharing_invitations(
+                invite
+            )
+        },
+        status=200,
+    )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def share_billing_account(request, billing_account_id):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    if not services.is_billing_account_owner(user, billing_account_id):
+        raise Http404()
+
+    billing_account_sharing_form = ShareBillingAccountForm(request.POST)
+    if billing_account_sharing_form.is_valid():
+        services.invite_user_to_shared_billing_account(
+            request=request,
+            owner=user,
+            user_email=billing_account_sharing_form.cleaned_data["user_email"],
+            billing_account_id=billing_account_id,
+        )
+        return HttpResponse(status=200)
+    else:
+        return HttpResponse(status=400)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_billing_shares(request, billing_account_id):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    billing_shares = services.get_owned_shares_of_billing_account(
+        owner=user, billing_account_id=billing_account_id
+    )
+    return JsonResponse(
+        {
+            "bucket_sharing_invites": serializers.serialize_billing_sharing_invitations(
+                billing_shares
+            )
+        },
+        status=200,
+    )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def revoke_billing_account_access(request, billing_account_id):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    if not services.is_billing_account_owner(user, billing_account_id):
+        raise Http404()
+    services.revoke_billing_account_access(request.POST["share_id"])
+
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+def confirm_billing_account_sharing(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    token = request.POST["token"]
+    services.consume_billing_account_sharing_token(user=user, token=token)
+    return HttpResponse(status=200)
