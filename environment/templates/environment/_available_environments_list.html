@@ -126,7 +126,7 @@
                                                             {% else %}
                                                                 {% environment_modal_button environment=environment button_type="modal_start" %}
                                                             {% endif %}
-                                                            {% if environment.type.value == "collaborative" %}
+                                                            {% if environment.type.value == "collaborative" and user.username == environment.workbench_owner_username %}
                                                                 <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier %}" class="btn btn-sm btn-info m-1">
                                                                     Manage
                                                                 </a>
