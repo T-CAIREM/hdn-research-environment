@@ -1,11 +1,12 @@
 $(function() {
-    const loadingText = "<i class='fas fa-spinner fa-pulse'></i> Loading...";
+    const addingText = "<i class='fas fa-spinner fa-pulse'></i> Adding...";
+    const removingText = "<i class='fas fa-spinner fa-pulse'></i> Removing...";
 
     $("#add-collaborator-form").submit(function() {
         const button = $(this).find(":submit");
         const originalText = button.html();
         button.data('original-text', originalText);
-        button.html(loadingText);
+        button.html(addingText);
         button.prop('disabled', true);
     });
 
@@ -13,7 +14,7 @@ $(function() {
         const button = $(this);
         const originalText = button.html();
         button.data('original-text', originalText);
-        button.html(loadingText);
+        button.html(removingText);
         button.prop('disabled', true);
 
         const form = button.closest('.modal-footer').find('form');
