@@ -156,16 +156,8 @@ def is_shared_bucket_admin(
     )
 
 
-def is_environment_owner(
-    user: User, workspace_project_id: str, environment_name: str
-) -> bool:
-    # TODO: to nie dziala na razie, to trzeba z labelem zrobic wteyd nie bediz trzeba uzywac get active
-    active_environments = get_active_environments(user)
-    return any(
-        environment.gcp_identifier == environment_name
-        and environment.workspace_name == workspace_project_id
-        for environment in active_environments
-    )
+def is_environment_owner(user: User, environment: ResearchEnvironment) -> bool:
+    return environment.workbench_owner_username == user.username
 
 
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):

@@ -26,6 +26,7 @@ from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
+    EnvironmentAccessFailed,
 )
 
 from environment.forms import (
@@ -655,23 +656,26 @@ def delete_environment(request):
 @login_required
 @cloud_identity_required
 def manage_collaborative_environment(request, workspace_project_id, environment_name):
-    if not services.is_environment_owner(
-        request.user, workspace_project_id, environment_name
-    ):
-        raise Http404()
-
     active_environments = services.get_active_environments(request.user)
-    environment = next(
-        (
-            env
-            for env in active_environments
-            if env.gcp_identifier == environment_name
-            and env.workspace_name == workspace_project_id
-        ),
-        None,
-    )
-    if not environment:
-        raise Http404()
+    try:
+        environment = next(
+            (
+                env
+                for env in active_environments
+                if env.gcp_identifier == environment_name
+                and env.workspace_name == workspace_project_id
+            ),
+            None,
+        )
+        if not environment or not services.is_environment_owner(
+            request.user, environment=environment
+        ):
+            raise EnvironmentAccessFailed(
+                f"Failed to access {environment_name} management panel"
+            )
+    except EnvironmentAccessFailed as e:
+        messages.error(request, str(e))
+        return redirect("research_environments")
 
     message = None
     if request.method == "POST":

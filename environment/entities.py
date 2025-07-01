@@ -106,6 +106,7 @@ class ResearchEnvironment:
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
     service_account_name: str
+    workbench_owner_username: Optional[str]
 
     @property
     def is_running(self):

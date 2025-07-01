@@ -21,6 +21,7 @@
 {% block local_js_top %}
 <script src="{% static 'environment/js/cookie.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
+<script src="{% static 'environment/js/collaborator_management.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -82,31 +83,22 @@
                 </div>
               </div>
             </li>
-            {% if collaborators %}
               {% for collaborator in collaborators %}
-              <li class="list-group-item">
-                <div class="row">
-                  <div class="col-md-8">
-                    {{ collaborator }}
-                  </div>
-                  <div class="col-md-4">
-                    <form method="post" style="display: inline-block;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="remove_collaborator">
-                      <input type="hidden" name="collaborator_email" value="{{ collaborator }}">
-                      <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-                    </form>
-                  </div>
-                </div>
-              </li>
+                {% if collaborator|cut:"@healthdatanexus.ai" != environment.workbench_owner_username %}
+                  {% with has_collaborators=True %}
+                    <li class="list-group-item">
+                      <div class="row">
+                        <div class="col-md-8">
+                          {{ collaborator }}
+                        </div>
+                        <div class="col-md-4">
+                          {% include "tag/collaborator_remove_modal_button.html" %}
+                        </div>
+                      </div>
+                    </li>
+                  {% endwith %}
+                {% endif %}
               {% endfor %}
-            {% else %}
-              <li class="list-group-item">
-                <div class="alert alert-info mb-0">
-                  No collaborators assigned to this environment yet.
-                </div>
-              </li>
-            {% endif %}
           </ul>
         </div>
         <a href="{% url 'research_environments' %}" class="btn btn-primary mt-4">Back to Environments</a>
