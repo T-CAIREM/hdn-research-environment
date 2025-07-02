@@ -15,13 +15,18 @@
   .list-title {
     margin-bottom: 15px;
   }
+  .validation-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+  }
 </style>
 {% endblock %}
 
 {% block local_js_top %}
 <script src="{% static 'environment/js/cookie.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
-<script src="{% static 'environment/js/collaborator_management_spinner.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -59,6 +64,7 @@
               <label for="collaborator_email">Collaborator Email</label>
               <input type="email" id="collaborator_email" name="collaborator_email" class="form-control" placeholder="Enter user email" required>
               <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
+              <div class="validation-error" id="email-validation-error">Please enter a valid email ending with @healthdatanexus.ai</div>
             </div>
             <button type="submit" class="btn btn-sm btn-primary mt-3">Add Collaborator</button>
           </form>
@@ -109,19 +115,42 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    const addingText = "<i class='fas fa-spinner fa-pulse'></i> Adding...";
+    const removingText = "<i class='fas fa-spinner fa-pulse'></i> Removing...";
+
     const addCollaboratorForm = document.getElementById('add-collaborator-form');
     const emailInput = document.getElementById('collaborator_email');
+    const emailValidationError = document.getElementById('email-validation-error');
 
     addCollaboratorForm.addEventListener('submit', function(event) {
       const email = emailInput.value.trim();
 
       if (!email.endsWith('@healthdatanexus.ai')) {
         event.preventDefault();
-        alert('Please enter a valid email ending with @healthdatanexus.ai');
+        emailValidationError.style.display = 'block';
         return false;
+      } else {
+        emailValidationError.style.display = 'none';
       }
 
+      const button = $(this).find(":submit");
+      const originalText = button.html();
+      button.data('original-text', originalText);
+      button.html(addingText);
+      button.prop('disabled', true);
+
       return true;
+    });
+
+    $(document).on('click', '.remove-collaborator-btn', function() {
+      const button = $(this);
+      const originalText = button.html();
+      button.data('original-text', originalText);
+      button.html(removingText);
+      button.prop('disabled', true);
+
+      const form = button.closest('.modal-footer').find('form');
+      form.submit();
     });
   });
 </script>
