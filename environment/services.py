@@ -432,16 +432,11 @@ def _get_project_for_environment(
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
-    print("kutas")
-    print(user)
     email = (
         user.cloud_identity.email
     )
 
     response = api.get_workspace_list(email)
-    print("fiucina")
-    print(response.json())
-    print("fiucina")
     if not response.ok:
         error_message = response.json()["error"]
         logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
