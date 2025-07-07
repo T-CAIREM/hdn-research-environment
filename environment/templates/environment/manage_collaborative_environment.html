@@ -6,35 +6,53 @@
 
 {% block local_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'environment/css/environment-base.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'environment/css/management_views.css' %}">
-<style>
-  .collaborators-card {
-    margin-top: 20px;
-    margin-bottom: 20px;
-  }
-  .list-title {
-    margin-bottom: 15px;
-  }
-  .validation-error {
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-    display: none;
-  }
-</style>
+<link rel="stylesheet" type="text/css" href="{% static 'environment/css/collaborator_management.css' %}">
 {% endblock %}
 
 {% block local_js_top %}
 <script src="{% static 'environment/js/cookie.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
+<script src="{% static 'environment/js/date-formatter.js' %}"></script>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-  {% include "message_snippet.html" %}
   <h3 class="mb-4 jumbotron">
     Manage Collaborators
   </h3>
+
+  <div class="notifications-container">
+    <div class="notifications-toggle collapsed" id="notifications-toggle">
+      <div>
+        <i class="fas fa-bell"></i> Notifications
+        <span class="notification-count" id="notification-badge" style="display: none;">0</span>
+      </div>
+      <div class="collapse-indicator">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+    </div>
+    <div class="notification-panel" id="notification-panel" style="display: none;">
+      <div class="notification-header">
+        <a href="#" id="clear-notifications" class="clear-all-btn text-muted">Clear all</a>
+      </div>
+      <div id="notification-container">
+        {% if notifications %}
+          {% for notification in notifications %}
+            <div class="notification-item notification-error" data-id="{{ notification.id }}">
+              <span class="notification-delete" data-id="{{ notification.id }}">×</span>
+              <div class="notification-title">Failed to add collaborator</div>
+              <div class="notification-message">{{ notification.email }}</div>
+              <div class="notification-timestamp" data-timestamp="{{ notification.timestamp }}">{{ notification.timestamp }}</div>
+            </div>
+          {% empty %}
+            <div class="no-notifications">No notifications</div>
+          {% endfor %}
+        {% else %}
+          <div class="no-notifications">No notifications</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 
   <div class="container-body">
     <div class="card" style="height: fit-content; width: 42rem;">
@@ -117,10 +135,104 @@
   document.addEventListener('DOMContentLoaded', function() {
     const addingText = "<i class='fas fa-spinner fa-pulse'></i> Adding...";
     const removingText = "<i class='fas fa-spinner fa-pulse'></i> Removing...";
+    const spinnerIcon = "<i class='fas fa-spinner fa-pulse'></i>";
 
     const addCollaboratorForm = document.getElementById('add-collaborator-form');
     const emailInput = document.getElementById('collaborator_email');
     const emailValidationError = document.getElementById('email-validation-error');
+    const notificationBadge = document.getElementById('notification-badge');
+    const notificationContainer = document.getElementById('notification-container');
+    const notificationsToggle = document.getElementById('notifications-toggle');
+    const notificationPanel = document.getElementById('notification-panel');
+    const clearAllNotificationsBtn = document.getElementById('clear-notifications');
+
+    function updateNotificationCount() {
+      const count = document.querySelectorAll('.notification-item').length;
+      if (count > 0) {
+        notificationBadge.textContent = count;
+        notificationBadge.style.display = 'inline-block';
+      } else {
+        notificationBadge.style.display = 'none';
+      }
+    }
+
+    notificationsToggle.addEventListener('click', function() {
+      if (notificationPanel.style.display === 'none') {
+        notificationPanel.style.display = 'block';
+        notificationsToggle.classList.remove('collapsed');
+      } else {
+        notificationPanel.style.display = 'none';
+        notificationsToggle.classList.add('collapsed');
+      }
+    });
+
+    document.querySelectorAll('.notification-delete').forEach(function(deleteBtn) {
+      deleteBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const notificationId = this.getAttribute('data-id');
+        const notificationItem = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+
+        const originalContent = this.innerHTML;
+        this.innerHTML = spinnerIcon;
+        this.style.cursor = 'default';
+        this.style.color = '#6c757d';
+        this.style.background = 'transparent';
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('action', 'mark_notification_viewed');
+        formData.append('notification_id', notificationId);
+
+        fetch(window.location.href, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          notificationItem.remove();
+          updateNotificationCount();
+
+          if (document.querySelectorAll('.notification-item').length === 0) {
+            notificationContainer.innerHTML = '<div class="no-notifications">No notifications</div>';
+          }
+        })
+      });
+    });
+
+    clearAllNotificationsBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+
+      const originalContent = this.innerHTML;
+      this.innerHTML = spinnerIcon;
+      this.style.cursor = 'default';
+
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      formData.append('action', 'clear_all_notifications');
+
+      fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        notificationContainer.innerHTML = '<div class="no-notifications">No notifications</div>';
+        notificationBadge.style.display = 'none';
+        this.innerHTML = originalContent;
+        this.style.cursor = 'pointer';
+      })
+    });
+
+    updateNotificationCount();
+
+    document.querySelectorAll('.notification-timestamp').forEach(element => {
+      const timestamp = element.getAttribute('data-timestamp');
+      element.textContent = formatDate(timestamp);
+    });
 
     addCollaboratorForm.addEventListener('submit', function(event) {
       const email = emailInput.value.trim();

@@ -428,3 +428,35 @@ def remove_workbench_collaborators(
         "collaborators": collaborators,
     }
     return Request("POST", url="/workbench/remove-collaborators", json=json)
+
+
+@api_request
+def get_workbench_notifications(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+    }
+    return Request("GET", url="/workbench/get-notifications", json=json)
+
+
+@api_request
+def mark_notification_as_viewed(notification_id: int) -> Request:
+    json = {
+        "notification_id": notification_id,
+    }
+    return Request("POST", url="/workbench/mark-notification-viewed", json=json)
+
+
+@api_request
+def clear_all_notifications(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+    }
+    return Request("POST", url="/workbench/clear-all-notifications", json=json)

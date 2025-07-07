@@ -62,6 +62,8 @@ from environment.exceptions import (
     GetGroupsIAMRolesFailed,
     GetMonitoringDatasetsFailed,
     UpdateWorkspaceBillingAccountFailed,
+    AddWorkbenchCollaboratorFailed,
+    RemoveWorkbenchCollaboratorFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -430,6 +432,28 @@ def _get_project_for_environment(
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
+    print("kutas")
+    print(user)
+    email = (
+        user.cloud_identity.email
+    )
+
+    response = api.get_workspace_list(email)
+    print("fiucina")
+    print(response.json())
+    print("fiucina")
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
+        raise GetAvailableEnvironmentsFailed(error_message)
+
+    all_environments = deserialize_research_environments(response.json())
+    return [environment for environment in all_environments if environment.is_active]
+
+
+def get_environment(
+    user: User, workspace_project_id: str, environment_name: str
+) -> ResearchEnvironment:
     email = user.cloud_identity.email
     response = api.get_workspace_list(email)
     if not response.ok:
@@ -437,7 +461,6 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
         logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
         raise GetAvailableEnvironmentsFailed(error_message)
 
-    # TODO: rozwiazniae tymczasowe nadpisalem an ten moment inna funkcje
     workspace_data = response.json()
     projects = PublishedProject.objects.all()
     all_environments = []
@@ -450,8 +473,15 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
                 workspace["workbenches"], gcp_project_id, region, projects
             )
             all_environments.extend(environments)
-
-    return [environment for environment in all_environments if environment.is_active]
+    return next(
+        (
+            env
+            for env in all_environments
+            if env.gcp_identifier == environment_name
+            and env.workspace_name == workspace_project_id
+        ),
+        None,
+    )
 
 
 def get_environments_with_projects(
@@ -1001,11 +1031,9 @@ def add_workbench_collaborator(
     )
 
     if not response.ok:
-        error_message = response.json().get("error", "Failed to add collaborator")
-        logger.error(f"Failed to add workbench collaborator: {error_message}")
-        return False
-
-    return True
+        error_message = response.json().get("error", "Failed to perform addition")
+        logger.error(f"AddWorkbenchCollaboratorFailed: {error_message}")
+        raise AddWorkbenchCollaboratorFailed(error_message)
 
 
 def remove_workbench_collaborator(
@@ -1018,8 +1046,52 @@ def remove_workbench_collaborator(
     )
 
     if not response.ok:
-        error_message = response.json().get("error", "Failed to remove collaborator")
-        logger.error(f"Failed to remove workbench collaborator: {error_message}")
+        error_message = response.json().get("error", "Failed to perform removal")
+        logger.error(f"RemoveWorkbenchCollaboratorFailed: {error_message}")
+        raise RemoveWorkbenchCollaboratorFailed(error_message)
+
+
+def get_workbench_notifications(
+    workspace_project_id: str, service_account_name: str
+) -> list:
+    response = api.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to fetch notifications")
+        logger.error(f"Failed to get workbench notifications: {error_message}")
+        return []
+
+    notifications_data = response.json()
+    return notifications_data.get("notifications", [])
+
+
+def mark_notification_as_viewed(notification_id: int) -> bool:
+    response = api.mark_notification_as_viewed(notification_id=notification_id)
+
+    if not response.ok:
+        error_message = response.json().get(
+            "error", "Failed to mark notification as viewed"
+        )
+        logger.error(f"Failed to mark notification as viewed: {error_message}")
+        return False
+
+    return True
+
+
+def clear_all_notifications(
+    workspace_project_id: str, service_account_name: str
+) -> bool:
+    response = api.clear_all_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to clear notifications")
+        logger.error(f"Failed to clear notifications: {error_message}")
         return False
 
     return True
