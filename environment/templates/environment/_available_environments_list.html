@@ -162,4 +162,64 @@
             Create one before creating a workbench.
         </div>
     {% endif %}
+
+    {% if shared_workbenches %}
+
+        {% regroup shared_workbenches by gcp_project_id as project_workbenches %}
+
+        {% for project in project_workbenches %}
+            <div class="card mt-3">
+                <div class="card-header py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">
+                                {{ project.grouper }} <small class="text-muted">(shared)</small>
+                            </h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for shared_wb in project.list %}
+                            <li class="list-group-item">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <a href="{% url 'published_project' shared_wb.workbench.project.slug shared_wb.workbench.project.version %}" target="_blank">
+                                            {{ shared_wb.workbench.project }}
+                                        </a>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small>
+                                            <i>Environment type:</i>
+                                            {% if shared_wb.workbench.type.value == "collaborative" %}
+                                                Collaborative Jupyter
+                                            {% else %}
+                                                {{ shared_wb.workbench.type.value|capfirst }}
+                                            {% endif %}<br>
+                                            <i>CPU:</i> {{ shared_wb.workbench.cpu }}<br>
+                                            <i>Memory:</i> {{ shared_wb.workbench.memory }}<br>
+                                            <i>Region:</i> {{ shared_wb.workbench.region.value }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ shared_wb.workbench.status.value|capfirst }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="d-flex flex-wrap">
+                                            {% if shared_wb.workbench.status.value == "running" %}
+                                                <a href="{{ shared_wb.workbench.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
+                                            {% endif %}
+                                            {% if shared_wb.workbench.type.value == "collaborative" and shared_wb.workbench.service_account_name %}
+                                                {% environment_modal_button environment=shared_wb.workbench button_type="modal_leave" %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
 </div>

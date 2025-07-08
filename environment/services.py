@@ -19,6 +19,7 @@ from environment.deserializers import (
     deserialize_quotas,
     deserialize_cloud_roles,
     deserialize_datasets_monitoring_data,
+    deserialize_shared_workbenches,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -556,6 +557,22 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
     return deserialize_workspaces(response.json(), projects)
+
+
+def get_shared_workbenches_list(user: User) -> list:
+    response = api.get_shared_workbenches(user.cloud_identity.email)
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to get shared workbenches")
+        logger.error(f"Failed to get shared workbenches: {error_message}")
+        return []
+
+    try:
+        projects = list(PublishedProject.objects.accessible_by(user))
+    except Exception as e:
+        logger.error(f"Failed to get projects for shared workbenches: {e}")
+        projects = []
+
+    return deserialize_shared_workbenches(response.json(), projects)
 
 
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:

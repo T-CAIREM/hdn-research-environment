@@ -18,6 +18,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    require_POST,
     billing_account_required,
     console_permission_required,
 )
@@ -98,10 +99,14 @@ def research_environments(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
+        shared_workbenches_list_future = executor.submit(
+            services.get_shared_workbenches_list, request.user
+        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
+    shared_workbenches = shared_workbenches_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -113,6 +118,7 @@ def research_environments(request):
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
+        "shared_workbenches": shared_workbenches,
         "billing_accounts_list": billing_accounts_list,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "workflows": running_workflows,
@@ -141,10 +147,14 @@ def research_environments_partial(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
+        shared_workbenches_list_future = executor.submit(
+            services.get_shared_workbenches_list, request.user
+        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
+    shared_workbenches = shared_workbenches_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -156,6 +166,7 @@ def research_environments_partial(request):
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
+        "shared_workbenches": shared_workbenches,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
@@ -590,6 +601,19 @@ def confirm_bucket_sharing(request):
         "is_owner": request.user == invite.owner,
     }
     return render(request, "environment/manage_shared_bucket_invitation.html", context)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def leave_shared_environment(request):
+    data = json.loads(request.body)
+    services.remove_workbench_collaborator(
+        workspace_project_id=data["gcp_project_id"],
+        service_account_name=data["service_account_name"],
+        collaborator_email=request.user.cloud_identity.email,
+    )
+    return JsonResponse({})
 
 
 @require_PATCH
