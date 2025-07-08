@@ -681,6 +681,7 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
                     service_account_name=environment.service_account_name,
                     collaborator_email=collaborator_email,
                 )
+                return redirect(request.path)
 
         elif action == "remove_collaborator":
             collaborator_email = request.POST.get("collaborator_email")
@@ -690,6 +691,7 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
                     service_account_name=environment.service_account_name,
                     collaborator_email=collaborator_email,
                 )
+                return redirect(request.path)
 
         elif action == "mark_notification_viewed":
             notification_id = request.POST.get("notification_id")
