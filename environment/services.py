@@ -432,9 +432,7 @@ def _get_project_for_environment(
 
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
-    email = (
-        user.cloud_identity.email
-    )
+    email = user.cloud_identity.email
 
     response = api.get_workspace_list(email)
     if not response.ok:
