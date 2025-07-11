@@ -22,10 +22,6 @@ class EnvironmentCreationFailed(Exception):
     pass
 
 
-class EnvironmentAccessFailed(Exception):
-    pass
-
-
 class BillingVerificationFailed(Exception):
     pass
 

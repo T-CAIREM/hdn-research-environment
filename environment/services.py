@@ -158,8 +158,8 @@ def is_shared_bucket_admin(
     )
 
 
-def is_environment_owner(user: User, environment: ResearchEnvironment) -> bool:
-    return environment.workbench_owner_username == user.username
+def is_environment_owner(user: User, workbench_owner_username: str) -> bool:
+    return workbench_owner_username == user.username
 
 
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
@@ -442,39 +442,6 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
 
     all_environments = deserialize_research_environments(response.json())
     return [environment for environment in all_environments if environment.is_active]
-
-
-def get_environment(
-    user: User, workspace_project_id: str, environment_name: str
-) -> ResearchEnvironment:
-    email = user.cloud_identity.email
-    response = api.get_workspace_list(email)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
-        raise GetAvailableEnvironmentsFailed(error_message)
-
-    workspace_data = response.json()
-    projects = PublishedProject.objects.all()
-    all_environments = []
-
-    for workspace in workspace_data:
-        if "workbenches" in workspace:
-            gcp_project_id = workspace.get("gcp_project_id", "")
-            region = workspace.get("region", DEFAULT_REGION)
-            environments = deserialize_research_environments(
-                workspace["workbenches"], gcp_project_id, region, projects
-            )
-            all_environments.extend(environments)
-    return next(
-        (
-            env
-            for env in all_environments
-            if env.gcp_identifier == environment_name
-            and env.workspace_name == workspace_project_id
-        ),
-        None,
-    )
 
 
 def get_environments_with_projects(

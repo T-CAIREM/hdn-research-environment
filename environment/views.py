@@ -26,7 +26,6 @@ from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
-    EnvironmentAccessFailed,
 )
 
 from environment.forms import (
@@ -655,19 +654,18 @@ def delete_environment(request):
 
 @login_required
 @cloud_identity_required
-def manage_collaborative_environment(request, workspace_project_id, environment_name):
-    try:
-        environment = services.get_environment(
-            request.user, workspace_project_id, environment_name
+def manage_collaborative_environment(
+    request,
+    workspace_project_id,
+    environment_name,
+    workbench_owner_username,
+    service_account_name,
+):
+    if not services.is_environment_owner(request.user, workbench_owner_username):
+        messages.error(
+            request,
+            f"Failed to access {environment_name} management panel",
         )
-        if not environment or not services.is_environment_owner(
-            request.user, environment=environment
-        ):
-            raise EnvironmentAccessFailed(
-                f"Failed to access {environment_name} management panel"
-            )
-    except EnvironmentAccessFailed as e:
-        messages.error(request, str(e))
         return redirect("research_environments")
 
     if request.method == "POST":
@@ -678,7 +676,7 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
             if collaborator_email:
                 services.add_workbench_collaborator(
                     workspace_project_id=workspace_project_id,
-                    service_account_name=environment.service_account_name,
+                    service_account_name=service_account_name,
                     collaborator_email=collaborator_email,
                 )
                 return redirect(request.path)
@@ -688,7 +686,7 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
             if collaborator_email:
                 services.remove_workbench_collaborator(
                     workspace_project_id=workspace_project_id,
-                    service_account_name=environment.service_account_name,
+                    service_account_name=service_account_name,
                     collaborator_email=collaborator_email,
                 )
                 return redirect(request.path)
@@ -704,7 +702,7 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
         elif action == "clear_all_notifications":
             success = services.clear_all_notifications(
                 workspace_project_id=workspace_project_id,
-                service_account_name=environment.service_account_name,
+                service_account_name=service_account_name,
             )
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"success": success})
@@ -712,16 +710,15 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
 
     collaborators = services.get_workbench_collaborators(
         workspace_project_id=workspace_project_id,
-        service_account_name=environment.service_account_name,
+        service_account_name=service_account_name,
     )
 
     notifications = services.get_workbench_notifications(
         workspace_project_id=workspace_project_id,
-        service_account_name=environment.service_account_name,
+        service_account_name=service_account_name,
     )
 
     context = {
-        "environment": environment,
         "workspace_project_id": workspace_project_id,
         "environment_name": environment_name,
         "collaborators": collaborators,
