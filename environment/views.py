@@ -734,20 +734,6 @@ def manage_collaborative_environment(request, workspace_project_id, environment_
 @require_DELETE
 @login_required
 @cloud_identity_required
-def delete_environment(request):
-    data = json.loads(request.body)
-    services.delete_environment(
-        user=request.user,
-        workspace_project_id=data["gcp_project_id"],
-        workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
-    )
-    return JsonResponse({})
-
-
-@require_DELETE
-@login_required
-@cloud_identity_required
 def delete_workspace(request):
     data = json.loads(request.body)
     services.delete_workspace(
