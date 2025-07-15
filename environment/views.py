@@ -25,6 +25,7 @@ from environment.entities import WorkflowStatus, WorkspaceStatus, Region, Workfl
 from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
+    EnvironmentCreationFailed,
 )
 
 from environment.forms import (
@@ -49,6 +50,7 @@ from environment.models import (
     VMInstance,
     CloudGroup,
     CloudIdentity,
+    GPUAccelerator,
 )
 from environment.utilities import user_has_cloud_identity
 
@@ -298,22 +300,30 @@ def create_research_environment(request, workspace_id):
                 services.cpu_usage(available_workspaces) + workbench_cpu_usage
             )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
-                project = services.get_project(form.cleaned_data["project_id"])
-                services.create_research_environment(
-                    user=request.user,
-                    project=project,
-                    workspace_project_id=form.cleaned_data["workspace_project_id"],
-                    machine_type=form.cleaned_data["machine_type"],
-                    workbench_type=form.cleaned_data["environment_type"],
-                    disk_size=form.cleaned_data.get("disk_size"),
-                    gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
-                    sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
-                )
-                messages.info(
-                    request,
-                    "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
-                )
-                return redirect("research_environments")
+                try:
+                    project = services.get_project(form.cleaned_data["project_id"])
+                    services.create_research_environment(
+                        user=request.user,
+                        project=project,
+                        workspace_project_id=form.cleaned_data["workspace_project_id"],
+                        machine_type=form.cleaned_data["machine_type"],
+                        workbench_type=form.cleaned_data["environment_type"],
+                        disk_size=form.cleaned_data.get("disk_size"),
+                        gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
+                        sharing_bucket_identifiers=form.cleaned_data.get(
+                            "shared_bucket"
+                        ),
+                    )
+                    messages.info(
+                        request,
+                        "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
+                    )
+                    return redirect("research_environments")
+                except EnvironmentCreationFailed as e:
+                    messages.error(
+                        request,
+                        str(e)
+                    )
             else:
                 messages.error(
                     request,
@@ -334,11 +344,18 @@ def create_research_environment(request, workspace_id):
     ]
     instance_projected_cost[region] = projected_costs
 
+    gpu_projected_costs = {
+        region: [
+            ProjectedWorkbenchCost(gpu.name, gpu.price)
+            for gpu in GPUAccelerator.objects.filter(region__region=region.value)
+        ]
+    }
+
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
         "instance_projected_costs": instance_projected_cost,
-        "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
+        "gpu_projected_costs": gpu_projected_costs,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)

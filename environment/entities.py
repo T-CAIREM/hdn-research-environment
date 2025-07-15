@@ -20,10 +20,6 @@ class BucketObjectType(Enum):
     FILE = "file"
 
 
-class GPUAcceleratorType(Enum):
-    NVIDIA_TESLA_T4 = "nvidia-tesla-t4"
-
-
 class EnvironmentStatus(Enum):
     CREATING = "creating"
 
