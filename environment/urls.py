@@ -265,7 +265,7 @@ urlpatterns = [
         name="react_views.confirm_bucket_sharing",
     ),
     path(
-        "api/sharing/revoke/<shared_workspace_name>/<shared_bucket_name>",
+        "api/sharing/revoke/<shared_bucket_name>",
         react_views.revoke_shared_bucket_access,
         name="react_views.revoke_shared_bucket_access",
     ),
@@ -275,7 +275,7 @@ urlpatterns = [
         name="react_views.get_bucket_sharing_invitation",
     ),
     path(
-        "api/sharing/shares",
+        "api/sharing/<shared_bucket_name>/shares",
         react_views.get_bucket_shares,
         name="react_views.get_bucket_shares",
     ),
@@ -295,7 +295,7 @@ urlpatterns = [
         name="react_views.revoke_billing_account_access",
     ),
     path(
-        "api/billing/shares",
+        "api/billing/<billing_account_id>/shares",
         react_views.get_billing_shares,
         name="react_views.get_billing_shares",
     ),
