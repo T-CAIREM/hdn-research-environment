@@ -283,9 +283,7 @@ def create_shared_bucket(request, workspace_id):
     if not shared_workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
 
-    form = CreateSharedBucketForm(
-        request.POST, selected_shared_workspace=shared_workspace
-    )
+    form = CreateSharedBucketForm(data, selected_shared_workspace=shared_workspace)
     if form.is_valid():
         services.create_shared_buket(
             user=user,
@@ -313,12 +311,12 @@ def delete_shared_bucket(request):
 def share_bucket(request, shared_workspace_name, shared_bucket_name):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
-    shared_workspace = services.get_simplified_workspace(shared_workspace_name, user)
-    if not services.is_shared_bucket_owner([shared_workspace], shared_bucket_name):
+    shared_workspaces = services.get_shared_workspaces_list(user)
+    if not services.is_shared_bucket_owner(shared_workspaces, shared_bucket_name):
         raise Http404()
 
     bucket_sharing_form = BucketSharingForm(
-        request.POST,
+        data,
         invitation_owner=user,
         shared_bucket_name=shared_bucket_name,
     )
@@ -357,13 +355,13 @@ def get_bucket_shares(request, shared_bucket_name):
 @require_POST
 @login_required
 @cloud_identity_required
-def revoke_shared_bucket_access(request, shared_workspace_name, shared_bucket_name):
+def revoke_shared_bucket_access(request, shared_bucket_name):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
-    shared_workspace = services.get_simplified_workspace(shared_workspace_name, user)
-    if not services.is_shared_bucket_owner([shared_workspace], shared_bucket_name):
+    shared_workspaces = services.get_shared_workspaces_list(user)
+    if not services.is_shared_bucket_owner(shared_workspaces, shared_bucket_name):
         raise Http404()
-    services.revoke_shared_bucket_access(request.POST["share_id"])
+    services.revoke_shared_bucket_access(data["share_id"])
 
     return HttpResponse(status=200)
 
@@ -407,7 +405,7 @@ def share_billing_account(request, billing_account_id):
     if not services.is_billing_account_owner(user, billing_account_id):
         raise Http404()
 
-    billing_account_sharing_form = ShareBillingAccountForm(request.POST)
+    billing_account_sharing_form = ShareBillingAccountForm(data)
     if billing_account_sharing_form.is_valid():
         services.invite_user_to_shared_billing_account(
             request=request,
@@ -430,7 +428,7 @@ def get_billing_shares(request, billing_account_id):
     )
     return JsonResponse(
         {
-            "bucket_sharing_invites": serializers.serialize_billing_sharing_invitations(
+            "billing_sharing_invites": serializers.serialize_billing_sharing_invitations(
                 billing_shares
             )
         },
@@ -446,7 +444,7 @@ def revoke_billing_account_access(request, billing_account_id):
     user = User.objects.get(id=data.get("user_id"))
     if not services.is_billing_account_owner(user, billing_account_id):
         raise Http404()
-    services.revoke_billing_account_access(request.POST["share_id"])
+    services.revoke_billing_account_access(data["share_id"])
 
     return HttpResponse(status=200)
 
