@@ -108,7 +108,7 @@
               </div>
             </li>
               {% for collaborator in collaborators %}
-                {% if collaborator|cut:"@healthdatanexus.ai" != environment.workbench_owner_username %}
+                {% if collaborator|cut:"@healthdatanexus.ai" != workbench_owner_username %}
                   {% with has_collaborators=True %}
                     <li class="list-group-item">
                       <div class="row">

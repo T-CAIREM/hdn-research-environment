@@ -723,6 +723,7 @@ def manage_collaborative_environment(
         "environment_name": environment_name,
         "collaborators": collaborators,
         "notifications": notifications,
+        "workbench_owner_username": workbench_owner_username,
     }
 
     return render(request, "environment/manage_collaborative_environment.html", context)
