@@ -430,14 +430,6 @@ def remove_workbench_collaborators(
     return Request("DELETE", url="/workbench/collaborators", json=json)
 
 
-
-@api_request
-def get_shared_workbenches(email: str) -> Request:
-    return Request(
-        "GET", url=f"/workbench/get_shared_workbenches", params={"email": email}
-    )
-
-
 @api_request
 def get_workbench_notifications(
     workspace_project_id: str,

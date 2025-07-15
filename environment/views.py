@@ -99,14 +99,10 @@ def research_environments(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
-        shared_workbenches_list_future = executor.submit(
-            services.get_shared_workbenches_list, request.user
-        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
-    shared_workbenches = shared_workbenches_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -118,7 +114,6 @@ def research_environments(request):
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
-        "shared_workbenches": shared_workbenches,
         "billing_accounts_list": billing_accounts_list,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "workflows": running_workflows,
@@ -147,14 +142,10 @@ def research_environments_partial(request):
         shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
-        shared_workbenches_list_future = executor.submit(
-            services.get_shared_workbenches_list, request.user
-        )
 
     workspaces = workspaces_list_future.result()
     billing_accounts_list = billing_accounts_list_future.result()
     shared_workspaces = shared_workspaces_list_feature.result()
-    shared_workbenches = shared_workbenches_list_future.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -166,7 +157,6 @@ def research_environments_partial(request):
     context = {
         "shared_workspaces": shared_workspaces,
         "workspaces_with_workbenches": workspaces,
-        "shared_workbenches": shared_workbenches,
         "billing_accounts_list": billing_accounts_list,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,

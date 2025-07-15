@@ -87,6 +87,7 @@ def deserialize_workspace_details(
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
+        is_collaborator_view=data.get("is_collaborator_view", False),
         workbenches=deserialize_research_environments(
             data["workbenches"],
             data["gcp_project_id"],
@@ -141,46 +142,6 @@ def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
-
-
-def deserialize_shared_workbenches(
-    data: list, projects: Iterable[PublishedProject]
-) -> Iterable[dict]:
-    if not data:
-        return []
-
-    shared_workbenches = []
-    for item in data:
-        gcp_project_id = item.get("gcp_project_id", "")
-        workbench_data = item.get("workbench", {})
-
-        if workbench_data:
-            workbench_data["gcp_project_id"] = gcp_project_id
-
-            dataset_identifier = workbench_data.get("dataset_identifier", "")
-
-            environment = ResearchEnvironment(
-                gcp_identifier=workbench_data.get("gcp_identifier"),
-                dataset_identifier=dataset_identifier,
-                url=workbench_data.get("url"),
-                workspace_name=gcp_project_id,
-                status=EnvironmentStatus(workbench_data.get("status")),
-                cpu=workbench_data.get("cpu"),
-                memory=workbench_data.get("memory"),
-                region=Region(workbench_data.get("zone", "").rsplit("-", 1)[0]),
-                type=EnvironmentType(workbench_data.get("workbench_type")),
-                machine_type=workbench_data.get("machine_type"),
-                disk_size=workbench_data.get("disk_size"),
-                project=_get_project_for_environment(dataset_identifier, projects),
-                gpu_accelerator_type=workbench_data.get("gpu_accelerator_type"),
-                service_account_name=workbench_data.get("service_account_name"),
-                workbench_owner_username=workbench_data.get("workbench_owner_username"),
-            )
-            shared_workbenches.append(
-                {"gcp_project_id": gcp_project_id, "workbench": environment}
-            )
-
-    return sorted(shared_workbenches, key=lambda x: x["gcp_project_id"])
 
 
 def _get_project_for_environment(
