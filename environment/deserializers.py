@@ -87,7 +87,7 @@ def deserialize_workspace_details(
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
-        is_collaborator_view=data.get("is_collaborator_view", False),
+        is_owner=data["is_owner"],
         workbenches=deserialize_research_environments(
             data["workbenches"],
             data["gcp_project_id"],

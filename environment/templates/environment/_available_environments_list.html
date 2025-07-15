@@ -29,11 +29,11 @@
                         <div>
                             <h6 class="mb-0">
                                 {{ workspace.gcp_project_id }}
-                                {% if workspace.is_collaborator_view %}
+                                {% if not workspace.is_owner %}
                                     <small class="text-muted">(shared)</small>
                                 {% endif %}
                             </h6>
-                            {% if not workspace.is_collaborator_view %}
+                            {% if workspace.is_owner %}
                                 {% if workspace.gcp_billing_id %}
                                     <small class="d-block">
                                         <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
@@ -72,7 +72,7 @@
                                 <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                             </div>
                         {% else %}
-                            {% if not workspace.is_collaborator_view %}
+                            {% if workspace.is_owner %}
                                 <div class="d-flex flex-column align-items-end px-4 mb-3">
                                     <div class="mb-2">
                                         {% workspace_destroy_modal_button workspace=workspace %}
@@ -129,11 +129,11 @@
                                                         {% elif environment.is_running or environment.is_paused %}
                                                             {% if environment.is_running %}
                                                                 <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
-                                                                {% if not workspace.is_collaborator_view %}
+                                                                {% if workspace.is_owner %}
                                                                     {% environment_modal_button environment=environment button_type="modal_pause" %}
                                                                 {% endif %}
                                                             {% else %}
-                                                                {% if not workspace.is_collaborator_view %}
+                                                                {% if workspace.is_owner %}
                                                                     {% environment_modal_button environment=environment button_type="modal_start" %}
                                                                 {% endif %}
                                                             {% endif %}
@@ -142,7 +142,7 @@
                                                                     Manage
                                                                 </a>
                                                             {% endif %}
-                                                            {% if not workspace.is_collaborator_view %}
+                                                            {% if workspace.is_owner %}
                                                                 {% environment_modal_button environment=environment button_type="modal_instance" %}
                                                                 {% environment_modal_button environment=environment button_type="modal_destroy" %}
                                                             {% elif environment.type.value == "collaborative" and environment.service_account_name %}
@@ -162,7 +162,7 @@
                                 Create one using the button below.
                             </div>
                         {% endif %}
-                        {% if not workspace.is_collaborator_view %}
+                        {% if workspace.is_owner %}
                             <div class="row mt-3">
                                 <a class="m-auto" href="{% url 'create_research_environment' workspace_id=workspace.gcp_project_id %}">
                                     Launch Research Environment
