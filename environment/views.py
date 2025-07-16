@@ -652,6 +652,83 @@ def delete_environment(request):
     return JsonResponse({})
 
 
+@login_required
+@cloud_identity_required
+def manage_collaborative_environment(
+    request,
+    workspace_project_id,
+    environment_name,
+    workbench_owner_username,
+    service_account_name,
+):
+    if not services.is_environment_owner(request.user, workbench_owner_username):
+        messages.error(
+            request,
+            f"Failed to access {environment_name} management panel",
+        )
+        return redirect("research_environments")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                services.add_workbench_collaborator(
+                    workspace_project_id=workspace_project_id,
+                    service_account_name=service_account_name,
+                    collaborator_email=collaborator_email,
+                )
+                return redirect(request.path)
+
+        elif action == "remove_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                services.remove_workbench_collaborator(
+                    workspace_project_id=workspace_project_id,
+                    service_account_name=service_account_name,
+                    collaborator_email=collaborator_email,
+                )
+                return redirect(request.path)
+
+        elif action == "mark_notification_viewed":
+            notification_id = request.POST.get("notification_id")
+            if notification_id:
+                success = services.mark_notification_as_viewed(notification_id)
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"success": success})
+                return redirect(request.path)
+
+        elif action == "clear_all_notifications":
+            success = services.clear_all_notifications(
+                workspace_project_id=workspace_project_id,
+                service_account_name=service_account_name,
+            )
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": success})
+            return redirect(request.path)
+
+    collaborators = services.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    notifications = services.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    context = {
+        "workspace_project_id": workspace_project_id,
+        "environment_name": environment_name,
+        "collaborators": collaborators,
+        "notifications": notifications,
+        "workbench_owner_username": workbench_owner_username,
+    }
+
+    return render(request, "environment/manage_collaborative_environment.html", context)
+
+
 @require_DELETE
 @login_required
 @cloud_identity_required

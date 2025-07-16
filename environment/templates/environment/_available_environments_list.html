@@ -101,7 +101,12 @@
                                                 </div>
                                                 <div class="col-md-3">
                                                     <small>
-                                                        <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
+                                                        <i>Environment type:</i>
+                                                        {% if environment.type.value == "collaborative" %}
+                                                            Collaborative Jupyter
+                                                        {% else %}
+                                                            {{ environment.type.value|capfirst }}
+                                                        {% endif %}<br>
                                                         <i>CPU:</i> {{ environment.cpu }}<br>
                                                         <i>Memory:</i> {{ environment.memory }}<br>
                                                         <i>Region:</i> {{ environment.region.value }}
@@ -120,6 +125,11 @@
                                                                 {% environment_modal_button environment=environment button_type="modal_pause" %}
                                                             {% else %}
                                                                 {% environment_modal_button environment=environment button_type="modal_start" %}
+                                                            {% endif %}
+                                                            {% if environment.type.value == "collaborative" and user.username == environment.workbench_owner_username %}
+                                                                <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier workbench_owner_username=environment.workbench_owner_username service_account_name=environment.service_account_name %}" class="btn btn-sm btn-info m-1">
+                                                                    Manage
+                                                                </a>
                                                             {% endif %}
                                                             {% environment_modal_button environment=environment button_type="modal_instance" %}
                                                             {% environment_modal_button environment=environment button_type="modal_destroy" %}

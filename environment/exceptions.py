@@ -136,3 +136,11 @@ class GetMonitoringDatasetsFailed(Exception):
 
 class UpdateWorkspaceBillingAccountFailed(Exception):
     pass
+
+
+class RemoveWorkbenchCollaboratorFailed(Exception):
+    pass
+
+
+class AddWorkbenchCollaboratorFailed(Exception):
+    pass

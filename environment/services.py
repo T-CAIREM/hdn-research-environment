@@ -62,6 +62,8 @@ from environment.exceptions import (
     GetGroupsIAMRolesFailed,
     GetMonitoringDatasetsFailed,
     UpdateWorkspaceBillingAccountFailed,
+    AddWorkbenchCollaboratorFailed,
+    RemoveWorkbenchCollaboratorFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -154,6 +156,10 @@ def is_shared_bucket_admin(
         for workspace in shared_workspaces_list
         for bucket in workspace.buckets
     )
+
+
+def is_environment_owner(user: User, workbench_owner_username: str) -> bool:
+    return workbench_owner_username == user.username
 
 
 def get_owned_shares_of_billing_account(owner: User, billing_account_id: str):
@@ -427,6 +433,7 @@ def _get_project_for_environment(
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
+
     response = api.get_workspace_list(email)
     if not response.ok:
         error_message = response.json()["error"]
@@ -955,3 +962,96 @@ def update_workspace_billing_account(
         error_message = response.json()["error"]
         logger.error(f"UpdateWorkspaceBillingAccountFailed: {error_message}")
         raise UpdateWorkspaceBillingAccountFailed(error_message)
+
+
+def get_workbench_collaborators(
+    workspace_project_id: str, service_account_name: str
+) -> list:
+    response = api.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to fetch collaborators")
+        logger.error(f"Failed to get workbench collaborators: {error_message}")
+        return []
+
+    collaborators_data = response.json()
+    return collaborators_data.get("collaborators", [])
+
+
+def add_workbench_collaborator(
+    workspace_project_id: str, service_account_name: str, collaborator_email: str
+):
+    response = api.add_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborators=[collaborator_email],
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to perform addition")
+        logger.error(f"AddWorkbenchCollaboratorFailed: {error_message}")
+        raise AddWorkbenchCollaboratorFailed(error_message)
+
+
+def remove_workbench_collaborator(
+    workspace_project_id: str, service_account_name: str, collaborator_email: str
+):
+    response = api.remove_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborators=[collaborator_email],
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to perform removal")
+        logger.error(f"RemoveWorkbenchCollaboratorFailed: {error_message}")
+        raise RemoveWorkbenchCollaboratorFailed(error_message)
+
+
+def get_workbench_notifications(
+    workspace_project_id: str, service_account_name: str
+) -> list:
+    response = api.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to fetch notifications")
+        logger.error(f"Failed to get workbench notifications: {error_message}")
+        return []
+
+    notifications_data = response.json()
+    return notifications_data.get("notifications", [])
+
+
+def mark_notification_as_viewed(notification_id: int) -> bool:
+    response = api.mark_notification_as_viewed(notification_id=notification_id)
+
+    if not response.ok:
+        error_message = response.json().get(
+            "error", "Failed to mark notification as viewed"
+        )
+        logger.error(f"Failed to mark notification as viewed: {error_message}")
+        return False
+
+    return True
+
+
+def clear_all_notifications(
+    workspace_project_id: str, service_account_name: str
+) -> bool:
+    response = api.clear_all_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    if not response.ok:
+        error_message = response.json().get("error", "Failed to clear notifications")
+        logger.error(f"Failed to clear notifications: {error_message}")
+        return False
+
+    return True
