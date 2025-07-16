@@ -1,3 +1,5 @@
+import json
+
 from typing import Iterable
 
 from django import forms
@@ -78,6 +80,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
+        ("collaborative", "Collaborative Jupyter"),
     ]
 
     workspace_project_id = forms.CharField(
@@ -98,6 +101,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         label="Environment type",
         choices=AVAILABLE_ENVIRONMENT_TYPES,
         widget=forms.RadioSelect(attrs={"class": "environment-type"}),
+    )
+    users_list = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False,
     )
     disk_size = forms.IntegerField(
         label="Persistent data disk size [GB]",
@@ -145,6 +152,16 @@ class CreateResearchEnvironmentForm(forms.Form):
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
         return None if gpu_accelerator == "" else gpu_accelerator
+
+    def clean_users_list(self):
+        users_list = self.cleaned_data.get("users_list")
+        if not users_list:
+            return []
+        try:
+            users = json.loads(users_list)
+            return users
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid user list format.")
 
 
 class ShareBillingAccountForm(forms.Form):

@@ -313,6 +313,7 @@ def create_research_environment(request, workspace_id):
                         sharing_bucket_identifiers=form.cleaned_data.get(
                             "shared_bucket"
                         ),
+                        collaborators=form.cleaned_data.get("users_list", []),
                     )
                     messages.info(
                         request,
@@ -320,10 +321,7 @@ def create_research_environment(request, workspace_id):
                     )
                     return redirect("research_environments")
                 except EnvironmentCreationFailed as e:
-                    messages.error(
-                        request,
-                        str(e)
-                    )
+                    messages.error(request, str(e))
             else:
                 messages.error(
                     request,

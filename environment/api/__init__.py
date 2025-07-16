@@ -111,6 +111,7 @@ def create_workbench(
     user_groups: list[str],
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
+    collaborators: Optional[list[str]] = None,
 ):
     json = {
         "workbench_type": workbench_type,
@@ -125,6 +126,7 @@ def create_workbench(
         "user_groups": user_groups,
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers,
+        "collaborators": collaborators,
     }
 
     return Request("POST", url="/workbench/create", json=json)
