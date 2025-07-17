@@ -71,19 +71,17 @@
                                 </h6>
                                 <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                             </div>
-                        {% else %}
-                            {% if workspace.is_owner %}
-                                <div class="d-flex flex-column align-items-end px-4 mb-3">
-                                    <div class="mb-2">
-                                        {% workspace_destroy_modal_button workspace=workspace %}
-                                    </div>
-                                    {% if should_display_google_link %}
-                                        <a class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/welcome?&project={{ workspace.gcp_project_id }}">
-                                          Go to Google console
-                                        </a>
-                                    {% endif %}
+                        {% elif workspace.is_owner %}
+                            <div class="d-flex flex-column align-items-end px-4 mb-3">
+                                <div class="mb-2">
+                                    {% workspace_destroy_modal_button workspace=workspace %}
                                 </div>
-                            {% endif %}
+                                {% if should_display_google_link %}
+                                    <a class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/welcome?&project={{ workspace.gcp_project_id }}">
+                                      Go to Google console
+                                    </a>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -132,10 +130,8 @@
                                                                 {% if workspace.is_owner %}
                                                                     {% environment_modal_button environment=environment button_type="modal_pause" %}
                                                                 {% endif %}
-                                                            {% else %}
-                                                                {% if workspace.is_owner %}
-                                                                    {% environment_modal_button environment=environment button_type="modal_start" %}
-                                                                {% endif %}
+                                                            {% elif workspace.is_owner %}
+                                                                {% environment_modal_button environment=environment button_type="modal_start" %}
                                                             {% endif %}
                                                             {% if environment.type.value == "collaborative" and user.username == environment.workbench_owner_username %}
                                                                 <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier workbench_owner_username=environment.workbench_owner_username service_account_name=environment.service_account_name %}" class="btn btn-sm btn-info m-1">
