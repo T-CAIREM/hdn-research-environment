@@ -45,6 +45,12 @@ button_types = {
         "url_name": "delete_environment",
         "button_class": "btn btn-danger m-1",
     },
+    "leave": {
+        "button_text": "Leave",
+        "http_method": "POST",
+        "url_name": "leave_shared_environment",
+        "button_class": "btn btn-danger m-1",
+    },
     "modal_instance": {
         "button_text": "Change Instance Type",
         "button_class": "btn-secondary",
@@ -72,6 +78,13 @@ button_types = {
         "modal_title": "Start",
         "modal_body": "Are you sure you want to start this environment?",
         "action_button_type": "start",
+    },
+    "modal_leave": {
+        "button_text": "Leave",
+        "button_class": "btn-danger",
+        "modal_title": "Leave Environment",
+        "modal_body": "Are you sure you want to leave this shared environment? You will lose access to it.",
+        "action_button_type": "leave",
     },
 }
 
@@ -114,6 +127,9 @@ def environment_action_button(
         "instance_name": environment.gcp_identifier,
         "environment_type": environment.type.value,
     }
+
+    if button_type == "leave":
+        request_data["service_account_name"] = environment.service_account_name
 
     result_data = {
         "button_class": data["button_class"],

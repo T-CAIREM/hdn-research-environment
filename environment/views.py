@@ -18,6 +18,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    require_POST,
     billing_account_required,
     console_permission_required,
 )
@@ -590,6 +591,19 @@ def confirm_bucket_sharing(request):
         "is_owner": request.user == invite.owner,
     }
     return render(request, "environment/manage_shared_bucket_invitation.html", context)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def leave_shared_environment(request):
+    data = json.loads(request.body)
+    services.remove_workbench_collaborator(
+        workspace_project_id=data["gcp_project_id"],
+        service_account_name=data["service_account_name"],
+        collaborator_email=request.user.cloud_identity.email,
+    )
+    return JsonResponse({})
 
 
 @require_PATCH

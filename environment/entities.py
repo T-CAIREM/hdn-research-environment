@@ -137,6 +137,7 @@ class ResearchWorkspace:
     gcp_project_id: str
     gcp_billing_id: str
     status: WorkspaceStatus
+    is_owner: bool
     workbenches: Iterable[ResearchEnvironment]
 
 

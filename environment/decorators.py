@@ -63,3 +63,6 @@ require_PATCH = require_http_methods(["PATCH"])
 
 
 require_DELETE = require_http_methods(["DELETE"])
+
+
+require_POST = require_http_methods(["POST"])
