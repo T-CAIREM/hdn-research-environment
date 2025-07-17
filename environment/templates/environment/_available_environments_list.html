@@ -29,9 +29,6 @@
                         <div>
                             <h6 class="mb-0">
                                 {{ workspace.gcp_project_id }}
-                                {% if not workspace.is_owner %}
-                                    <small class="text-muted">(shared)</small>
-                                {% endif %}
                             </h6>
                             {% if workspace.is_owner %}
                                 {% if workspace.gcp_billing_id %}
@@ -62,6 +59,8 @@
                                         </small>
                                     {% endif %}
                                 {% endif %}
+                            {% else %}
+                                <small class="text-muted">(shared)</small>
                             {% endif %}
                         </div>
                         {% if not workspace.status.value == "created" %}
