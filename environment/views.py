@@ -214,7 +214,6 @@ def create_workspace(request):
             services.create_workspace(
                 user=request.user,
                 billing_account_id=form.cleaned_data["billing_account_id"],
-                region=form.cleaned_data["region"],
             )
             return redirect("research_environments")
     else:
@@ -752,7 +751,6 @@ def delete_workspace(request):
         user=request.user,
         gcp_project_id=data["gcp_project_id"],
         billing_account_id=data["billing_account_id"],
-        region=data["region"],
     )
     return JsonResponse({})
 

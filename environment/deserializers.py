@@ -83,7 +83,6 @@ def deserialize_workspace_details(
     data: dict, projects: Iterable[PublishedProject]
 ) -> ResearchWorkspace:
     return ResearchWorkspace(
-        region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
@@ -91,7 +90,6 @@ def deserialize_workspace_details(
         workbenches=deserialize_research_environments(
             data["workbenches"],
             data["gcp_project_id"],
-            Region(data["region"]),
             projects,
         ),
     )

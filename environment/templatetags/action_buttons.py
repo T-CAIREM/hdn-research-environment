@@ -168,7 +168,6 @@ def workspace_destroy_modal_button(
 ) -> dict:
     request_data = {
         "gcp_project_id": workspace.gcp_project_id,
-        "region": workspace.region.value,
         "billing_account_id": workspace.gcp_billing_id,
     }
     result_data = {

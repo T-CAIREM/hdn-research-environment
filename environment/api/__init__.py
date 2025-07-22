@@ -58,25 +58,23 @@ def revoke_billing_account_access(
 
 @api_request
 def create_workspace(
-    email: str, billing_account_id: str, region: str, user_groups: list[str]
+    email: str, billing_account_id: str, user_groups: list[str]
 ) -> Request:
     json = {
         "user_email": email,
         "user_groups": user_groups,
         "billing_account_id": billing_account_id,
-        "region": region,
     }
     return Request("POST", url="/workspace/create", json=json)
 
 
 @api_request
 def delete_workspace(
-    email: str, billing_account_id: str, region: str, gcp_project_id: str
+    email: str, billing_account_id: str, gcp_project_id: str
 ) -> Request:
     json = {
         "user_email": email,
         "billing_account_id": billing_account_id,
-        "region": region,
         "workspace_project_id": gcp_project_id,
     }
     return Request("DELETE", url=f"/workspace/delete", json=json)

@@ -133,7 +133,6 @@ class ResearchEnvironment:
 
 @dataclass(frozen=True, eq=True)
 class ResearchWorkspace:
-    region: Region
     gcp_project_id: str
     gcp_billing_id: str
     status: WorkspaceStatus

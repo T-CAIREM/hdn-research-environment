@@ -52,7 +52,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
 class CreateWorkspaceForm(forms.Form):
     billing_account_id = forms.ChoiceField(label="Billing Account")
-    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)

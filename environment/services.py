@@ -269,11 +269,10 @@ def invite_user_to_shared_bucket(
     return invite
 
 
-def create_workspace(user: User, billing_account_id: str, region: str):
+def create_workspace(user: User, billing_account_id: str):
     response = api.create_workspace(
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
-        region=region,
         user_groups=list(
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
@@ -300,13 +299,12 @@ def create_shared_workspace(user: User, billing_account_id: str):
 
 
 def delete_workspace(
-    user: User, billing_account_id: str, region: str, gcp_project_id: str
+    user: User, billing_account_id: str, gcp_project_id: str
 ):
     response = api.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
-        region=region,
     )
     if not response.ok:
         error_message = response.json()["error"]
