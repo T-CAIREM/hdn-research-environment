@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Iterable, Union
+from typing import Iterable, Union, Dict
 from django.forms.models import model_to_dict
 from django.contrib.auth import get_user_model
 
@@ -8,6 +8,7 @@ from environment.entities import (
     ResearchEnvironment,
     EntityScaffolding,
     SharedWorkspace,
+    SharedBucketObject
 )
 from environment.models import (
     VMInstance,
@@ -150,4 +151,17 @@ def serialize_billing_sharing_invitations(
             ],
         )
         for billing_sharing_invitation in billing_sharing_invitations
+    ]
+
+
+def serialize_shared_bucket_objects(objects: Iterable[SharedBucketObject]) -> list[Dict]:
+    return [
+        {
+            "type": obj.type,
+            "name": obj.name,
+            "size": obj.size,
+            "modification_time": obj.modification_time,
+            "full_path": obj.full_path,
+        }
+        for obj in objects
     ]

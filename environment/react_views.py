@@ -6,6 +6,7 @@ from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
 from environment.models import VMInstance, GPUAccelerator, BucketSharingInvite
 from rest_framework.response import Response
 import json
+import re
 
 
 from django.contrib.auth.decorators import login_required
@@ -456,4 +457,67 @@ def confirm_billing_account_sharing(request):
     user = User.objects.get(id=data.get("user_id"))
     token = request.POST["token"]
     services.consume_billing_account_sharing_token(user=user, token=token)
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def generate_signed_url(request, bucket_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+
+    signed_url = services.generate_signed_url(
+        bucket_name=bucket_name,
+        size=int(data.get("size")),
+        filename=data.get("filename"),
+        user=user,
+    )
+
+    return JsonResponse({"signed_url": signed_url})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_shared_bucket_content(request, bucket_name):
+    subdir = request.GET.get("subdir")
+    user = User.objects.get(id=request.GET.get("user_id"))
+    bucket_content = services.get_shared_bucket_content(
+        bucket_name=bucket_name, subdir=subdir, user=user
+    )
+    parent_subbed_dir = re.subn("/[^/]*/$", "/", subdir or "")
+    context = {
+        "shared_bucket_name": bucket_name,
+        "bucket_content": serializers.serialize_shared_bucket_objects(bucket_content),
+        "current_dir_path": subdir,
+        "parent_dir": parent_subbed_dir[0] if parent_subbed_dir[1] else "",
+    }
+    return JsonResponse(context)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def create_shared_bucket_directory(request, bucket_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    services.create_shared_bucket_directory(
+        bucket_name=bucket_name,
+        parent_path=data["parent_path"],
+        directory_name=data["directory_name"],
+        user=user,
+    )
+    return HttpResponse(status=200)
+
+
+@require_DELETE
+@login_required
+@cloud_identity_required
+def delete_shared_bucket_content(request, bucket_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    services.delete_shared_bucket_content(
+        bucket_name=bucket_name, full_path=data["full_path"], user=user
+    )
     return HttpResponse(status=200)

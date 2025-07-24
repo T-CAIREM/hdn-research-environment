@@ -299,4 +299,24 @@ urlpatterns = [
         react_views.get_billing_shares,
         name="react_views.get_billing_shares",
     ),
+    path(
+        "api/sharing/generate_signed_url/<bucket_name>",
+        react_views.generate_signed_url,
+        name="react_views.generate_signed_url",
+    ),
+    path(
+        "api/sharing/<bucket_name>",
+        react_views.get_shared_bucket_content,
+        name="react_views.get_shared_bucket_content",
+    ),
+    path(
+        "api/sharing/<bucket_name>/content/create",
+        react_views.create_shared_bucket_directory,
+        name="react_views.create_shared_bucket_directory",
+    ),
+    path(
+        "api/sharing/<bucket_name>/content/delete",
+        react_views.delete_shared_bucket_content,
+        name="react_views.delete_shared_bucket_content",
+    ),
 ]
