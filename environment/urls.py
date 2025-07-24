@@ -52,7 +52,7 @@ urlpatterns = [
         name="leave_shared_environment",
     ),
     path(
-        "environment/manage/<workspace_project_id>/<environment_name>/<workbench_owner_username>/<service_account_name>",
+        "environment/manage/<workspace_project_id>/<environment_name>/<workbench_owner_username>/<service_account_name>/<project_id>",
         views.manage_collaborative_environment,
         name="manage_collaborative_environment",
     ),
@@ -168,6 +168,11 @@ urlpatterns = [
         "gpu-accelerators/",
         views.get_available_gpu_accelerators_partial,
         name="get_available_gpu_accelerators_partial",
+    ),
+    path(
+        "validate-collaborator-access/",
+        views.validate_collaborator_project_access,
+        name="validate_collaborator_project_access",
     ),
     path(
         "api/workspaces",

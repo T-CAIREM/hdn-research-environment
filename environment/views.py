@@ -674,6 +674,7 @@ def manage_collaborative_environment(
     environment_name,
     workbench_owner_username,
     service_account_name,
+    project_id,
 ):
     if not services.is_environment_owner(request.user, workbench_owner_username):
         messages.error(
@@ -688,12 +689,18 @@ def manage_collaborative_environment(
         if action == "add_collaborator":
             collaborator_email = request.POST.get("collaborator_email")
             if collaborator_email:
-                services.add_workbench_collaborator(
-                    workspace_project_id=workspace_project_id,
-                    service_account_name=service_account_name,
-                    collaborator_email=collaborator_email,
-                )
-                return redirect(request.path)
+                try:
+                    services.check_collaborator_project_access(
+                        collaborator_email, project_id
+                    )
+                    services.add_workbench_collaborator(
+                        workspace_project_id=workspace_project_id,
+                        service_account_name=service_account_name,
+                        collaborator_email=collaborator_email,
+                    )
+                    return redirect(request.path)
+                except services.PublishedProjectAccessFailed as e:
+                    messages.error(request, str(e))
 
         elif action == "remove_collaborator":
             collaborator_email = request.POST.get("collaborator_email")
@@ -1127,3 +1134,17 @@ def get_available_gpu_accelerators_partial(request):
     gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
     context = {"gpu_accelerators": gpu_accelerators}
     return render(request, "environment/gpu_accelerator_partial.html", context=context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def validate_collaborator_project_access(request):
+    collaborator_email = request.GET.get("collaborator_email")
+    project_id = request.GET.get("project_id")
+
+    try:
+        services.check_collaborator_project_access(collaborator_email, project_id)
+        return JsonResponse({"valid": True})
+    except services.PublishedProjectAccessFailed as e:
+        return JsonResponse({"valid": False, "error": str(e)})

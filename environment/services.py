@@ -64,6 +64,7 @@ from environment.exceptions import (
     UpdateWorkspaceBillingAccountFailed,
     AddWorkbenchCollaboratorFailed,
     RemoveWorkbenchCollaboratorFailed,
+    PublishedProjectAccessFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -76,6 +77,7 @@ from environment.models import (
 from environment.utilities import inner_join_iterators, left_join_iterators
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+UserModel = apps.get_model("user", "User")
 
 
 User = Model
@@ -402,6 +404,25 @@ def get_available_projects(user: User) -> Iterable[PublishedProject]:
 
 def get_project(project_id: str) -> PublishedProject:
     return PublishedProject.objects.get(id=project_id)
+
+
+def check_collaborator_project_access(collaborator_email: str, project_id: str) -> bool:
+    try:
+        project = PublishedProject.objects.get(id=project_id)
+        collaborator_user = UserModel.objects.get(
+            cloud_identity__email=collaborator_email
+        )
+        if (
+            not PublishedProject.objects.accessible_by(collaborator_user)
+            .filter(id=project_id)
+            .exists()
+        ):
+            raise PublishedProjectAccessFailed(
+                f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to project '{project.slug}'."
+            )
+        return True
+    except UserModel.DoesNotExist:
+        return
 
 
 def _get_projects_for_environments(
