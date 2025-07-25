@@ -20,6 +20,7 @@ from environment.forms import (
     CreateSharedBucketForm,
     BucketSharingForm,
     ShareBillingAccountForm,
+    UpdateWorkspaceBillingAccountForm
 )
 from django.apps import apps
 import environment.services as services
@@ -28,6 +29,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    billing_account_required,
 )
 
 User = get_user_model()
@@ -520,4 +522,27 @@ def delete_shared_bucket_content(request, bucket_name):
     services.delete_shared_bucket_content(
         bucket_name=bucket_name, full_path=data["full_path"], user=user
     )
+    return HttpResponse(status=200)
+
+
+@login_required
+@cloud_identity_required
+@billing_account_required
+def update_workspace_billing_account(
+    request
+):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    billing_accounts_list = services.get_billing_accounts_list(user)
+
+    form = UpdateWorkspaceBillingAccountForm(
+        request.POST,
+        workspace_project_id=data["workspace_project_id"],
+        billing_accounts_list=billing_accounts_list,
+    )
+    if form.is_valid():
+        services.update_workspace_billing_account(
+            form.cleaned_data["workspace_project_id"],
+            form.cleaned_data["billing_account_id"],
+        )
     return HttpResponse(status=200)

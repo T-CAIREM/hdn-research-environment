@@ -309,4 +309,9 @@ urlpatterns = [
         react_views.delete_shared_bucket_content,
         name="react_views.delete_shared_bucket_content",
     ),
+    path(
+        "api/workspace/update_billing",
+        react_views.update_workspace_billing_account,
+        name="react_views.update_workspace_billing_account",
+    ),
 ]
