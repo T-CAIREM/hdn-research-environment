@@ -4,11 +4,7 @@ from django.forms.models import model_to_dict
 from django.contrib.auth import get_user_model
 
 
-from environment.entities import (
-    ResearchWorkspace,
-    SharedWorkspace,
-    SharedBucketObject
-)
+from environment.entities import ResearchWorkspace, SharedWorkspace, SharedBucketObject
 from environment.models import (
     VMInstance,
     BucketSharingInvite,
@@ -134,7 +130,9 @@ def serialize_billing_sharing_invitations(
     ]
 
 
-def serialize_shared_bucket_objects(objects: Iterable[SharedBucketObject]) -> list[Dict]:
+def serialize_shared_bucket_objects(
+    objects: Iterable[SharedBucketObject],
+) -> list[Dict]:
     return [
         {
             "type": obj.type,

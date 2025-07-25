@@ -20,7 +20,7 @@ from environment.forms import (
     CreateSharedBucketForm,
     BucketSharingForm,
     ShareBillingAccountForm,
-    UpdateWorkspaceBillingAccountForm
+    UpdateWorkspaceBillingAccountForm,
 )
 from django.apps import apps
 import environment.services as services
@@ -528,9 +528,7 @@ def delete_shared_bucket_content(request, bucket_name):
 @login_required
 @cloud_identity_required
 @billing_account_required
-def update_workspace_billing_account(
-    request
-):
+def update_workspace_billing_account(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
