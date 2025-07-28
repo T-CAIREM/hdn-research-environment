@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 from django.apps import apps
 
@@ -23,6 +23,63 @@ from environment.entities import (
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+
+
+def _check_billing_accessibility(billing_info: dict, user_billing_accounts: list = None) -> tuple[bool, str]:
+    """
+    Check if the billing account is accessible by the user.
+    Returns (is_accessible, reason_if_not_accessible)
+    """
+    billing_account_id = billing_info.get("billing_account_id")
+    billing_enabled = billing_info.get("billing_enabled", False)
+    
+    if not billing_account_id:
+        return False, "No billing account connected"
+    
+    if not billing_enabled:
+        return False, "Billing account is closed or inactive"
+    
+    # Check if user has access to this billing account
+    if user_billing_accounts:
+        accessible_billing_ids = [acc.get("id") for acc in user_billing_accounts]
+        if billing_account_id not in accessible_billing_ids:
+            return False, "Billing account access revoked"
+    
+    return True, None
+
+
+def _check_workspace_accessibility(
+    billing_info: dict, 
+    workbenches: list, 
+    projects: Iterable[PublishedProject], 
+    user_billing_accounts: list = None
+) -> tuple[bool, str]:
+    """
+    Check overall workspace accessibility including billing and project access.
+    Returns (is_accessible, reason_if_not_accessible)
+    """
+    # First check billing accessibility
+    billing_accessible, billing_reason = _check_billing_accessibility(billing_info, user_billing_accounts)
+    
+    # Check if any workbenches have inaccessible projects
+    project_access_issues = []
+    for workbench in workbenches:
+        if workbench.get("type") == "Workbench":
+            dataset_id = workbench.get("dataset_identifier")
+            if dataset_id:
+                project = _get_project_for_environment_safe(dataset_id, projects)
+                if not project:
+                    project_access_issues.append(f"Dataset '{dataset_id}' access revoked")
+    
+    # Determine overall accessibility and reason
+    if not billing_accessible and project_access_issues:
+        return False, f"{billing_reason}; {'; '.join(project_access_issues)}"
+    elif not billing_accessible:
+        return False, billing_reason
+    elif project_access_issues:
+        return False, "; ".join(project_access_issues)
+    
+    return True, None
 
 
 def _project_data_group(project: PublishedProject) -> str:
@@ -56,7 +113,7 @@ def deserialize_research_environments(
             type=EnvironmentType(workbench["workbench_type"]),
             machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
-            project=_get_project_for_environment(
+            project=_get_project_for_environment_safe(
                 workbench["dataset_identifier"], projects
             ),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
@@ -80,8 +137,12 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
 
 
 def deserialize_workspace_details(
-    data: dict, projects: Iterable[PublishedProject]
+    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list = None
 ) -> ResearchWorkspace:
+    workspace_accessible, access_denial_reason = _check_workspace_accessibility(
+        data["billing_info"], data["workbenches"], projects, user_billing_accounts
+    )
+    
     return ResearchWorkspace(
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
@@ -94,6 +155,8 @@ def deserialize_workspace_details(
             Region(data["region"]),
             projects,
         ),
+        is_accessible=workspace_accessible,
+        access_denial_reason=access_denial_reason,
     )
 
 
@@ -108,13 +171,19 @@ def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBuck
     ]
 
 
-def deserialize_shared_workspace_details(data: dict) -> SharedWorkspace:
+def deserialize_shared_workspace_details(data: dict, user_billing_accounts: list = None) -> SharedWorkspace:
+    billing_accessible, access_denial_reason = _check_billing_accessibility(
+        data["billing_info"], user_billing_accounts
+    )
+    
     return SharedWorkspace(
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
         is_owner=data["is_owner"],
+        is_accessible=billing_accessible,
+        access_denial_reason=access_denial_reason,
     )
 
 
@@ -125,19 +194,19 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 
 
 def deserialize_workspaces(
-    data: dict, projects: Iterable[PublishedProject]
+    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list = None
 ) -> Iterable[ResearchWorkspace]:
     return [
-        deserialize_workspace_details(workspace_data, projects)
+        deserialize_workspace_details(workspace_data, projects, user_billing_accounts)
         if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
 
 
-def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
+def deserialize_shared_workspaces(data: dict, user_billing_accounts: list = None) -> Iterable[SharedWorkspace]:
     return [
-        deserialize_shared_workspace_details(workspace_data)
+        deserialize_shared_workspace_details(workspace_data, user_billing_accounts)
         if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
@@ -155,6 +224,20 @@ def _get_project_for_environment(
             if _project_data_group(project) == dataset_identifier
         )
     )
+
+
+def _get_project_for_environment_safe(
+    dataset_identifier: str,
+    projects: Iterable[PublishedProject],
+) -> Optional[PublishedProject]:
+    """
+    Safe version of _get_project_for_environment that returns None if project not found
+    instead of raising StopIteration.
+    """
+    try:
+        return _get_project_for_environment(dataset_identifier, projects)
+    except StopIteration:
+        return None
 
 
 def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject]:

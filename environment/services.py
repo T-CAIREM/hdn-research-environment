@@ -554,8 +554,17 @@ def match_workspace_with_billing_id(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     projects = PublishedProject.objects.accessible_by(user)
+    
+    # Get user's accessible billing accounts for access checking
+    try:
+        user_billing_accounts = get_billing_accounts_list(user)
+        billing_accounts_data = user_billing_accounts.get("billing_accounts", [])
+    except GetBillingAccountsListFailed:
+        # If we can't get billing accounts, set to empty list so access will be marked as restricted
+        billing_accounts_data = []
+    
     response = api.get_workspace_list(email)
-    return deserialize_workspaces(response.json(), projects)
+    return deserialize_workspaces(response.json(), projects, billing_accounts_data)
 
 
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
@@ -564,8 +573,16 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
 
 
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
+    # Get user's accessible billing accounts for access checking
+    try:
+        user_billing_accounts = get_billing_accounts_list(user)
+        billing_accounts_data = user_billing_accounts.get("billing_accounts", [])
+    except GetBillingAccountsListFailed:
+        # If we can't get billing accounts, set to empty list so access will be marked as restricted
+        billing_accounts_data = []
+    
     response = api.get_shared_workspaces(user.cloud_identity.email)
-    return deserialize_shared_workspaces(response.json())
+    return deserialize_shared_workspaces(response.json(), billing_accounts_data)
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:

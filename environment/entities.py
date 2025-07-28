@@ -101,7 +101,7 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
-    project: PublishedProject
+    project: Optional[PublishedProject]
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
@@ -139,6 +139,8 @@ class ResearchWorkspace:
     status: WorkspaceStatus
     is_owner: bool
     workbenches: Iterable[ResearchEnvironment]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
 
 
 @dataclass
@@ -155,6 +157,8 @@ class SharedWorkspace:
     is_owner: bool
     status: WorkspaceStatus
     buckets: Iterable[SharedBucket]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
 
 
 @dataclass
