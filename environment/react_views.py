@@ -534,6 +534,7 @@ def delete_shared_bucket_content(request, bucket_name):
     return HttpResponse(status=200)
 
 
+@require_POST
 @login_required
 @cloud_identity_required
 @billing_account_required
@@ -543,7 +544,7 @@ def update_workspace_billing_account(request):
     billing_accounts_list = services.get_billing_accounts_list(user)
 
     form = UpdateWorkspaceBillingAccountForm(
-        request.POST,
+        data,
         workspace_project_id=data["workspace_project_id"],
         billing_accounts_list=billing_accounts_list,
     )
