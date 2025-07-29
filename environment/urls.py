@@ -314,4 +314,9 @@ urlpatterns = [
         react_views.update_workspace_billing_account,
         name="react_views.update_workspace_billing_account",
     ),
+    path(
+        "api/workspace/quotas/<workspace_region>/<workspace_project_id>",
+        react_views.get_quotas,
+        name="react_views.get_quotas",
+    ),
 ]
