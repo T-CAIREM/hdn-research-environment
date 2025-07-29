@@ -89,7 +89,11 @@ class CreateResearchEnvironmentForm(forms.Form):
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
-    workspace_region = forms.CharField(widget=forms.HiddenInput())
+    region = forms.ChoiceField(
+        label="Region",
+        choices=AVAILABLE_REGIONS,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
     project_id = forms.ChoiceField(label="Project")
     machine_type = forms.ModelChoiceField(
         label="Instance type",
@@ -135,18 +139,22 @@ class CreateResearchEnvironmentForm(forms.Form):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
-        self.fields["workspace_region"].initial = selected_workspace.region.value
 
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
-        self.fields["machine_type"].queryset = VMInstance.objects.filter(
-            region__region=selected_workspace.region.value
-        )
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
+
+        region = self.data.get("region")
+        if region:
+            self.fields["machine_type"].queryset = VMInstance.objects.filter(
+                region__region=region
+            )
+        else:
+            self.fields["machine_type"].queryset = VMInstance.objects.none()
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")

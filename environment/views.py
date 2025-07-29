@@ -314,6 +314,7 @@ def create_research_environment(request, workspace_id):
                             "shared_bucket"
                         ),
                         collaborators=form.cleaned_data.get("users_list", []),
+                        region=form.cleaned_data["region"],
                     )
                     messages.info(
                         request,
@@ -851,8 +852,8 @@ def delete_shared_bucket_content(request, bucket_name):
 @require_http_methods(["GET"])
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
     context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
     return render(request, "environment/quotas_list.html", context, status=200)
@@ -1125,3 +1126,19 @@ def get_available_gpu_accelerators_partial(request):
     gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
     context = {"gpu_accelerators": gpu_accelerators}
     return render(request, "environment/gpu_accelerator_partial.html", context=context)
+
+
+@require_GET
+@login_required
+@login_required
+@cloud_identity_required
+def get_available_machine_types_partial(request):
+    region = request.GET.get("region")
+    if region:
+        machine_types = VMInstance.objects.filter(region__region=region)
+        context = {"machine_types": machine_types}
+        return render(
+            request, "environment/machine_types_partial.html", context=context
+        )
+
+    return JsonResponse({"error": "Region parameter is required"}, status=400)

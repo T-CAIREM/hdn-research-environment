@@ -44,7 +44,7 @@
                                 {% if workspace.status.value == "created" %}
                                     <small class="d-block">
                                         <span style="padding-top: 0.375rem;">
-                                            <a class="m-auto" href="{% url 'get_quotas' workspace_region=workspace.region.value|default:'us-central1' workspace_project_id=workspace.gcp_project_id %}">
+                                            <a class="m-auto" href="{% url 'get_quotas' workspace_project_id=workspace.gcp_project_id %}">
                                                 Check workspace quotas
                                             </a>
                                         </span>

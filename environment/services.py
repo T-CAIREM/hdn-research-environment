@@ -298,9 +298,7 @@ def create_shared_workspace(user: User, billing_account_id: str):
     persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
 
 
-def delete_workspace(
-    user: User, billing_account_id: str, gcp_project_id: str
-):
+def delete_workspace(user: User, billing_account_id: str, gcp_project_id: str):
     response = api.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
@@ -335,6 +333,7 @@ def _create_workbench_kwargs(
     machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
+    region: str,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
@@ -350,6 +349,7 @@ def _create_workbench_kwargs(
         "cpu": machine_type.cpu,
         "dataset_identifier": _project_data_group(project),
         "disk_size": disk_size,
+        "region": region,
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": (
@@ -369,6 +369,7 @@ def create_research_environment(
     machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
+    region: str,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
@@ -380,6 +381,7 @@ def create_research_environment(
         machine_type,
         workbench_type,
         disk_size,
+        region,
         gpu_accelerator_type,
         sharing_bucket_identifiers,
         collaborators,
@@ -556,8 +558,8 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     return deserialize_workspaces(response.json(), projects)
 
 
-def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
-    response = api.list_quotas_data(workspace_project_id, region)
+def list_quotas_data(workspace_project_id: str) -> Iterable[QuotaInfo]:
+    response = api.list_quotas_data(workspace_project_id)
     return deserialize_quotas(response.json())
 
 

@@ -40,7 +40,6 @@ def _project_data_group(project: PublishedProject) -> str:
 def deserialize_research_environments(
     workbenches: dict,
     gcp_project_id: str,
-    region: Region,
     projects: Iterable[PublishedProject],
 ) -> Iterable[ResearchEnvironment]:
     return [
@@ -52,7 +51,7 @@ def deserialize_research_environments(
             status=EnvironmentStatus(workbench["status"]),
             cpu=workbench["cpu"],
             memory=workbench["memory"],
-            region=region,
+            region=Region(workbench["region"]),
             type=EnvironmentType(workbench["workbench_type"]),
             machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),

@@ -86,8 +86,8 @@ def get_workspace_list(email: str) -> Request:
 
 
 @api_request
-def list_quotas_data(region: str, workspace_project_id: str) -> Request:
-    return Request("GET", url=f"/workspace/quotas/{region}/{workspace_project_id}")
+def list_quotas_data(workspace_project_id: str) -> Request:
+    return Request("GET", url=f"/workspace/quotas/{workspace_project_id}")
 
 
 @api_request
@@ -104,6 +104,7 @@ def create_workbench(
     cpu: int,
     dataset_identifier: str,
     disk_size: str,
+    region: str,
     bucket_name: str,
     workspace_project_id: str,
     user_groups: list[str],
@@ -121,6 +122,7 @@ def create_workbench(
         "user_email": user_email,
         "bucket_name": bucket_name,
         "disk_size": disk_size,
+        "region": region,
         "user_groups": user_groups,
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers,
