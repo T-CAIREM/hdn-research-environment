@@ -110,20 +110,24 @@
 <script>
   function fetchGpuAccelerators() {
     var machine_type_id = $("#id_machine_type").val();
+    var region = $("#id_region").val();
     if (machine_type_id) {
       $.ajax({
         url: "{% url 'get_available_gpu_accelerators_partial' %}",
         data: {
-          'vm_instance': machine_type_id
+          'vm_instance': machine_type_id,
+          'region': region
         },
         success: function (data) {
           $("#id_gpu_accelerator").html(data);
         }
       });
+    } else {
+      $("#id_gpu_accelerator").html('<option value="">---------</option>');
     }
   }
 
-  function fetchMachineTypes() {
+  function fetchMachineTypes(callback) {
     var region = $("#id_region").val();
     if (region) {
       $.ajax({
@@ -133,18 +137,19 @@
         },
         success: function (data) {
           $("#id_machine_type").html(data);
+          if (callback) {
+            callback();
+          }
         }
       });
     }
   }
 
   $(document).ready(function () {
-    fetchMachineTypes();
-    fetchGpuAccelerators();
+    fetchMachineTypes(fetchGpuAccelerators);
 
-    $("#id_region").change(function() {
-      fetchMachineTypes();
-      fetchGpuAccelerators();
+    $("#id_region").change(function () {
+      fetchMachineTypes(fetchGpuAccelerators);
     });
 
     $("#id_machine_type").change(function () {

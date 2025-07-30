@@ -1123,7 +1123,9 @@ def update_workspace_billing_account(
 @cloud_identity_required
 def get_available_gpu_accelerators_partial(request):
     vm_instance_id = request.GET.get("vm_instance")
-    gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
+    region = request.GET.get("region")
+    vm_instance = VMInstance.objects.get(id=vm_instance_id, region__region=region)
+    gpu_accelerators = vm_instance.gpu_accelerators.all()
     context = {"gpu_accelerators": gpu_accelerators}
     return render(request, "environment/gpu_accelerator_partial.html", context=context)
 
