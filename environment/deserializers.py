@@ -67,16 +67,16 @@ def _check_workspace_accessibility(
         if workbench.get("type") == "Workbench":
             dataset_id = workbench.get("dataset_identifier")
             if dataset_id:
-                project = _get_project_for_environment_safe(dataset_id, projects)
+                project = _get_project_for_environment(dataset_id, projects)
                 if not project:
                     project_access_issues.append(f"Dataset '{dataset_id}' access revoked")
     
     # Determine overall accessibility and reason
     if not billing_accessible and project_access_issues:
         return False, f"{billing_reason}; {'; '.join(project_access_issues)}"
-    elif not billing_accessible:
+    if not billing_accessible:
         return False, billing_reason
-    elif project_access_issues:
+    if project_access_issues:
         return False, "; ".join(project_access_issues)
     
     return True, None
@@ -113,7 +113,7 @@ def deserialize_research_environments(
             type=EnvironmentType(workbench["workbench_type"]),
             machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
-            project=_get_project_for_environment_safe(
+            project=_get_project_for_environment(
                 workbench["dataset_identifier"], projects
             ),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
@@ -216,26 +216,15 @@ def deserialize_shared_workspaces(data: dict, user_billing_accounts: list = None
 def _get_project_for_environment(
     dataset_identifier: str,
     projects: Iterable[PublishedProject],
-) -> PublishedProject:
-    return next(
-        iter(
-            project
-            for project in projects
-            if _project_data_group(project) == dataset_identifier
-        )
-    )
-
-
-def _get_project_for_environment_safe(
-    dataset_identifier: str,
-    projects: Iterable[PublishedProject],
 ) -> Optional[PublishedProject]:
-    """
-    Safe version of _get_project_for_environment that returns None if project not found
-    instead of raising StopIteration.
-    """
     try:
-        return _get_project_for_environment(dataset_identifier, projects)
+        return next(
+            iter(
+                project
+                for project in projects
+                if _project_data_group(project) == dataset_identifier
+            )
+        )
     except StopIteration:
         return None
 
