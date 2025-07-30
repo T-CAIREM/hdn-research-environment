@@ -194,7 +194,7 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 
 
 def deserialize_workspaces(
-    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list = None
+    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list
 ) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data, projects, user_billing_accounts)
@@ -204,7 +204,7 @@ def deserialize_workspaces(
     ]
 
 
-def deserialize_shared_workspaces(data: dict, user_billing_accounts: list = None) -> Iterable[SharedWorkspace]:
+def deserialize_shared_workspaces(data: dict, user_billing_accounts: list) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data, user_billing_accounts)
         if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
