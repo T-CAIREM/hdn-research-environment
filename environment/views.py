@@ -335,25 +335,29 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
 
-    instance_projected_cost = {}
-    region = Region(selected_workspace.region)
-    instances = VMInstance.objects.filter(region__region=region.value)
-    projected_costs = [
-        ProjectedWorkbenchCost(instance.id, instance.price) for instance in instances
-    ]
-    instance_projected_cost[region] = projected_costs
+    instance_projected_costs = {
+        region: [
+            ProjectedWorkbenchCost(instance.id, instance.price)
+            for instance in VMInstance.objects.filter(region__region=region.value)
+        ]
+        for region in Region
+    }
 
     gpu_projected_costs = {
         region: [
             ProjectedWorkbenchCost(gpu.name, gpu.price)
             for gpu in GPUAccelerator.objects.filter(region__region=region.value)
         ]
+        for region in Region
     }
+
+    print(f"Instance projected costs: {instance_projected_costs}")
+    print(f"GPU projected costs: {gpu_projected_costs}")
 
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
-        "instance_projected_costs": instance_projected_cost,
+        "instance_projected_costs": instance_projected_costs,
         "gpu_projected_costs": gpu_projected_costs,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
@@ -1131,7 +1135,6 @@ def get_available_gpu_accelerators_partial(request):
 
 
 @require_GET
-@login_required
 @login_required
 @cloud_identity_required
 def get_available_machine_types_partial(request):
