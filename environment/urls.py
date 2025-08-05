@@ -329,4 +329,9 @@ urlpatterns = [
         react_views.get_quotas,
         name="react_views.get_quotas",
     ),
+    path(
+        "api/identity-provisioning/",
+        react_views.identity_provisioning,
+        name="react_views.identity_provisioning",
+    ),
 ]
