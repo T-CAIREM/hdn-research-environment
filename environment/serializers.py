@@ -46,7 +46,7 @@ def serialize_workbench(workbench):
         "memory": workbench.memory,
         "region": workbench.region.value,
         "type": workbench.type.value,
-        "project": model_to_dict(workbench.project, fields=["pk", "slug"]),
+        "project": model_to_dict(workbench.project, fields=["pk", "slug", "version", "title"]),
         "machine_type": workbench.machine_type,
         "disk_size": workbench.disk_size,
         "gpu_accelerator_type": workbench.gpu_accelerator_type,
@@ -71,7 +71,16 @@ def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
 
 
 def serialize_user(user: User):
-    return model_to_dict(user, fields=["id", "username"])
+    model_to_dict(user, fields=["id", "username"])
+    return {
+        "id": user.id,
+        "username": user.username,
+        "is_authenticated": user.is_authenticated,
+        "can_view_admin_console": user.has_access_to_admin_console(),
+        "can_view_events": user.has_perms(["view_event_menu"]),
+        "is_admin": user.is_admin,
+
+    }
 
 
 def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
