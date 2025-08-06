@@ -174,4 +174,19 @@ urlpatterns = [
         react_views.get_workspaces_list,
         name="react_views.get_workspaces_list",
     ),
+    path(
+        "api/shared-workspaces",
+        react_views.get_shared_workspaces_list,
+        name="react_views.get_shared_workspaces_list",
+    ),
+    path(
+        "api/billing",
+        react_views.get_billing_accounts_list,
+        name="react_views.get_billing_accounts_list",
+    ),
+    path(
+        "api/user",
+        react_views.get_user,
+        name="react_views.get_user",
+    ),
 ]
