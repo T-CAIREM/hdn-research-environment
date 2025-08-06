@@ -189,4 +189,24 @@ urlpatterns = [
         react_views.get_user,
         name="react_views.get_user",
     ),
+    path(
+        "api/sharing/workspace/create",
+        react_views.create_shared_workspace,
+        name="react_views.create_shared_workspace",
+    ),
+    path(
+        "api/sharing/workspace/delete",
+        react_views.delete_shared_workspace,
+        name="react_views.delete_shared_workspace",
+    ),
+    path(
+        "api/workspace/create",
+        react_views.create_workspace,
+        name="react_views.create_workspace",
+    ),
+    path(
+        "api/workspace/delete",
+        react_views.delete_workspace,
+        name="react_views.delete_workspace",
+    ),
 ]
