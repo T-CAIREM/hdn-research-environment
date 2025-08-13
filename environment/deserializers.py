@@ -1,6 +1,15 @@
-from typing import Iterable, Optional
+import logging
+from typing import Iterable, Optional, List, Any
 
-from django.apps import apps
+from django.apps import apps  # type: ignore
+from environment.api_types import (
+    RawServiceErrorsData,
+    RawWorkspacesData,
+    RawSharedWorkspacesData,
+    RawWorkbenchesData,
+    WorkspaceResponse,
+    SharedWorkspaceResponse,
+)
 
 from environment.entities import (
     EntityScaffolding,
@@ -16,73 +25,28 @@ from environment.entities import (
     SharedWorkspace,
     SharedBucket,
     SharedBucketObject,
-    WorkspaceType,
     QuotaInfo,
     CloudRole,
     DatasetsMonitoringEntry,
+    ServiceError,
 )
 
-PublishedProject = apps.get_model("project", "PublishedProject")
+PublishedProject = apps.get_model("project", "PublishedProject")  # runtime retrieval; avoid static type usage
+
+logger = logging.getLogger(__name__)
 
 
-def _check_billing_accessibility(billing_info: dict, user_billing_accounts: list = None) -> tuple[bool, str]:
-    """
-    Check if the billing account is accessible by the user.
-    Returns (is_accessible, reason_if_not_accessible)
-    """
-    billing_account_id = billing_info.get("billing_account_id")
-    billing_enabled = billing_info.get("billing_enabled", False)
-    
-    if not billing_account_id:
-        return False, "No billing account connected"
-    
-    if not billing_enabled:
-        return False, "Billing account is closed or inactive"
-    
-    # Check if user has access to this billing account
-    if user_billing_accounts:
-        accessible_billing_ids = [acc.get("id") for acc in user_billing_accounts]
-        if billing_account_id not in accessible_billing_ids:
-            return False, "Billing account access revoked"
-    
-    return True, None
+##############################################
+# NOTE:
+# Previous local accessibility computation (_check_* helpers)
+# has been deprecated. Accessibility is now computed by the
+# API backend and surfaced via `is_accessible` and
+# `access_denial_reason` fields. Frontend deserialization
+# trusts backend to keep DRY and authoritative.
+##############################################
 
 
-def _check_workspace_accessibility(
-    billing_info: dict, 
-    workbenches: list, 
-    projects: Iterable[PublishedProject], 
-    user_billing_accounts: list = None
-) -> tuple[bool, str]:
-    """
-    Check overall workspace accessibility including billing and project access.
-    Returns (is_accessible, reason_if_not_accessible)
-    """
-    # First check billing accessibility
-    billing_accessible, billing_reason = _check_billing_accessibility(billing_info, user_billing_accounts)
-    
-    # Check if any workbenches have inaccessible projects
-    project_access_issues = []
-    for workbench in workbenches:
-        if workbench.get("type") == "Workbench":
-            dataset_id = workbench.get("dataset_identifier")
-            if dataset_id:
-                project = _get_project_for_environment(dataset_id, projects)
-                if not project:
-                    project_access_issues.append(f"Dataset '{dataset_id}' access revoked")
-    
-    # Determine overall accessibility and reason
-    if not billing_accessible and project_access_issues:
-        return False, f"{billing_reason}; {'; '.join(project_access_issues)}"
-    if not billing_accessible:
-        return False, billing_reason
-    if project_access_issues:
-        return False, "; ".join(project_access_issues)
-    
-    return True, None
-
-
-def _project_data_group(project: PublishedProject) -> str:
+def _project_data_group(project) -> str:
     # HACK: Use the slug and version to calculate the dataset group.
     # The result has to match the patterns for:
     # - Service Account ID: must start with a lower case letter, followed by one or more lower case alphanumerical characters that can be separated by hyphens
@@ -95,35 +59,38 @@ def _project_data_group(project: PublishedProject) -> str:
 
 
 def deserialize_research_environments(
-    workbenches: dict,
+    workbenches: RawWorkbenchesData,
     gcp_project_id: str,
     region: Region,
-    projects: Iterable[PublishedProject],
+    projects: Iterable[Any],
 ) -> Iterable[ResearchEnvironment]:
-    return [
-        ResearchEnvironment(
-            gcp_identifier=workbench["gcp_identifier"],
-            dataset_identifier=workbench["dataset_identifier"],
-            url=workbench.get("url"),
-            workspace_name=gcp_project_id,
-            status=EnvironmentStatus(workbench["status"]),
-            cpu=workbench["cpu"],
-            memory=workbench["memory"],
-            region=region,
-            type=EnvironmentType(workbench["workbench_type"]),
-            machine_type=workbench["machine_type"],
-            disk_size=workbench.get("disk_size"),
-            project=_get_project_for_environment(
-                workbench["dataset_identifier"], projects
-            ),
-            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
-            service_account_name=workbench.get("service_account_name"),
-            workbench_owner_username=workbench.get("workbench_owner_username"),
-        )
-        if workbench.get("type") == "Workbench"
-        else deserialize_entity_scaffolding(workbench)
-        for workbench in workbenches
-    ]
+    environments = []
+    for workbench in workbenches:
+        workbench_service_errors = deserialize_service_errors(workbench.get("service_errors", []))
+        environments.append(
+                ResearchEnvironment(
+                    gcp_identifier=workbench["gcp_identifier"],
+                    dataset_identifier=workbench["dataset_identifier"],
+                    url=workbench.get("url"),
+                    workspace_name=gcp_project_id,
+                    status=EnvironmentStatus(workbench["status"]),
+                    cpu=workbench["cpu"],
+                    memory=workbench["memory"],
+                    region=region,
+                    type=EnvironmentType(workbench["workbench_type"]),
+                    machine_type=workbench["machine_type"],
+                    disk_size=workbench.get("disk_size"),
+                    project=_get_project_for_environment(
+                        workbench["dataset_identifier"], projects
+                    ),
+                    gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+                    service_account_name=workbench["service_account_name"],
+                    workbench_owner_username=workbench["workbench_owner_username"],
+                    service_errors=workbench_service_errors,
+                )
+            )
+    
+    return environments
 
 
 def deserialize_workflow_details(workflow_data: dict) -> Workflow:
@@ -136,54 +103,93 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
     )
 
 
+def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> List[ServiceError]:
+    service_errors = []
+    # Handle case where service_errors_data might be None
+    if not service_errors_data:
+        return service_errors
+        
+    for error in service_errors_data:
+        error_obj = ServiceError(
+            error_type=error.get("error_type", "unknown"),
+            message=error.get("message", ""),
+            resource_id=error.get("resource_id", ""),
+            service_name=error.get("service_name", ""),
+            details=error.get("details"),
+            can_retry=error.get("can_retry", False),
+        )
+        service_errors.append(error_obj)
+    
+    return service_errors
+
+
 def deserialize_workspace_details(
-    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list = None
+    data: WorkspaceResponse, projects: Iterable[Any]
 ) -> ResearchWorkspace:
-    workspace_accessible, access_denial_reason = _check_workspace_accessibility(
-        data["billing_info"], data["workbenches"], projects, user_billing_accounts
-    )
+    # Handle missing or invalid billing_info gracefully
+    billing_info = data.get("billing_info")
+    if not billing_info or not isinstance(billing_info, dict):
+        billing_info = {
+            "billing_account_id": None,
+            "billing_enabled": False
+        }
+    
+    service_errors = deserialize_service_errors(data.get("service_errors", []))
+    
+    # Safely extract billing account ID
+    billing_account_id = billing_info.get("billing_account_id")
     
     return ResearchWorkspace(
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=data["billing_info"]["billing_account_id"],
+        gcp_billing_id=billing_account_id,
         status=WorkspaceStatus(data["status"]),
         is_owner=data["is_owner"],
         workbenches=deserialize_research_environments(
-            data["workbenches"],
-            data["gcp_project_id"],
-            Region(data["region"]),
-            projects,
+            data["workbenches"], data["gcp_project_id"], Region(data["region"]), projects
         ),
-        is_accessible=workspace_accessible,
-        access_denial_reason=access_denial_reason,
+    is_accessible=data.get("is_accessible", True),
+    access_denial_reason=data.get("access_denial_reason"),
+        service_errors=service_errors,
     )
 
 
-def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
+def deserialize_shared_bucket_details(buckets_data: List[dict]) -> Iterable[SharedBucket]:
     return [
         SharedBucket(
-            name=data["bucket_name"],
-            is_owner=data["is_owner"],
-            is_admin=data["is_admin"],
+            name=bucket["bucket_name"],
+            is_owner=bucket.get("is_owner", False),
+            is_admin=bucket.get("is_admin", False),
         )
-        for data in buckets_data
+        for bucket in buckets_data
     ]
 
 
-def deserialize_shared_workspace_details(data: dict, user_billing_accounts: list = None) -> SharedWorkspace:
-    billing_accessible, access_denial_reason = _check_billing_accessibility(
-        data["billing_info"], user_billing_accounts
-    )
+
+
+def deserialize_shared_workspace_details(data: SharedWorkspaceResponse) -> SharedWorkspace:
+    service_errors = deserialize_service_errors(data.get("service_errors", []))
+    
+    # Handle missing or invalid billing_info gracefully
+    billing_info = data.get("billing_info")
+    if not billing_info or not isinstance(billing_info, dict):
+        billing_info = {
+            "billing_account_id": None,
+            "billing_enabled": False
+        }
+    
+    # Safely extract billing account ID
+    billing_account_id = billing_info.get("billing_account_id")
     
     return SharedWorkspace(
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=data["billing_info"]["billing_account_id"],
+        gcp_billing_id=billing_account_id,
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
         is_owner=data["is_owner"],
-        is_accessible=billing_accessible,
-        access_denial_reason=access_denial_reason,
+    is_accessible=data.get("is_accessible", True),
+    access_denial_reason=data.get("access_denial_reason"),
+        service_errors=service_errors,
     )
 
 
@@ -194,29 +200,27 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 
 
 def deserialize_workspaces(
-    data: dict, projects: Iterable[PublishedProject], user_billing_accounts: list
+    data: RawWorkspacesData, projects: Iterable[Any]
 ) -> Iterable[ResearchWorkspace]:
     return [
-        deserialize_workspace_details(workspace_data, projects, user_billing_accounts)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
+        deserialize_workspace_details(workspace_data, projects)
         for workspace_data in data
+        # Note: Type checking removed as we now have proper typed data
     ]
 
 
-def deserialize_shared_workspaces(data: dict, user_billing_accounts: list) -> Iterable[SharedWorkspace]:
+def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
     return [
-        deserialize_shared_workspace_details(workspace_data, user_billing_accounts)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
+    deserialize_shared_workspace_details(workspace_data)
         for workspace_data in data
+        # Note: Type checking removed as we now have proper typed data
     ]
 
 
 def _get_project_for_environment(
     dataset_identifier: str,
-    projects: Iterable[PublishedProject],
-) -> Optional[PublishedProject]:
+    projects: Iterable[Any],
+) -> Optional[Any]:
     try:
         return next(
             iter(

@@ -1,4 +1,5 @@
 {% load action_buttons %}
+{% load environment_templatetags %}
 
 {% if recent_workflow %}
     {% if recent_workflow_failed %}
@@ -23,12 +24,18 @@
 <div id="accordion">
     {% if shared_workspaces %}
         {% for workspace in shared_workspaces %}
-            <div class="card">
+            <div class="card {{ workspace|has_errors|yesno:'workspace-with-errors,' }}">
                 <div class="card-header py-3" id="{{ heading }}">
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="mb-0">
                                 {{ workspace.gcp_project_id }}
+                                {% if workspace|has_errors %}
+                                    <span class="badge badge-warning ml-2">Service Issues</span>
+                                {% endif %}
+                                {% if workspace|has_billing_issues %}
+                                    <span class="badge badge-danger ml-2">Billing Issues</span>
+                                {% endif %}
                             </h6>
                             {% if workspace.gcp_billing_id %}
                                 {% if workspace.is_owner %}
@@ -48,6 +55,49 @@
                                         </span>
                                     </small>
                                 {% endif %}
+                            {% elif workspace.is_owner %}
+                                {# No billing account attached - show warning and change billing button #}
+                                <small>
+                                    <span class="d-inline font-weight-bold text-danger" style="padding-top: 0.375rem;">
+                                        ⚠️ No billing account connected
+                                    </span>
+                                </small>
+                                <small class="d-block">
+                                    <span style="padding-top: 0.375rem;">
+                                        <a class="m-auto btn btn-sm btn-warning" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='none' %}">
+                                            Connect billing account
+                                        </a>
+                                    </span>
+                                </small>
+                            {% endif %}
+                            
+                            {# Display billing-specific error message when billing issues are detected #}
+                            {% if workspace|has_billing_issues %}
+                                <div class="alert alert-warning mt-2 mb-2" role="alert">
+                                    <strong>⚠️ Billing Configuration Required:</strong>
+                                    This workspace requires billing account configuration to function properly.
+                                    {% if workspace.is_owner %}
+                                        <br><small>Please use the "Change billing account" button above to resolve this issue.</small>
+                                    {% else %}
+                                        <br><small>Please contact the workspace owner to resolve billing issues.</small>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            {# Display service errors as badges #}
+                            {% if workspace|has_errors %}
+                                <div class="mt-2">
+                                    {% for error in workspace.service_errors %}
+                                        <span class="service-error-badge {{ error|error_css_class }}">
+                                            {{ error|error_message }}
+                                            {% if error|error_action_link %}
+                                                <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-danger">
+                                                    {{ error|error_action_text }}
+                                                </a>
+                                            {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </div>
                             {% endif %}
                         </div>
                         {% if not workspace.status.value == "created" %}
@@ -65,6 +115,7 @@
                 {% if workspace.status.value == "created" %}
                     <div class="card-body">
                         {% if workspace.buckets %}
+                            {% comment %} Show buckets even if there are service errors {% endcomment %}
                             <ul class="list-group list-group-flush">
                                 {% for bucket in workspace.buckets %}
                                     <li class="list-group-item">
@@ -94,15 +145,37 @@
                             </ul>
                         {% else %}
                             <div class="text-center">
-                                You don't have any buckets in this workspace.<br>
-                                Create one using the button below.
+                                {% if workspace|has_billing_issues %}
+                                    <div class="text-muted mb-2">
+                                        <i class="fa fa-exclamation-triangle text-warning"></i>
+                                        Workspace functionality disabled due to billing issues.
+                                        {% if workspace.is_owner %}
+                                            <br><small>Please resolve billing configuration above to create buckets.</small>
+                                        {% else %}
+                                            <br><small>Contact the workspace owner to resolve billing issues.</small>
+                                        {% endif %}
+                                    </div>
+                                {% elif workspace|has_errors %}
+                                    <div class="text-muted mb-2">
+                                        No buckets available due to service issues above.
+                                    </div>
+                                {% else %}
+                                    You don't have any buckets in this workspace.<br>
+                                    Create one using the button below.
+                                {% endif %}
                             </div>
                         {% endif %}
-                        {% if workspace.is_owner %}
+                        {% if workspace.is_owner and workspace|workspace_functional and not workspace|has_billing_issues %}
                         <div class="row mt-3">
                             <a class="m-auto" href="{% url 'create_shared_bucket' workspace_id=workspace.gcp_project_id %}">
                                 Create shared bucket
                             </a>
+                        </div>
+                        {% elif workspace.is_owner and not workspace|workspace_functional %}
+                        <div class="row mt-3">
+                            <div class="m-auto text-muted">
+                                <small>Cannot create shared bucket due to service issues above</small>
+                            </div>
                         </div>
                         {% endif %}
                     </div>

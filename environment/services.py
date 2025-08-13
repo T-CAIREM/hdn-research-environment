@@ -1,7 +1,7 @@
 import logging
 import traceback
 from collections import defaultdict
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Iterable, Optional, Tuple, Any
 
 from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
@@ -12,7 +12,6 @@ import environment.mailers as mailers
 from environment import api
 from environment.deserializers import (
     _project_data_group,
-    deserialize_research_environments,
     deserialize_workflow_details,
     deserialize_workspaces,
     deserialize_shared_workspaces,
@@ -20,6 +19,12 @@ from environment.deserializers import (
     deserialize_quotas,
     deserialize_cloud_roles,
     deserialize_datasets_monitoring_data,
+)
+from environment.api_types import (
+    WorkspaceListResponse,
+    SharedWorkspaceListResponse,
+    RawWorkspacesData,
+    RawSharedWorkspacesData,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -29,6 +34,7 @@ from environment.entities import (
     SharedBucketObject,
     QuotaInfo,
     DatasetsMonitoringEntry,
+    ServiceError,
 )
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
@@ -86,6 +92,36 @@ DEFAULT_REGION = "us-central1"
 
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_workspace_list_response(response_data: dict) -> RawWorkspacesData:
+    """Parse and validate workspace list API response."""
+    try:
+        # Handle both direct list and wrapped response formats
+        if "workspaces" in response_data:
+            workspace_list_response: WorkspaceListResponse = response_data
+            return workspace_list_response["workspaces"]
+        else:
+            # Assume direct list format for backward compatibility
+            return response_data
+    except (KeyError, TypeError) as e:
+        logger.error(f"Failed to parse workspace list response: {e}")
+        raise ValueError(f"Invalid workspace list response format: {e}")
+
+
+def _parse_shared_workspace_list_response(response_data: dict) -> RawSharedWorkspacesData:
+    """Parse and validate shared workspace list API response."""
+    try:
+        # Handle both direct list and wrapped response formats
+        if "shared_workspaces" in response_data:
+            shared_workspace_list_response: SharedWorkspaceListResponse = response_data
+            return shared_workspace_list_response["shared_workspaces"]
+        else:
+            # Assume direct list format for backward compatibility
+            return response_data
+    except (KeyError, TypeError) as e:
+        logger.error(f"Failed to parse shared workspace list response: {e}")
+        raise ValueError(f"Invalid shared workspace list response format: {e}")
 
 
 def _handle_api_error(response, operation_name: str, exception_class, additional_context: dict = None):
@@ -183,7 +219,7 @@ def create_cloud_identity(
     return identity
 
 
-def get_billing_accounts_list(user: User):
+def get_billing_accounts_list(user: User) -> list[dict]:
     response = api.list_billing_accounts(user.cloud_identity.email)
     if not response.ok:
         _handle_api_error(
@@ -420,7 +456,7 @@ def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id:
 
 def _create_workbench_kwargs(
     user: User,
-    project: PublishedProject,
+    project: Any,
     workspace_project_id: str,
     machine_type: VMInstance,
     workbench_type: str,
@@ -454,7 +490,7 @@ def _create_workbench_kwargs(
 
 def create_research_environment(
     user: User,
-    project: PublishedProject,
+    project: Any,
     workspace_project_id: str,
     machine_type: VMInstance,
     workbench_type: str,
@@ -487,17 +523,17 @@ def create_research_environment(
     return response.json()
 
 
-def get_available_projects(user: User) -> Iterable[PublishedProject]:
+def get_available_projects(user: User) -> Iterable[Any]:
     return PublishedProject.objects.accessible_by(user)
 
 
-def get_project(project_id: str) -> PublishedProject:
+def get_project(project_id: str) -> Any:
     return PublishedProject.objects.get(id=project_id)
 
 
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
-) -> Iterable[PublishedProject]:
+) -> Iterable[Any]:
     dataset_identifiers = list(map(_environment_data_group, environments))
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
@@ -511,8 +547,8 @@ def _get_projects_for_environments(
 
 def _get_project_for_environment(
     dataset_identifier: str,
-    projects: Iterable[PublishedProject],
-) -> PublishedProject:
+    projects: Iterable[Any],
+) -> Any:
     return next(
         iter(
             project
@@ -524,6 +560,8 @@ def _get_project_for_environment(
 
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
+    projects = PublishedProject.objects.accessible_by(user)
+    # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
     response = api.get_workspace_list(email)
     if not response.ok:
@@ -534,13 +572,23 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
             {"user_email": email}
         )
 
-    all_environments = deserialize_research_environments(response.json())
+    # Process through full workspace deserialization to capture all service errors
+    raw_response = response.json()
+    workspace_data = _parse_workspace_list_response(raw_response)
+    workspaces = deserialize_workspaces(workspace_data, projects)
+    
+    # Extract all environments from all workspaces
+    all_environments = []
+    for workspace in workspaces:
+        if hasattr(workspace, 'workbenches') and workspace.workbenches:
+            all_environments.extend(workspace.workbenches)
+    
     return [environment for environment in all_environments if environment.is_active]
 
 
 def get_environments_with_projects(
     user: User,
-) -> Iterable[Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
+) -> Iterable[Tuple[ResearchEnvironment, Any, Iterable[Workflow]]]:
     active_environments = get_active_environments(user)
     projects = _get_projects_for_environments(active_environments)
     environment_project_pairs = inner_join_iterators(
@@ -556,13 +604,12 @@ def get_available_projects_with_environments(
     user: User,
     environments: Iterable[ResearchEnvironment],
 ) -> Iterable[
-    Tuple[PublishedProject, Optional[ResearchEnvironment], Iterable[Workflow]]
+    Tuple[Any, Optional[ResearchEnvironment], Iterable[Workflow]]
 ]:
     available_projects = get_available_projects(user)
     project_environment_pairs = left_join_iterators(
         _project_data_group,
         available_projects,
-        _environment_data_group,
         environments,
     )
     return [
@@ -573,9 +620,9 @@ def get_available_projects_with_environments(
 
 def get_projects_with_environment_being_created(
     project_environment_workflow_triplets: Iterable[
-        Tuple[PublishedProject, Optional[ResearchEnvironment], Iterable[Workflow]]
+        Tuple[Any, Optional[ResearchEnvironment], Iterable[Workflow]]
     ],
-) -> Iterable[Tuple[None, PublishedProject, Iterable[Workflow]]]:
+) -> Iterable[Tuple[None, Any, Iterable[Workflow]]]:
     return [
         (environment, project, workflows)
         for project, environment, workflows in project_environment_workflow_triplets
@@ -592,7 +639,7 @@ def get_workspace_workflows(user: User) -> Iterable[Workflow]:
 
 def get_environment_project_pairs_with_expired_access(
     user: User,
-) -> Iterable[Tuple[ResearchEnvironment, PublishedProject]]:
+) -> Iterable[Tuple[ResearchEnvironment, Any]]:
     all_environment_project_pairs = get_environments_with_projects(user)
     return [
         (environment, project)
@@ -603,12 +650,12 @@ def get_environment_project_pairs_with_expired_access(
 
 def sort_environments_per_workspace(
     environment_project_workflow_triplets: Iterable[
-        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
+        Tuple[ResearchEnvironment, Any, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
 ) -> Dict[
     ResearchWorkspace,
-    Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]],
+    Tuple[ResearchEnvironment, Any, Iterable[Workflow]],
 ]:
     sorted_environments_project_workflow_triplets = defaultdict(
         list,
@@ -648,7 +695,6 @@ def match_workspace_with_billing_id(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     projects = PublishedProject.objects.accessible_by(user)
-    user_billing_accounts = get_billing_accounts_list(user)    
     response = api.get_workspace_list(email)
     if not response.ok:
         _handle_api_error(
@@ -657,7 +703,9 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
             GetAvailableEnvironmentsFailed,
             {"user_email": email}
         )
-    return deserialize_workspaces(response.json(), projects, user_billing_accounts)
+    raw_response = response.json()
+    workspace_data = _parse_workspace_list_response(raw_response)
+    return deserialize_workspaces(workspace_data, projects)
 
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
     response = api.list_quotas_data(workspace_project_id, region)
@@ -672,7 +720,6 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
 
 
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
-    user_billing_accounts = get_billing_accounts_list(user)    
     response = api.get_shared_workspaces(user.cloud_identity.email)
     if not response.ok:
         _handle_api_error(
@@ -681,7 +728,9 @@ def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
             GetAvailableEnvironmentsFailed,
             {"user_email": user.cloud_identity.email}
         )
-    return deserialize_shared_workspaces(response.json(), user_billing_accounts)
+    raw_response = response.json()
+    shared_workspace_data = _parse_shared_workspace_list_response(raw_response)
+    return deserialize_shared_workspaces(shared_workspace_data)
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
@@ -794,7 +843,7 @@ def delete_environment(
     return response.json()
 
 
-def create_shared_buket(
+def create_shared_bucket(
     region: str,
     workspace_project_id: str,
     user_defined_bucket_name: str,

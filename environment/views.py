@@ -27,6 +27,7 @@ from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
+    CreateSharedBucketFailed,
 )
 
 from environment.forms import (
@@ -387,13 +388,20 @@ def create_shared_bucket(request, workspace_id):
             request.POST, selected_shared_workspace=selected_shared_workspace
         )
         if form.is_valid():
-            services.create_shared_buket(
-                user=request.user,
-                region=form.cleaned_data["region"],
-                user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
-                workspace_project_id=form.cleaned_data["workspace_project_id"],
-            )
-            return redirect("research_environments")
+            try:
+                services.create_shared_bucket(
+                    user=request.user,
+                    region=form.cleaned_data["region"],
+                    user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
+                    workspace_project_id=form.cleaned_data["workspace_project_id"],
+                )
+                return redirect("research_environments")
+            except (CreateSharedBucketFailed, ValueError, ConnectionError) as e:
+                # Capture bucket creation failure and add as message
+                messages.error(
+                    request,
+                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}"
+                )
     else:
         form = CreateSharedBucketForm(
             selected_shared_workspace=selected_shared_workspace
@@ -556,10 +564,15 @@ def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_nam
         shared_bucket_name, request.user
     )
 
+    # Check if the workspace has service errors
+    workspace = next((ws for ws in shared_workspaces_list if ws.gcp_project_id == shared_workspace_name), None)
+    workspace_has_errors = workspace and not workspace.is_accessible if workspace else False
+
     context = {
         "shared_bucket_name": shared_bucket_name,
         "shared_workspace_name": shared_workspace_name,
         "bucket_content": bucket_content,
+        "workspace_has_errors": workspace_has_errors,
     }
 
     return render(request, "environment/manage_shared_bucket_files.html", context)
@@ -1108,9 +1121,13 @@ def update_workspace_billing_account(
             billing_accounts_list=billing_accounts_list,
         )
 
-    current_billing_account = [
-        acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
-    ][0]
+    current_billing_account = None
+    if current_billing_account_id and current_billing_account_id != 'none':
+        current_billing_account_matches = [
+            acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
+        ]
+        current_billing_account = current_billing_account_matches[0] if current_billing_account_matches else None
+    
     context = {
         "form": form,
         "workspace_project_id": workspace_project_id,

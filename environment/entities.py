@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, List
 
 from django.apps import apps
 from environment.models import GCPRegion
@@ -107,6 +107,7 @@ class ResearchEnvironment:
     gpu_accelerator_type: Optional[str]
     service_account_name: str
     workbench_owner_username: Optional[str]
+    service_errors: Optional[List["ServiceError"]] = None
 
     @property
     def is_running(self):
@@ -141,6 +142,7 @@ class ResearchWorkspace:
     workbenches: Iterable[ResearchEnvironment]
     is_accessible: bool = True
     access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
 
 
 @dataclass
@@ -159,12 +161,23 @@ class SharedWorkspace:
     buckets: Iterable[SharedBucket]
     is_accessible: bool = True
     access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
 
 
 @dataclass
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+
+
+@dataclass
+class ServiceError:
+    error_type: str
+    message: str
+    resource_id: str
+    service_name: str
+    details: Optional[str] = None
+    can_retry: bool = False
 
 
 @dataclass
