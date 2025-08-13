@@ -1,15 +1,6 @@
-import logging
-from typing import Iterable, Optional, List, Any
+from typing import Iterable
 
-from django.apps import apps  # type: ignore
-from environment.api_types import (
-    RawServiceErrorsData,
-    RawWorkspacesData,
-    RawSharedWorkspacesData,
-    RawWorkbenchesData,
-    WorkspaceResponse,
-    SharedWorkspaceResponse,
-)
+from django.apps import apps
 
 from environment.entities import (
     EntityScaffolding,
@@ -25,25 +16,13 @@ from environment.entities import (
     SharedWorkspace,
     SharedBucket,
     SharedBucketObject,
+    WorkspaceType,
     QuotaInfo,
     CloudRole,
     DatasetsMonitoringEntry,
-    ServiceError,
 )
 
-PublishedProject = apps.get_model("project", "PublishedProject")  # runtime retrieval; avoid static type usage
-
-logger = logging.getLogger(__name__)
-
-
-##############################################
-# NOTE:
-# Previous local accessibility computation (_check_* helpers)
-# has been deprecated. Accessibility is now computed by the
-# API backend and surfaced via `is_accessible` and
-# `access_denial_reason` fields. Frontend deserialization
-# trusts backend to keep DRY and authoritative.
-##############################################
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
 def _project_data_group(project) -> str:
@@ -59,38 +38,35 @@ def _project_data_group(project) -> str:
 
 
 def deserialize_research_environments(
-    workbenches: RawWorkbenchesData,
+    workbenches: dict,
     gcp_project_id: str,
     region: Region,
-    projects: Iterable[Any],
+    projects: Iterable,
 ) -> Iterable[ResearchEnvironment]:
-    environments = []
-    for workbench in workbenches:
-        workbench_service_errors = deserialize_service_errors(workbench.get("service_errors", []))
-        environments.append(
-                ResearchEnvironment(
-                    gcp_identifier=workbench["gcp_identifier"],
-                    dataset_identifier=workbench["dataset_identifier"],
-                    url=workbench.get("url"),
-                    workspace_name=gcp_project_id,
-                    status=EnvironmentStatus(workbench["status"]),
-                    cpu=workbench["cpu"],
-                    memory=workbench["memory"],
-                    region=region,
-                    type=EnvironmentType(workbench["workbench_type"]),
-                    machine_type=workbench["machine_type"],
-                    disk_size=workbench.get("disk_size"),
-                    project=_get_project_for_environment(
-                        workbench["dataset_identifier"], projects
-                    ),
-                    gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
-                    service_account_name=workbench["service_account_name"],
-                    workbench_owner_username=workbench["workbench_owner_username"],
-                    service_errors=workbench_service_errors,
-                )
-            )
-    
-    return environments
+    return [
+        ResearchEnvironment(
+            gcp_identifier=workbench["gcp_identifier"],
+            dataset_identifier=workbench.get("dataset_identifier", "creating"),
+            url=workbench.get("url"),
+            workspace_name=gcp_project_id,
+            status=EnvironmentStatus(workbench["status"]),
+            cpu=workbench.get("cpu", 0),
+            memory=workbench.get("memory", 0.0),
+            region=region,
+            type=EnvironmentType(workbench.get("workbench_type", "JUPYTER")),
+            machine_type=workbench.get("machine_type", "creating"),
+            disk_size=workbench.get("disk_size"),
+            project=_get_project_for_environment(
+                workbench.get("dataset_identifier", "creating"), projects
+            ),
+            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+            service_account_name=workbench.get("service_account_name"),
+            workbench_owner_username=workbench.get("workbench_owner_username"),
+        )
+        if workbench.get("type") == "Workbench"
+        else deserialize_entity_scaffolding(workbench)
+        for workbench in workbenches
+    ]
 
 
 def deserialize_workflow_details(workflow_data: dict) -> Workflow:
@@ -103,93 +79,42 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
     )
 
 
-def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> List[ServiceError]:
-    service_errors = []
-    # Handle case where service_errors_data might be None
-    if not service_errors_data:
-        return service_errors
-        
-    for error in service_errors_data:
-        error_obj = ServiceError(
-            error_type=error.get("error_type", "unknown"),
-            message=error.get("message", ""),
-            resource_id=error.get("resource_id", ""),
-            service_name=error.get("service_name", ""),
-            details=error.get("details"),
-            can_retry=error.get("can_retry", False),
-        )
-        service_errors.append(error_obj)
-    
-    return service_errors
-
-
 def deserialize_workspace_details(
-    data: WorkspaceResponse, projects: Iterable[Any]
+    data: dict, projects: Iterable
 ) -> ResearchWorkspace:
-    # Handle missing or invalid billing_info gracefully
-    billing_info = data.get("billing_info")
-    if not billing_info or not isinstance(billing_info, dict):
-        billing_info = {
-            "billing_account_id": None,
-            "billing_enabled": False
-        }
-    
-    service_errors = deserialize_service_errors(data.get("service_errors", []))
-    
-    # Safely extract billing account ID
-    billing_account_id = billing_info.get("billing_account_id")
-    
     return ResearchWorkspace(
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=billing_account_id,
+        gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
         is_owner=data["is_owner"],
         workbenches=deserialize_research_environments(
-            data["workbenches"], data["gcp_project_id"], Region(data["region"]), projects
+            data["workbenches"],
+            data["gcp_project_id"],
+            Region(data["region"]),
+            projects,
         ),
-    is_accessible=data.get("is_accessible", True),
-    access_denial_reason=data.get("access_denial_reason"),
-        service_errors=service_errors,
     )
 
 
-def deserialize_shared_bucket_details(buckets_data: List[dict]) -> Iterable[SharedBucket]:
+def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
     return [
         SharedBucket(
-            name=bucket["bucket_name"],
-            is_owner=bucket.get("is_owner", False),
-            is_admin=bucket.get("is_admin", False),
+            name=data["bucket_name"],
+            is_owner=data["is_owner"],
+            is_admin=data["is_admin"],
         )
-        for bucket in buckets_data
+        for data in buckets_data
     ]
 
 
-
-
-def deserialize_shared_workspace_details(data: SharedWorkspaceResponse) -> SharedWorkspace:
-    service_errors = deserialize_service_errors(data.get("service_errors", []))
-    
-    # Handle missing or invalid billing_info gracefully
-    billing_info = data.get("billing_info")
-    if not billing_info or not isinstance(billing_info, dict):
-        billing_info = {
-            "billing_account_id": None,
-            "billing_enabled": False
-        }
-    
-    # Safely extract billing account ID
-    billing_account_id = billing_info.get("billing_account_id")
-    
+def deserialize_shared_workspace_details(data: dict) -> SharedWorkspace:
     return SharedWorkspace(
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=billing_account_id,
+        gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
         is_owner=data["is_owner"],
-    is_accessible=data.get("is_accessible", True),
-    access_denial_reason=data.get("access_denial_reason"),
-        service_errors=service_errors,
     )
 
 
@@ -200,27 +125,33 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 
 
 def deserialize_workspaces(
-    data: RawWorkspacesData, projects: Iterable[Any]
+    data: dict, projects: Iterable
 ) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data, projects)
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
+        else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
-        # Note: Type checking removed as we now have proper typed data
     ]
 
 
-def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
+def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
-    deserialize_shared_workspace_details(workspace_data)
+        deserialize_shared_workspace_details(workspace_data)
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
+        else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
-        # Note: Type checking removed as we now have proper typed data
     ]
 
 
 def _get_project_for_environment(
     dataset_identifier: str,
-    projects: Iterable[Any],
-) -> Optional[Any]:
+    projects: Iterable,
+):
+    # Handle placeholder/creating workspaces that don't have a real dataset yet
+    if dataset_identifier == "creating":
+        return None
+        
     try:
         return next(
             iter(
