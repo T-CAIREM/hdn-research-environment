@@ -168,6 +168,17 @@ class SharedWorkspace:
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+    region: Optional[Region] = Region.US_CENTRAL
+    gcp_billing_id: Optional[str] = None
+    is_owner: bool = False
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    workbenches: Iterable[ResearchEnvironment] = None
+    service_errors: Optional[List["ServiceError"]] = None
+    
+    def __post_init__(self):
+        if self.workbenches is None:
+            self.workbenches = []
 
 
 @dataclass

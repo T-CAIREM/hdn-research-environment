@@ -64,33 +64,31 @@ def deserialize_research_environments(
     region: Region,
     projects: Iterable[Any],
 ) -> Iterable[ResearchEnvironment]:
-    environments = []
-    for workbench in workbenches:
-        workbench_service_errors = deserialize_service_errors(workbench.get("service_errors", []))
-        environments.append(
-                ResearchEnvironment(
-                    gcp_identifier=workbench["gcp_identifier"],
-                    dataset_identifier=workbench.get("dataset_identifier", "creating"),
-                    url=workbench.get("url"),
-                    workspace_name=gcp_project_id,
-                    status=EnvironmentStatus(workbench["status"]),
-                    cpu=workbench.get("cpu", 0),
-                    memory=workbench.get("memory", 0.0),
-                    region=region,
-                    type=EnvironmentType.from_string_or_none(workbench.get("workbench_type")),
-                    machine_type=workbench.get("machine_type", "creating"),
-                    disk_size=workbench.get("disk_size"),
-                    project=_get_project_for_environment(
-                        workbench.get("dataset_identifier", "creating"), projects
-                    ),
-                    gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
-                    service_account_name=workbench.get("service_account_name"),
-                    workbench_owner_username=workbench.get("workbench_owner_username"),
-                    service_errors=workbench_service_errors,
-                )
-            )
-    
-    return environments
+    return [
+        ResearchEnvironment(
+            gcp_identifier=workbench["gcp_identifier"],
+            dataset_identifier=workbench["dataset_identifier"],
+            url=workbench.get("url"),
+            workspace_name=gcp_project_id,
+            status=EnvironmentStatus(workbench["status"]),
+            cpu=workbench["cpu"],
+            memory=workbench["memory"],
+            region=region,
+            type=EnvironmentType(workbench["workbench_type"]),
+            machine_type=workbench["machine_type"],
+            disk_size=workbench.get("disk_size"),
+            project=_get_project_for_environment(
+                workbench["dataset_identifier"], projects
+            ),
+            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+            service_account_name=workbench["service_account_name"],
+            workbench_owner_username=workbench["workbench_owner_username"],
+            service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
+        )
+        if workbench.get("type") == "Workbench"
+        else deserialize_entity_scaffolding(workbench)
+        for workbench in workbenches
+    ]
 
 
 def deserialize_workflow_details(workflow_data: dict) -> Workflow:
