@@ -30,12 +30,6 @@
                         <div>
                             <h6 class="mb-0">
                                 {{ workspace.gcp_project_id }}
-                                {% if workspace|has_errors %}
-                                    <span class="badge badge-warning ml-2">Service Issues</span>
-                                {% endif %}
-                                {% if workspace|has_billing_issues %}
-                                    <span class="badge badge-danger ml-2">Billing Issues</span>
-                                {% endif %}
                             </h6>
                             {% if workspace.gcp_billing_id %}
                                 {% if workspace.is_owner %}
@@ -108,7 +102,15 @@
                                 <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
                             </div>
                         {% else %}
-                            {% shared_workspace_destroy_modal_button shared_workspace=workspace %}
+                            <div class="d-flex align-items-center">
+                                {% if workspace|has_errors %}
+                                    <span class="badge badge-warning ml-2">Service Issues</span>
+                                {% endif %}
+                                {% if workspace|has_billing_issues %}
+                                    <span class="badge badge-danger ml-2">Billing Issues</span>
+                                {% endif %}
+                                {% shared_workspace_destroy_modal_button shared_workspace=workspace %}
+                            </div>
                         {% endif %}
                     </div>
                 </div>
