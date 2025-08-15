@@ -25,28 +25,17 @@ from environment.entities import (
     SharedWorkspace,
     SharedBucket,
     SharedBucketObject,
+    WorkspaceType,
     QuotaInfo,
     CloudRole,
     DatasetsMonitoringEntry,
     ServiceError,
 )
 
-PublishedProject = apps.get_model("project", "PublishedProject")  # runtime retrieval; avoid static type usage
-
-logger = logging.getLogger(__name__)
+PublishedProject = apps.get_model("project", "PublishedProject")
 
 
-##############################################
-# NOTE:
-# Previous local accessibility computation (_check_* helpers)
-# has been deprecated. Accessibility is now computed by the
-# API backend and surfaced via `is_accessible` and
-# `access_denial_reason` fields. Frontend deserialization
-# trusts backend to keep DRY and authoritative.
-##############################################
-
-
-def _project_data_group(project) -> str:
+def _project_data_group(project: PublishedProject) -> str:
     # HACK: Use the slug and version to calculate the dataset group.
     # The result has to match the patterns for:
     # - Service Account ID: must start with a lower case letter, followed by one or more lower case alphanumerical characters that can be separated by hyphens
@@ -126,17 +115,11 @@ def deserialize_workspace_details(
 ) -> ResearchWorkspace:
     # Handle missing or invalid billing_info gracefully
     billing_info = data.get("billing_info")
-    if not billing_info or not isinstance(billing_info, dict):
-        billing_info = {
-            "billing_account_id": None,
-            "billing_enabled": False
-        }
-    
     service_errors = deserialize_service_errors(data.get("service_errors", []))
-    
+
     # Safely extract billing account ID
     billing_account_id = billing_info.get("billing_account_id")
-    
+
     return ResearchWorkspace(
         region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
@@ -202,16 +185,18 @@ def deserialize_workspaces(
 ) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data, projects)
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
+        else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
-        # Note: Type checking removed as we now have proper typed data
     ]
 
 
 def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
     return [
-    deserialize_shared_workspace_details(workspace_data)
+        deserialize_shared_workspace_details(workspace_data)
+        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
+        else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
-        # Note: Type checking removed as we now have proper typed data
     ]
 
 
