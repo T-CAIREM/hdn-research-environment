@@ -141,6 +141,14 @@ class ResearchWorkspace:
     workbenches: Iterable[ResearchEnvironment]
 
 
+@dataclass(frozen=True, eq=True)
+class SimplifiedResearchWorkspace:
+    gcp_project_id: str
+    status: WorkspaceStatus
+    owner: str
+    region: Optional[Region] = None
+
+
 @dataclass
 class SharedBucket:
     name: str

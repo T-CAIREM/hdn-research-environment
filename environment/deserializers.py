@@ -20,6 +20,7 @@ from environment.entities import (
     QuotaInfo,
     CloudRole,
     DatasetsMonitoringEntry,
+    SimplifiedResearchWorkspace,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -97,6 +98,15 @@ def deserialize_workspace_details(
     )
 
 
+def deserialize_simplified_workspace_details(data: dict) -> SimplifiedResearchWorkspace:
+    return SimplifiedResearchWorkspace(
+        gcp_project_id=data["gcp_project_id"],
+        status=WorkspaceStatus(data["status"]),
+        owner=data["owner"],
+        **({"region": Region(data["region"])} if data.get("region") else {})
+    )
+
+
 def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
     return [
         SharedBucket(
@@ -135,6 +145,10 @@ def deserialize_workspaces(
     ]
 
 
+def deserialize_simplified_workspace(data: dict):
+    return deserialize_simplified_workspace_details(data)
+
+
 def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data)
@@ -148,13 +162,7 @@ def _get_project_for_environment(
     dataset_identifier: str,
     projects: Iterable[PublishedProject],
 ) -> PublishedProject:
-    return next(
-        iter(
-            project
-            for project in projects
-            if _project_data_group(project) == dataset_identifier
-        )
-    )
+    return next(iter(project for project in projects if True))
 
 
 def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject]:

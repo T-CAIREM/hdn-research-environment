@@ -9,6 +9,11 @@ from environment.entities import (
     EntityScaffolding,
     SharedWorkspace,
 )
+from environment.models import (
+    VMInstance,
+    BucketSharingInvite,
+    BillingAccountSharingInvite,
+)
 
 User = get_user_model()
 
@@ -86,3 +91,63 @@ def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
 
 def serialize_user(user: User):
     return model_to_dict(user, fields=["id", "username"])
+
+
+def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
+    return [
+        {
+            **model_to_dict(vm),
+            "name": vm.get_instance_value(),
+            "region": vm.region.region,
+            "gpu_accelerators": [
+                model_to_dict(gpu) for gpu in vm.gpu_accelerators.all()
+            ],
+        }
+        for vm in vm_instances
+    ]
+
+
+def serialize_projects(projects):
+    return [
+        model_to_dict(project, fields=["id", "slug", "version"]) for project in projects
+    ]
+
+
+def serialize_bucket_sharing_invitations(
+    bucket_sharing_invitations: Iterable[BucketSharingInvite],
+):
+    return [
+        model_to_dict(
+            bucket_sharing_invitation,
+            fields=[
+                "id",
+                "user_contact_email",
+                "is_consumed",
+                "is_revoked",
+                "permissions",
+                "owner",
+                "user",
+            ],
+        )
+        for bucket_sharing_invitation in bucket_sharing_invitations
+    ]
+
+
+def serialize_billing_sharing_invitations(
+    billing_sharing_invitations: Iterable[BillingAccountSharingInvite],
+):
+    return [
+        model_to_dict(
+            billing_sharing_invitation,
+            fields=[
+                "id",
+                "user_contact_email",
+                "is_consumed",
+                "is_revoked",
+                "billing_account_id",
+                "owner",
+                "user",
+            ],
+        )
+        for billing_sharing_invitation in billing_sharing_invitations
+    ]
