@@ -1,0 +1,63 @@
+{% load environment_templatetags %}
+
+{# Enhanced Service Error Display Component Template #}
+{% if entity|has_errors %}
+    <div class="mt-2">
+        {% if group_by_severity %}
+            {# Group errors by severity for better organization #}
+            {% with grouped_errors=entity.service_errors|group_errors %}
+                {% if grouped_errors.critical %}
+                    <div class="error-group critical-errors">
+                        {% for error in grouped_errors.critical %}
+                            <span class="service-error-badge {{ error|error_css_class }} critical">
+                                {% if error_prefix %}{{ error_prefix }}: {% endif %}{{ error|error_message }}
+                                {% if error|error_action_link %}
+                                    <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-danger">
+                                        {{ error|error_action_text }}
+                                    </a>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                {% if grouped_errors.warning %}
+                    <div class="error-group warning-errors">
+                        {% for error in grouped_errors.warning %}
+                            <span class="service-error-badge {{ error|error_css_class }} warning">
+                                {% if error_prefix %}{{ error_prefix }}: {% endif %}{{ error|error_message }}
+                                {% if error|error_action_link %}
+                                    <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-warning">
+                                        {{ error|error_action_text }}
+                                    </a>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                {% if grouped_errors.info %}
+                    <div class="error-group info-errors">
+                        {% for error in grouped_errors.info %}
+                            <span class="service-error-badge {{ error|error_css_class }} info">
+                                {% if error_prefix %}{{ error_prefix }}: {% endif %}{{ error|error_message }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% else %}
+            {# Standard error display #}
+            {% for error in entity.service_errors %}
+                <span class="service-error-badge {{ error|error_css_class }} {{ error|error_severity }}">
+                    {% if error_prefix %}{{ error_prefix }}: {% endif %}{{ error|error_message }}
+                    {% if error|error_action_link %}
+                        <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-danger">
+                            {{ error|error_action_text }}
+                        </a>
+                    {% endif %}
+                </span>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endif %}

@@ -41,7 +41,7 @@
                                             ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
                                         </span>
                                     </small>
-                                {% else %}
+                                {% elif workspace.status.value == "created" %}
                                     <div class="mt-2">
                                         <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
                                             Connect billing account
@@ -66,32 +66,19 @@
                                         </small>
                                     {% endif %}
                                 {% endif %}
-                            {% else %}
-                                <small class="text-muted">(shared)</small>
-                                {% if not workspace.gcp_billing_id %}
-                                    <div class="mt-2">
-                                        <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
-                                            Connect billing account
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
-                            
-                            {# Display service errors as badges #}
-                            {% if workspace|has_errors %}
-                                <div class="mt-2">
-                                    {% for error in workspace.service_errors %}
-                                        <span class="service-error-badge {{ error|error_css_class }}">
-                                            {{ error|error_message }}
-                                            {% if error|error_action_link %}
-                                                <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-danger">
-                                                    {{ error|error_action_text }}
-                                                </a>
-                                            {% endif %}
-                                        </span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+            {% else %}
+                <small class="text-muted">(shared)</small>
+                {% if not workspace.gcp_billing_id and workspace.status.value == "created" %}
+                    <div class="mt-2">
+                        <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
+                            Connect billing account
+                        </a>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            {# Display service errors as badges #}
+            {% service_error_display entity=workspace %}
                         </div>
                         <div class="d-flex align-items-center">
                             {% if not workspace.status.value == "created" %}
@@ -130,15 +117,7 @@
                                     <li class="list-group-item {{ environment|has_errors|yesno:'workbench-with-errors,' }}">
                                         <div class="row">
                                             {# Show workbench service errors #}
-                                            {% if environment|has_errors %}
-                                                <div class="col-12 mb-2">
-                                                    {% for error in environment.service_errors %}
-                                                        <span class="service-error-badge {{ error|error_css_class }}">
-                                                            Workbench Error: {{ error|error_message }}
-                                                        </span>
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
+                                            {% service_error_display entity=environment error_prefix="Workbench Error" %}
                                             {% if environment.status.value == "creating" %}
                                                 <div class="d-flex m-auto">
                                                     <span class="mr-5">Creating...</span>

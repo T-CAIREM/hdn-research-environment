@@ -79,20 +79,7 @@
                             {% endif %}
                             
                             {# Display service errors as badges #}
-                            {% if workspace|has_errors %}
-                                <div class="mt-2">
-                                    {% for error in workspace.service_errors %}
-                                        <span class="service-error-badge {{ error|error_css_class }}">
-                                            {{ error|error_message }}
-                                            {% if error|error_action_link %}
-                                                <a href="{{ error|error_action_link }}" target="_blank" class="error-action-link btn btn-sm btn-outline-danger">
-                                                    {{ error|error_action_text }}
-                                                </a>
-                                            {% endif %}
-                                        </span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% service_error_display entity=workspace group_by_severity=True %}
                         </div>
                         {% if not workspace.status.value == "created" %}
                             <div class="d-flex align-items-center justify-content-between">

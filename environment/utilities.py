@@ -51,16 +51,47 @@ def left_join_iterators(
 def has_service_errors(workspace_or_workbench) -> bool:
     """Check if workspace or workbench has service errors."""
     return (
-        workspace_or_workbench.service_errors is not None 
+        workspace_or_workbench.service_errors is not None
         and len(workspace_or_workbench.service_errors) > 0
     )
 
 
-def has_billing_error(workspace_or_workbench) -> bool:
-    """Check if workspace or workbench has billing-related errors."""
+def has_error_type(workspace_or_workbench, error_type: str) -> bool:
+    """Generic function to check if workspace or workbench has a specific error type."""
     if not has_service_errors(workspace_or_workbench):
         return False
-    return any(error.error_type == "billing_disabled" for error in workspace_or_workbench.service_errors)
+    return any(error.error_type == error_type for error in workspace_or_workbench.service_errors)
+
+
+def has_billing_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has billing-related errors."""
+    return has_error_type(workspace_or_workbench, "billing_disabled")
+
+
+def has_api_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has API-related errors."""
+    return has_error_type(workspace_or_workbench, "api_not_enabled")
+
+
+def has_permission_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has permission-related errors."""
+    return has_error_type(workspace_or_workbench, "permission_denied")
+
+
+def get_errors_by_type(workspace_or_workbench, error_type: str) -> list:
+    """Get all errors of a specific type."""
+    if not has_service_errors(workspace_or_workbench):
+        return []
+    return [error for error in workspace_or_workbench.service_errors if error.error_type == error_type]
+
+
+def get_critical_errors(workspace_or_workbench) -> list:
+    """Get all critical errors that would make the entity non-functional."""
+    critical_error_types = ["permission_denied", "not_found", "billing_disabled"]
+    if not has_service_errors(workspace_or_workbench):
+        return []
+    return [error for error in workspace_or_workbench.service_errors 
+            if error.error_type in critical_error_types]
 
 
 def has_billing_issues(workspace) -> bool:
@@ -95,20 +126,6 @@ def requires_billing_change(workspace) -> bool:
     return has_billing_issues(workspace)
 
 
-def has_api_error(workspace_or_workbench) -> bool:
-    """Check if workspace or workbench has API-related errors."""
-    if not has_service_errors(workspace_or_workbench):
-        return False
-    return any(error.error_type == "api_not_enabled" for error in workspace_or_workbench.service_errors)
-
-
-def has_permission_error(workspace_or_workbench) -> bool:
-    """Check if workspace or workbench has permission-related errors."""
-    if not has_service_errors(workspace_or_workbench):
-        return False
-    return any(error.error_type == "permission_denied" for error in workspace_or_workbench.service_errors)
-
-
 def get_billing_link(workspace_id: str) -> str:
     """Generate billing enable link for a workspace."""
     return f"https://console.developers.google.com/billing/enable?project={workspace_id}"
@@ -116,27 +133,26 @@ def get_billing_link(workspace_id: str) -> str:
 
 def format_error_message(error: ServiceError) -> str:
     """Format error message for display in templates."""
-    if error.error_type == "billing_disabled":
-        return f"⚠️ Billing disabled: {error.message}"
-    elif error.error_type == "api_not_enabled":
-        return f"⏳ APIs enabling: {error.service_name} APIs are being enabled"
-    elif error.error_type == "permission_denied":
-        return f"🚫 Access denied: {error.message}"
-    elif error.error_type == "quota_exceeded":
-        return f"📊 Quota exceeded: {error.message}"
-    elif error.error_type == "not_found":
-        return f"❓ Resource not found: {error.message}"
-    else:
-        return f"❌ Error: {error.message}"
+    error_formats = {
+        "billing_disabled": lambda e: f"⚠️ Billing disabled: {e.message}",
+        "api_not_enabled": lambda e: f"⏳ APIs enabling: {e.service_name} APIs are being enabled",
+        "permission_denied": lambda e: f"🚫 Access denied: {e.message}",
+        "quota_exceeded": lambda e: f"📊 Quota exceeded: {e.message}",
+        "not_found": lambda e: f"❓ Resource not found: {e.message}",
+        "unknown": lambda e: f"❌ Error: {e.message}",
+    }
+    
+    formatter = error_formats.get(error.error_type, error_formats["unknown"])
+    return formatter(error)
 
 
 def get_error_action_text(error: ServiceError) -> Optional[str]:
     """Get action text for error types that have user actions."""
-    if error.error_type == "billing_disabled":
-        return "Enable billing"
-    elif error.error_type == "quota_exceeded" and error.can_retry:
-        return "Retry later"
-    return None
+    action_text_map = {
+        "billing_disabled": "Enable billing",
+        "quota_exceeded": "Retry later" if hasattr(error, 'can_retry') and error.can_retry else None,
+    }
+    return action_text_map.get(error.error_type)
 
 
 def get_error_action_link(error: ServiceError) -> Optional[str]:
@@ -157,6 +173,28 @@ def get_error_css_class(error: ServiceError) -> str:
         "unknown": "error-unknown",
     }
     return error_type_map.get(error.error_type, "error-unknown")
+
+
+def get_error_severity(error: ServiceError) -> str:
+    """Get error severity level."""
+    severity_map = {
+        "billing_disabled": "critical",
+        "permission_denied": "critical", 
+        "not_found": "critical",
+        "api_not_enabled": "warning",
+        "quota_exceeded": "warning",
+        "unknown": "info",
+    }
+    return severity_map.get(error.error_type, "info")
+
+
+def group_errors_by_severity(errors: list) -> dict:
+    """Group errors by severity level."""
+    grouped = {"critical": [], "warning": [], "info": []}
+    for error in errors:
+        severity = get_error_severity(error)
+        grouped[severity].append(error)
+    return grouped
 
 
 def workspace_is_functional(workspace) -> bool:
