@@ -8,7 +8,7 @@ from rest_framework.response import Response
 import json
 import re
 
-
+from environment.utilities import user_has_cloud_identity
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
@@ -21,6 +21,7 @@ from environment.forms import (
     BucketSharingForm,
     ShareBillingAccountForm,
     UpdateWorkspaceBillingAccountForm,
+    CloudIdentityPasswordForm,
 )
 from django.apps import apps
 import environment.services as services
@@ -554,3 +555,32 @@ def update_workspace_billing_account(request):
             form.cleaned_data["billing_account_id"],
         )
     return HttpResponse(status=200)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_quotas(request, workspace_project_id, workspace_region):
+    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+
+    return JsonResponse({"quotas": serializers.serialize_quotas(quotas_data_list)})
+
+
+@require_POST
+@login_required
+def identity_provisioning(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    if user_has_cloud_identity(user):
+        return HttpResponse(status=302)
+
+    # TODO: Handle the case where the user was created successfully, but the response was lost.
+    form = CloudIdentityPasswordForm(data)
+    if form.is_valid():
+        services.create_cloud_identity(
+            request.user,
+            form.cleaned_data.get("password"),
+            form.cleaned_data.get("recovery_email"),
+        )
+
+    return HttpResponse(status=201)
