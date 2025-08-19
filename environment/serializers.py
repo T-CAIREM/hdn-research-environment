@@ -8,7 +8,7 @@ from environment.entities import (
     ResearchEnvironment,
     EntityScaffolding,
     SharedWorkspace,
-    SharedBucketObject
+    SharedBucketObject,
 )
 from environment.models import (
     VMInstance,
@@ -154,7 +154,9 @@ def serialize_billing_sharing_invitations(
     ]
 
 
-def serialize_shared_bucket_objects(objects: Iterable[SharedBucketObject]) -> list[Dict]:
+def serialize_shared_bucket_objects(
+    objects: Iterable[SharedBucketObject],
+) -> list[Dict]:
     return [
         {
             "type": obj.type,
