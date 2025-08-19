@@ -20,6 +20,7 @@ from environment.forms import (
     CreateSharedBucketForm,
     BucketSharingForm,
     ShareBillingAccountForm,
+    UpdateWorkspaceBillingAccountForm,
 )
 from django.apps import apps
 import environment.services as services
@@ -28,6 +29,7 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    billing_account_required,
 )
 
 User = get_user_model()
@@ -86,7 +88,9 @@ def create_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
+    form = CreateWorkspaceForm(
+        data, billing_accounts_list=billing_accounts_list
+    )
     if form.is_valid():
         services.create_workspace(
             user=request.user,
@@ -120,7 +124,9 @@ def create_shared_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateSharedWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
+    form = CreateSharedWorkspaceForm(
+        data, billing_accounts_list=billing_accounts_list
+    )
     if form.is_valid():
         services.create_shared_workspace(
             user=request.user,
@@ -150,10 +156,13 @@ def get_environment_resource_options(request):
     serialized_available_instances = serializers.serialize_vm_instances(
         VMInstance.objects.all()
     )
-
+    serialized_available_gpu_accelerators = serializers.serialize_gpu_accelerators(
+        GPUAccelerator.objects.all()
+    )
     return JsonResponse(
         {
             "instances": serialized_available_instances,
+            "accelerators": serialized_available_gpu_accelerators,
         }
     )
 
@@ -186,6 +195,7 @@ def create_research_environment(request, workspace_project_id):
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
     project = PublishedProject.objects.get(id=data["project_id"])
+
     form = CreateResearchEnvironmentForm(
         data,
         selected_workspace=workspace,
@@ -194,6 +204,7 @@ def create_research_environment(request, workspace_project_id):
     )
 
     if form.is_valid():
+        project = services.get_project(form.cleaned_data["project_id"])
         services.create_research_environment(
             user=user,
             project=project,
@@ -520,4 +531,26 @@ def delete_shared_bucket_content(request, bucket_name):
     services.delete_shared_bucket_content(
         bucket_name=bucket_name, full_path=data["full_path"], user=user
     )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+@billing_account_required
+def update_workspace_billing_account(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    billing_accounts_list = services.get_billing_accounts_list(user)
+
+    form = UpdateWorkspaceBillingAccountForm(
+        data,
+        workspace_project_id=data["workspace_project_id"],
+        billing_accounts_list=billing_accounts_list,
+    )
+    if form.is_valid():
+        services.update_workspace_billing_account(
+            form.cleaned_data["workspace_project_id"],
+            form.cleaned_data["billing_account_id"],
+        )
     return HttpResponse(status=200)

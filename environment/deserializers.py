@@ -162,7 +162,13 @@ def _get_project_for_environment(
     dataset_identifier: str,
     projects: Iterable[PublishedProject],
 ) -> PublishedProject:
-    return next(iter(project for project in projects if True))
+    return next(
+        iter(
+            project
+            for project in projects
+            if _project_data_group(project) == dataset_identifier
+        )
+    )
 
 
 def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject]:

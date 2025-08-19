@@ -152,3 +152,11 @@ class GetSimplifiedWorkspaceFailed(Exception):
 
 class GetSharedBucketFailed(Exception):
     pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass
