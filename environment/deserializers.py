@@ -62,6 +62,9 @@ def deserialize_research_environments(
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
             service_account_name=workbench.get("service_account_name"),
             workbench_owner_username=workbench.get("workbench_owner_username"),
+            rstudio_ssl_certificate_expiration_date=workbench.get(
+                "rstudio_ssl_certificate_expiration_date"
+            ),
         )
         if workbench.get("type") == "Workbench"
         else deserialize_entity_scaffolding(workbench)

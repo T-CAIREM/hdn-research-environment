@@ -144,3 +144,7 @@ class RemoveWorkbenchCollaboratorFailed(Exception):
 
 class AddWorkbenchCollaboratorFailed(Exception):
     pass
+
+
+class RenewEnvironmentCertificateFailed(Exception):
+    pass

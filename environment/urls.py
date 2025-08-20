@@ -52,6 +52,11 @@ urlpatterns = [
         name="leave_shared_environment",
     ),
     path(
+        "environment/renew",
+        views.renew_environment_certificate,
+        name="renew_environment_certificate",
+    ),
+    path(
         "environment/manage/<workspace_project_id>/<environment_name>/<workbench_owner_username>/<service_account_name>",
         views.manage_collaborative_environment,
         name="manage_collaborative_environment",

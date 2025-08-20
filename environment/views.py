@@ -27,6 +27,7 @@ from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
+    RenewEnvironmentCertificateFailed,
 )
 
 from environment.forms import (
@@ -664,6 +665,23 @@ def delete_environment(request):
         workbench_resource_id=data["instance_name"],
     )
     return JsonResponse({})
+
+
+@require_PATCH
+@login_required
+@cloud_identity_required
+def renew_environment_certificate(request):
+    data = json.loads(request.body)
+    try:
+        services.renew_environment_certificate(
+            user=request.user,
+            workspace_project_id=data["gcp_project_id"],
+            workbench_type=data["environment_type"],
+            workbench_resource_id=data["instance_name"],
+        )
+        return JsonResponse({})
+    except RenewEnvironmentCertificateFailed as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required

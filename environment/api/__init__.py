@@ -199,6 +199,22 @@ def delete_workbench(
 
 
 @api_request
+def renew_environment_certificate(
+    workbench_type: str,
+    user_email: str,
+    workspace_project_id: str,
+    workbench_resource_id: str,
+) -> Request:
+    json = {
+        "workbench_type": workbench_type,
+        "workspace_project_id": workspace_project_id,
+        "user_email": user_email,
+        "workbench_resource_id": workbench_resource_id,
+    }
+    return Request("PUT", url="/workbench/renew-ssl-certificate", json=json)
+
+
+@api_request
 def get_workflow(workflow_id: str) -> Request:
     return Request("GET", url=f"/workflow/{workflow_id}")
 
