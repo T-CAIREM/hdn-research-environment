@@ -19,6 +19,7 @@ from environment.deserializers import (
     deserialize_quotas,
     deserialize_cloud_roles,
     deserialize_datasets_monitoring_data,
+    deserialize_simplified_workspace,
 )
 from environment.entities import (
     ResearchEnvironment,
@@ -65,6 +66,10 @@ from environment.exceptions import (
     AddWorkbenchCollaboratorFailed,
     RemoveWorkbenchCollaboratorFailed,
     RenewEnvironmentCertificateFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
@@ -1078,3 +1083,25 @@ def clear_all_notifications(
         return False
 
     return True
+
+
+def get_simplified_workspace(workspace_project_id: str, user: User):
+    response = api.get_simplified_workspace(
+        workspace_project_id, user.cloud_identity.email
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"GetSimplifiedWorkspaceFailed: {error_message}")
+        raise GetSimplifiedWorkspaceFailed(error_message)
+    return deserialize_simplified_workspace(response.json())
+
+
+def get_shared_bucket(bucket_name: str, user: User):
+    if not bucket_name:
+        return
+    response = api.get_shared_bucket(bucket_name, user.cloud_identity.email)
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"GetSharedBucketFailed: {error_message}")
+        raise GetSharedBucketFailed(error_message)
+    return deserialize_shared_bucket_objects({"bucket": [response.json()]})

@@ -148,3 +148,19 @@ class AddWorkbenchCollaboratorFailed(Exception):
 
 class RenewEnvironmentCertificateFailed(Exception):
     pass
+
+ 
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass
