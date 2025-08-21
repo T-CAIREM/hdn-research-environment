@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!email.endsWith("@healthdatanexus.ai")) {
       alert("Please enter a valid email ending with @healthdatanexus.ai.");
+      return;
     } else if (users.includes(email)) {
       alert("This user is already added.");
       return;
