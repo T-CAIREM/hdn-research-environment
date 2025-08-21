@@ -89,9 +89,7 @@ def create_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateWorkspaceForm(
-        data, billing_accounts_list=billing_accounts_list
-    )
+    form = CreateWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
     if form.is_valid():
         services.create_workspace(
             user=request.user,
@@ -125,9 +123,7 @@ def create_shared_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateSharedWorkspaceForm(
-        data, billing_accounts_list=billing_accounts_list
-    )
+    form = CreateSharedWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
     if form.is_valid():
         services.create_shared_workspace(
             user=request.user,

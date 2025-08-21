@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Iterable, Union, Dict
+from typing import Iterable, Dict, Union
 from django.forms.models import model_to_dict
 from django.contrib.auth import get_user_model
 
@@ -8,6 +8,9 @@ from environment.entities import (
     ResearchWorkspace,
     SharedWorkspace,
     SharedBucketObject,
+    QuotaInfo,
+    EntityScaffolding,
+    ResearchEnvironment,
 )
 from environment.models import (
     VMInstance,
@@ -18,9 +21,13 @@ from environment.models import (
 User = get_user_model()
 
 
-def serialize_workspaces(workspaces: Iterable[ResearchWorkspace]):
+def serialize_workspaces(
+    workspaces: Iterable[Union[ResearchWorkspace, EntityScaffolding]]
+):
     return [
         serialize_workspace_details(research_workspace)
+        if isinstance(research_workspace, ResearchWorkspace)
+        else serialize_entity_scaffolding(research_workspace)
         for research_workspace in workspaces
     ]
 
@@ -31,7 +38,12 @@ def serialize_workspace_details(workspace: ResearchWorkspace):
         "gcp_project_id": workspace.gcp_project_id,
         "gcp_billing_id": workspace.gcp_billing_id,
         "status": workspace.status.value,
-        "workbenches": [serialize_workbench(wb) for wb in workspace.workbenches],
+        "workbenches": [
+            serialize_workbench(wb)
+            if isinstance(wb, ResearchEnvironment)
+            else serialize_entity_scaffolding(wb)
+            for wb in workspace.workbenches
+        ],
     }
 
 
@@ -46,18 +58,31 @@ def serialize_workbench(workbench):
         "memory": workbench.memory,
         "region": workbench.region.value,
         "type": workbench.type.value,
-        "project": model_to_dict(workbench.project, fields=["pk", "slug"]),
+        "project": model_to_dict(
+            workbench.project, fields=["pk", "slug", "version", "title"]
+        ),
         "machine_type": workbench.machine_type,
         "disk_size": workbench.disk_size,
         "gpu_accelerator_type": workbench.gpu_accelerator_type,
     }
 
 
-def serialize_shared_workspaces(shared_workspaces: Iterable[SharedWorkspace]):
+def serialize_shared_workspaces(
+    shared_workspaces: Iterable[Union[SharedWorkspace, EntityScaffolding]]
+):
     return [
         serialize_shared_workspace_details(shared_workspace)
+        if isinstance(shared_workspace, SharedWorkspace)
+        else serialize_entity_scaffolding(shared_workspace)
         for shared_workspace in shared_workspaces
     ]
+
+
+def serialize_entity_scaffolding(scaffolding: EntityScaffolding) -> Dict:
+    return {
+        "status": scaffolding.status.value,
+        "gcp_project_id": scaffolding.gcp_project_id,
+    }
 
 
 def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
@@ -71,7 +96,15 @@ def serialize_shared_workspace_details(shared_workspace: SharedWorkspace):
 
 
 def serialize_user(user: User):
-    return model_to_dict(user, fields=["id", "username"])
+    model_to_dict(user, fields=["id", "username"])
+    return {
+        "id": user.id,
+        "username": user.username,
+        "is_authenticated": user.is_authenticated,
+        "can_view_admin_console": user.has_access_to_admin_console(),
+        "can_view_events": user.has_perms(["view_event_menu"]),
+        "is_admin": user.is_admin,
+    }
 
 
 def serialize_vm_instances(vm_instances: Iterable[VMInstance]):
@@ -144,6 +177,18 @@ def serialize_shared_bucket_objects(
             "size": obj.size,
             "modification_time": obj.modification_time,
             "full_path": obj.full_path,
+        }
+        for obj in objects
+    ]
+
+
+def serialize_quotas(objects: Iterable[QuotaInfo]) -> list[Dict]:
+    return [
+        {
+            "metric_name": obj.metric_name,
+            "limit": obj.limit,
+            "usage": obj.usage,
+            "usage_percentage": obj.usage_percentage,
         }
         for obj in objects
     ]
