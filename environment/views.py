@@ -676,7 +676,6 @@ def renew_environment_certificate(request):
         services.renew_environment_certificate(
             user=request.user,
             workspace_project_id=data["gcp_project_id"],
-            workbench_type=data["environment_type"],
             workbench_resource_id=data["instance_name"],
         )
         return JsonResponse({})

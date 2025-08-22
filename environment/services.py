@@ -675,11 +675,9 @@ def delete_environment(
 def renew_environment_certificate(
     user: User,
     workspace_project_id: str,
-    workbench_type: str,
     workbench_resource_id: str,
 ) -> str:
     response = api.renew_environment_certificate(
-        workbench_type=workbench_type,
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
