@@ -59,7 +59,7 @@
                                         </small>
                                     {% endif %}
                                 {% endif %}
-                            {% else %}
+                            {% elif workspace.status.value == "created" %}
                                 <small class="text-muted">(shared)</small>
                             {% endif %}
                         </div>
