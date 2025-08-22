@@ -105,7 +105,7 @@
                                                 </div>
                                                 <div class="col-md-3">
                                                     <small>
-                                                        {% if not environment.is_in_progress %}
+                                                        {% if not environment.is_in_progress and  environment.type.value == "rstudio" %}
                                                             {% environment_renew_certificate_modal environment button_type="modal_renew" %}
                                                         {% endif %}
                                                         <i>Environment type:</i>

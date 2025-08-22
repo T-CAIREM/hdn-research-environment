@@ -166,22 +166,20 @@ def environment_renew_certificate_modal(
     expiration_date_str = getattr(
         environment, "rstudio_ssl_certificate_expiration_date", None
     )
-    expiry_date_formatted = None
     is_expired = False
     show_renew_button = False
 
-    if expiration_date_str:
-        try:
-            now = datetime.datetime.now(datetime.timezone.utc)
-            expiry_date = datetime.datetime.strptime(
-                expiration_date_str, "%Y-%m-%dT%H:%M:%SZ"
-            )
-            expiry_date = expiry_date.replace(tzinfo=datetime.timezone.utc)
-            expiry_date_formatted = expiry_date.strftime("%Y-%m-%d")
-            is_expired = now > expiry_date
-            show_renew_button = (expiry_date - now).days <= 14
-        except Exception:
-            expiry_date_formatted = expiration_date_str
+    try:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        expiry_date = datetime.datetime.strptime(
+            expiration_date_str, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        expiry_date = expiry_date.replace(tzinfo=datetime.timezone.utc)
+        expiry_date_formatted = expiry_date.strftime("%Y-%m-%d")
+        is_expired = now > expiry_date
+        show_renew_button = (expiry_date - now).days <= 14
+    except Exception:
+        expiry_date_formatted = expiration_date_str
     button_class = "btn-danger" if is_expired else "btn-warning"
     modal_body = (
         f"Your SSL certificate expired on <strong>{expiry_date_formatted}</strong>. "
