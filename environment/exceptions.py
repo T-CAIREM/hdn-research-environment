@@ -149,7 +149,7 @@ class AddWorkbenchCollaboratorFailed(Exception):
 class RenewEnvironmentCertificateFailed(Exception):
     pass
 
- 
+
 class GetSimplifiedWorkspaceFailed(Exception):
     pass
 
