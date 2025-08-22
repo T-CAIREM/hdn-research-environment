@@ -148,3 +148,19 @@ class AddWorkbenchCollaboratorFailed(Exception):
 
 class PublishedProjectAccessFailed(Exception):
     pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass

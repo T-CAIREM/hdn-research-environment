@@ -466,3 +466,23 @@ def clear_all_notifications(
         "service_account_name": service_account_name,
     }
     return Request("DELETE", url="/workbench/notifications", json=json)
+
+
+@api_request
+def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
+    return Request("GET", url=f"/workspace/{email}/{workspace_project_id}")
+
+
+@api_request
+def get_shared_bucket(bucket_name: str, email: str) -> Request:
+    return Request("GET", url=f"/sharing/{email}/{bucket_name}")
+
+
+@api_request
+def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
+    return Request("GET", url=f"/workspace/{email}/{workspace_project_id}")
+
+
+@api_request
+def get_shared_bucket(bucket_name: str, email: str) -> Request:
+    return Request("GET", url=f"/sharing/{email}/{bucket_name}")
