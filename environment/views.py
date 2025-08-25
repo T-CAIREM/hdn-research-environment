@@ -1122,25 +1122,20 @@ def update_workspace_billing_account(
 @require_GET
 @login_required
 @cloud_identity_required
-def get_available_gpu_accelerators_partial(request):
-    vm_instance_id = request.GET.get("vm_instance")
+def get_available_machine_types_and_gpus_partial(request):
     region = request.GET.get("region")
-    vm_instance = VMInstance.objects.get(id=vm_instance_id, region__region=region)
-    gpu_accelerators = vm_instance.gpu_accelerators.all()
-    context = {"gpu_accelerators": gpu_accelerators}
-    return render(request, "environment/gpu_accelerator_partial.html", context=context)
-
-
-@require_GET
-@login_required
-@cloud_identity_required
-def get_available_machine_types_partial(request):
-    region = request.GET.get("region")
-    if region:
-        machine_types = VMInstance.objects.filter(region__region=region)
-        context = {"machine_types": machine_types}
-        return render(
-            request, "environment/machine_types_partial.html", context=context
-        )
-
-    return JsonResponse({"error": "Region parameter is required"}, status=400)
+    machine_types = VMInstance.objects.filter(region__region=region)
+    response = {
+        "machine_types": [
+            {"id": machine_type.id, "name": str(machine_type)}
+            for machine_type in machine_types
+        ],
+        "gpu_accelerators_by_machine_type": {
+            str(machine_type.id): [
+                {"name": gpu_accelerator.name, "label": str(gpu_accelerator)}
+                for gpu_accelerator in machine_type.gpu_accelerators.all()
+            ]
+            for machine_type in machine_types
+        },
+    }
+    return JsonResponse(response)

@@ -164,13 +164,8 @@ urlpatterns = [
         name="update_workspace_billing_account",
     ),
     path(
-        "gpu-accelerators/",
-        views.get_available_gpu_accelerators_partial,
-        name="get_available_gpu_accelerators_partial",
-    ),
-    path(
-        "machine-types/",
-        views.get_available_machine_types_partial,
-        name="get_available_machine_types_partial",
+        "machine-types-and-gpus/",
+        views.get_available_machine_types_and_gpus_partial,
+        name="get_available_machine_types_and_gpus_partial",
     ),
 ]
