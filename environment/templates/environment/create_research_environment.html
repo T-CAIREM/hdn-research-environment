@@ -127,7 +127,7 @@
     }
   }
 
-  function fetchMachineTypes(callback) {
+  function fetchMachineTypes() {
     var region = $("#id_region").val();
     if (region) {
       $.ajax({
@@ -137,19 +137,17 @@
         },
         success: function (data) {
           $("#id_machine_type").html(data);
-          if (callback) {
-            callback();
-          }
         }
       });
     }
   }
 
   $(document).ready(function () {
-    fetchMachineTypes(fetchGpuAccelerators);
+    fetchMachineTypes();
 
     $("#id_region").change(function () {
-      fetchMachineTypes(fetchGpuAccelerators);
+      fetchMachineTypes();
+      $("#id_gpu_accelerator").html('<option value="">---------</option>');
     });
 
     $("#id_machine_type").change(function () {
