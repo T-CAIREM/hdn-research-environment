@@ -18,6 +18,7 @@ from environment.entities import (
     SharedBucketObject,
     WorkspaceType,
     QuotaInfo,
+    RegionQuotas,
     CloudRole,
     DatasetsMonitoringEntry,
 )
@@ -167,15 +168,21 @@ def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject
     ]
 
 
-def deserialize_quotas(data) -> Iterable[QuotaInfo]:
+def deserialize_quotas(data) -> Iterable[RegionQuotas]:
     return [
-        QuotaInfo(
-            metric_name=quota["metric_name"],
-            limit=quota["limit"],
-            usage=quota["usage"],
-            usage_percentage=(quota["usage"] / quota["limit"]) * 100,
+        RegionQuotas(
+            region=region,
+            quotas=[
+                QuotaInfo(
+                    metric_name=quota["metric_name"],
+                    limit=quota["limit"],
+                    usage=quota["usage"],
+                    usage_percentage=(quota["usage"] / quota["limit"]) * 100,
+                )
+                for quota in quotas_list
+            ],
         )
-        for quota in data
+        for region, quotas_list in data.items()
     ]
 
 
