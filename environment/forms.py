@@ -64,6 +64,17 @@ class CreateWorkspaceForm(forms.Form):
         ]
 
 
+class MachineTypeField(forms.ModelChoiceField):
+    def to_python(self, value):
+        return int(value)
+
+    def validate(self, value):
+        if value is None:
+            raise ValidationError("Machine type is required.")
+        elif value not in VMInstance.objects.all().values_list("id", flat=True):
+            raise ValidationError(f"{value} is not a valid choice")
+
+
 class GPUAcceleratorField(forms.ModelChoiceField):
     def to_python(self, value):
         return value
@@ -95,7 +106,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     project_id = forms.ChoiceField(label="Project")
-    machine_type = forms.ModelChoiceField(
+    machine_type = MachineTypeField(
         label="Instance type",
         queryset=VMInstance.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -148,13 +159,9 @@ class CreateResearchEnvironmentForm(forms.Form):
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
 
-        region = self.data.get("region")
-        if region:
-            self.fields["machine_type"].queryset = VMInstance.objects.filter(
-                region__region=region
-            )
-        else:
-            self.fields["machine_type"].queryset = VMInstance.objects.none()
+    def clean_machine_type(self):
+        machine_type_id = self.cleaned_data.get("machine_type")
+        return VMInstance.objects.get(id=machine_type_id)
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
