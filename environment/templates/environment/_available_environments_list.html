@@ -68,8 +68,7 @@
                                 {% endif %}
                             {% elif workspace.status.value == "created" %}
                                 <small class="text-muted">(shared)</small>
-                            {% endif %}
-                {% else %}
+                            {% else %}
                     <small class="text-muted">(shared)</small>
                     {% if not workspace.gcp_billing_id and workspace.status.value == "created" %}
                         <div class="mt-2">
