@@ -412,22 +412,22 @@ def get_project(project_id: str) -> PublishedProject:
 
 
 def check_collaborator_project_access(collaborator_email: str, project_id: str) -> bool:
-    try:
-        project = PublishedProject.objects.get(id=project_id)
-        collaborator_user = UserModel.objects.get(
-            cloud_identity__email=collaborator_email
-        )
-        if (
-            not PublishedProject.objects.accessible_by(collaborator_user)
-            .filter(id=project_id)
-            .exists()
-        ):
-            raise PublishedProjectAccessFailed(
-                f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to project '{project.slug}'."
-            )
-        return True
-    except UserModel.DoesNotExist:
+    collaborator_user = (
+        UserModel.objects.filter(cloud_identity__email=collaborator_email)
+        .only("id")
+        .first()
+    )
+    if not collaborator_user:
         return
+    if (
+        not PublishedProject.objects.accessible_by(collaborator_user)
+        .filter(id=project_id)
+        .exists()
+    ):
+        raise PublishedProjectAccessFailed(
+            f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to currently chosen project."
+        )
+    return True
 
 
 def _get_projects_for_environments(
