@@ -30,6 +30,7 @@ from environment.entities import (
     CloudRole,
     DatasetsMonitoringEntry,
     ServiceError,
+    SimplifiedResearchWorkspace,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -135,6 +136,15 @@ def deserialize_workspace_details(
     )
 
 
+def deserialize_simplified_workspace_details(data: dict) -> SimplifiedResearchWorkspace:
+    return SimplifiedResearchWorkspace(
+        gcp_project_id=data["gcp_project_id"],
+        status=WorkspaceStatus(data["status"]),
+        owner=data["owner"],
+        **({"region": Region(data["region"])} if data.get("region") else {})
+    )
+
+
 def deserialize_shared_bucket_details(buckets_data: List[dict]) -> Iterable[SharedBucket]:
     return [
         SharedBucket(
@@ -189,6 +199,9 @@ def deserialize_workspaces(
         else deserialize_entity_scaffolding(workspace_data)
         for workspace_data in data
     ]
+
+def deserialize_simplified_workspace(data: dict):
+    return deserialize_simplified_workspace_details(data)
 
 
 def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
