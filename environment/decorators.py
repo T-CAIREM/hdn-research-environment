@@ -1,6 +1,8 @@
 from functools import wraps
 from typing import Callable
 from django.contrib import messages
+from django.http import JsonResponse
+from functools import wraps
 
 from django.db.models import Model
 from django.http import HttpRequest, HttpResponse
@@ -18,6 +20,16 @@ from environment.utilities import (
 View = Callable[[HttpRequest], HttpResponse]
 
 User = Model
+
+
+def api_login_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
 
 
 def _redirect_view_if_user(

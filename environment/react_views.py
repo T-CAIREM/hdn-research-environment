@@ -9,7 +9,6 @@ import json
 import re
 
 from environment.utilities import user_has_cloud_identity
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth import get_user_model
@@ -31,6 +30,7 @@ from environment.decorators import (
     require_DELETE,
     require_PATCH,
     billing_account_required,
+    api_login_required,
 )
 
 User = get_user_model()
@@ -41,7 +41,7 @@ ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_workspaces_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
@@ -52,7 +52,7 @@ def get_workspaces_list(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_shared_workspaces_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
@@ -68,7 +68,7 @@ def get_shared_workspaces_list(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_billing_accounts_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
@@ -77,13 +77,13 @@ def get_billing_accounts_list(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 def get_user(request):
     return JsonResponse({"code": 200, "user": serializers.serialize_user(request.user)})
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def create_workspace(request):
     data = json.loads(request.body)
@@ -102,7 +102,7 @@ def create_workspace(request):
 
 
 @require_DELETE
-@login_required
+@api_login_required
 @cloud_identity_required
 def delete_workspace(request):
     data = json.loads(request.body)
@@ -117,7 +117,7 @@ def delete_workspace(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def create_shared_workspace(request):
     data = json.loads(request.body)
@@ -135,7 +135,7 @@ def create_shared_workspace(request):
 
 
 @require_DELETE
-@login_required
+@api_login_required
 @cloud_identity_required
 def delete_shared_workspace(request):
     data = json.loads(request.body)
@@ -165,7 +165,7 @@ def get_environment_resource_options(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 def get_available_projects(request):
     user = User.objects.get(id=request.GET.get("user_id"))
     projects = services.get_available_projects(user)
@@ -173,7 +173,7 @@ def get_available_projects(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def create_research_environment(request, workspace_project_id):
     data = json.loads(request.body)
@@ -218,7 +218,7 @@ def create_research_environment(request, workspace_project_id):
 
 
 @require_DELETE
-@login_required
+@api_login_required
 @cloud_identity_required
 def delete_research_environment(request):
     data = json.loads(request.body)
@@ -233,7 +233,7 @@ def delete_research_environment(request):
 
 
 @require_PATCH
-@login_required
+@api_login_required
 @cloud_identity_required
 def stop_running_environment(request):
     data = json.loads(request.body)
@@ -248,7 +248,7 @@ def stop_running_environment(request):
 
 
 @require_PATCH
-@login_required
+@api_login_required
 @cloud_identity_required
 def start_stopped_environment(request):
     data = json.loads(request.body)
@@ -263,7 +263,7 @@ def start_stopped_environment(request):
 
 
 @require_PATCH
-@login_required
+@api_login_required
 @cloud_identity_required
 def change_environment_machine_type(request):
     data = json.loads(request.body)
@@ -282,7 +282,7 @@ def change_environment_machine_type(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def create_shared_bucket(request, workspace_id):
     data = json.loads(request.body)
@@ -306,7 +306,7 @@ def create_shared_bucket(request, workspace_id):
 
 
 @require_DELETE
-@login_required
+@api_login_required
 @cloud_identity_required
 def delete_shared_bucket(request):
     data = json.loads(request.body)
@@ -315,7 +315,7 @@ def delete_shared_bucket(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def share_bucket(request, shared_workspace_name, shared_bucket_name):
     data = json.loads(request.body)
@@ -344,7 +344,7 @@ def share_bucket(request, shared_workspace_name, shared_bucket_name):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_bucket_shares(request, shared_bucket_name):
     user = User.objects.get(id=request.GET.get("user_id"))
@@ -362,7 +362,7 @@ def get_bucket_shares(request, shared_bucket_name):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def revoke_shared_bucket_access(request, shared_bucket_name):
     data = json.loads(request.body)
@@ -376,7 +376,7 @@ def revoke_shared_bucket_access(request, shared_bucket_name):
 
 
 @require_POST
-@login_required
+@api_login_required
 def confirm_bucket_sharing(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
@@ -386,7 +386,7 @@ def confirm_bucket_sharing(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 def get_bucket_sharing_invitation(request):
     token = request.GET.get("token")
     if not token:
@@ -406,7 +406,7 @@ def get_bucket_sharing_invitation(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def share_billing_account(request, billing_account_id):
     data = json.loads(request.body)
@@ -428,7 +428,7 @@ def share_billing_account(request, billing_account_id):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_billing_shares(request, billing_account_id):
     user = User.objects.get(id=request.GET.get("user_id"))
@@ -446,7 +446,7 @@ def get_billing_shares(request, billing_account_id):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def revoke_billing_account_access(request, billing_account_id):
     data = json.loads(request.body)
@@ -459,7 +459,7 @@ def revoke_billing_account_access(request, billing_account_id):
 
 
 @require_POST
-@login_required
+@api_login_required
 def confirm_billing_account_sharing(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
@@ -469,7 +469,7 @@ def confirm_billing_account_sharing(request):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def generate_signed_url(request, bucket_name):
     data = json.loads(request.body)
@@ -486,7 +486,7 @@ def generate_signed_url(request, bucket_name):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_shared_bucket_content(request, bucket_name):
     subdir = request.GET.get("subdir")
@@ -505,7 +505,7 @@ def get_shared_bucket_content(request, bucket_name):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 def create_shared_bucket_directory(request, bucket_name):
     data = json.loads(request.body)
@@ -520,7 +520,7 @@ def create_shared_bucket_directory(request, bucket_name):
 
 
 @require_DELETE
-@login_required
+@api_login_required
 @cloud_identity_required
 def delete_shared_bucket_content(request, bucket_name):
     data = json.loads(request.body)
@@ -532,7 +532,7 @@ def delete_shared_bucket_content(request, bucket_name):
 
 
 @require_POST
-@login_required
+@api_login_required
 @cloud_identity_required
 @billing_account_required
 def update_workspace_billing_account(request):
@@ -554,7 +554,7 @@ def update_workspace_billing_account(request):
 
 
 @require_GET
-@login_required
+@api_login_required
 @cloud_identity_required
 def get_quotas(request, workspace_project_id, workspace_region):
     quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
@@ -563,7 +563,7 @@ def get_quotas(request, workspace_project_id, workspace_region):
 
 
 @require_POST
-@login_required
+@api_login_required
 def identity_provisioning(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
