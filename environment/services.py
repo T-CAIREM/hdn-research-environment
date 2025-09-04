@@ -21,12 +21,6 @@ from environment.deserializers import (
     deserialize_datasets_monitoring_data,
     deserialize_simplified_workspace,
 )
-from environment.api_types import (
-    WorkspaceListResponse,
-    SharedWorkspaceListResponse,
-    RawWorkspacesData,
-    RawSharedWorkspacesData,
-)
 from environment.decorators import handle_api_error
 from environment.entities import (
     ResearchEnvironment,
@@ -36,7 +30,6 @@ from environment.entities import (
     SharedBucketObject,
     QuotaInfo,
     DatasetsMonitoringEntry,
-    ServiceError,
 )
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
@@ -100,34 +93,6 @@ DEFAULT_REGION = "us-central1"
 logger = logging.getLogger(__name__)
 
 
-def _parse_workspace_list_response(response_data: dict) -> RawWorkspacesData:
-    """Parse and validate workspace list API response."""
-    try:
-        # Handle both direct list and wrapped response formats
-        if "workspaces" in response_data:
-            workspace_list_response: WorkspaceListResponse = response_data
-            return workspace_list_response["workspaces"]
-        else:
-            # Assume direct list format for backward compatibility
-            return response_data
-    except (KeyError, TypeError) as e:
-        logger.error(f"Failed to parse workspace list response: {e}")
-        raise ValueError(f"Invalid workspace list response format: {e}")
-
-
-def _parse_shared_workspace_list_response(response_data: dict) -> RawSharedWorkspacesData:
-    """Parse and validate shared workspace list API response."""
-    try:
-        # Handle both direct list and wrapped response formats
-        if "shared_workspaces" in response_data:
-            shared_workspace_list_response: SharedWorkspaceListResponse = response_data
-            return shared_workspace_list_response["shared_workspaces"]
-        else:
-            # Assume direct list format for backward compatibility
-            return response_data
-    except (KeyError, TypeError) as e:
-        logger.error(f"Failed to parse shared workspace list response: {e}")
-        raise ValueError(f"Invalid shared workspace list response format: {e}")
 
 
 def _handle_api_error(response, operation_name: str, exception_class, additional_context: dict = None):
@@ -576,8 +541,7 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
 
     # Process through full workspace deserialization to capture all service errors
     raw_response = response.json()
-    workspace_data = _parse_workspace_list_response(raw_response)
-    workspaces = deserialize_workspaces(workspace_data, projects)
+    workspaces = deserialize_workspaces(raw_response["workspaces"], projects)
     
     # Extract all environments from all workspaces
     all_environments = []
@@ -706,8 +670,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
             {"user_email": email}
         )
     raw_response = response.json()
-    workspace_data = _parse_workspace_list_response(raw_response)
-    return deserialize_workspaces(workspace_data, projects)
+    return deserialize_workspaces(raw_response["workspaces"], projects)
 
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
     response = api.list_quotas_data(workspace_project_id, region)
@@ -731,8 +694,7 @@ def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
             {"user_email": user.cloud_identity.email}
         )
     raw_response = response.json()
-    shared_workspace_data = _parse_shared_workspace_list_response(raw_response)
-    return deserialize_shared_workspaces(shared_workspace_data)
+    return deserialize_shared_workspaces(raw_response["shared_workspaces"])
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:

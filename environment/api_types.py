@@ -62,15 +62,6 @@ class ScaffoldingResponse(TypedDict):
     status: str
 
 
-class WorkspaceListResponse(TypedDict):
-    """Response from GET /api/workspaces endpoint."""
-    workspaces: List[WorkspaceResponse]
-    scaffolding: NotRequired[List[ScaffoldingResponse]]
-
-
-class SingleWorkspaceResponse(TypedDict):
-    """Response from GET /api/workspaces/{id} endpoint."""
-    workspace: WorkspaceResponse
 
 
 class SharedBucketResponse(TypedDict):
@@ -90,19 +81,8 @@ class SharedWorkspaceResponse(TypedDict):
     service_errors: List[ServiceErrorResponse]
 
 
-class SharedWorkspaceListResponse(TypedDict):
-    """Response from GET /api/shared-workspaces endpoint."""
-    shared_workspaces: List[SharedWorkspaceResponse]
 
 
-class SingleSharedWorkspaceResponse(TypedDict):
-    """Response from GET /api/shared-workspaces/{id} endpoint."""
-    shared_workspace: SharedWorkspaceResponse
-
-
-# Union types for different API response patterns
-APIWorkspaceData = Union[WorkspaceListResponse, SingleWorkspaceResponse]
-APISharedWorkspaceData = Union[SharedWorkspaceListResponse, SingleSharedWorkspaceResponse]
 
 # Type aliases for commonly used response data
 RawWorkspacesData = List[WorkspaceResponse]
