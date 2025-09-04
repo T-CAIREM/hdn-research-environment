@@ -11,58 +11,72 @@ import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
 from environment.decorators import handle_api_error
-from environment.deserializers import (_project_data_group,
-                                       deserialize_cloud_roles,
-                                       deserialize_datasets_monitoring_data,
-                                       deserialize_quotas,
-                                       deserialize_shared_bucket_objects,
-                                       deserialize_shared_workspaces,
-                                       deserialize_simplified_workspace,
-                                       deserialize_workflow_details,
-                                       deserialize_workspaces)
-from environment.entities import (DatasetsMonitoringEntry, QuotaInfo,
-                                  ResearchEnvironment, ResearchWorkspace,
-                                  SharedBucket, SharedBucketObject,
-                                  SharedWorkspace)
+from environment.deserializers import (
+    _project_data_group,
+    deserialize_cloud_roles,
+    deserialize_datasets_monitoring_data,
+    deserialize_quotas,
+    deserialize_shared_bucket_objects,
+    deserialize_shared_workspaces,
+    deserialize_simplified_workspace,
+    deserialize_workflow_details,
+    deserialize_workspaces,
+)
+from environment.entities import (
+    DatasetsMonitoringEntry,
+    QuotaInfo,
+    ResearchEnvironment,
+    ResearchWorkspace,
+    SharedBucket,
+    SharedBucketObject,
+    SharedWorkspace,
+)
 from environment.entities import Workflow as ApiWorkflow
-from environment.exceptions import (AddRolesToCloudGroupFailed,
-                                    AddWorkbenchCollaboratorFailed,
-                                    BillingAccessRevokationFailed,
-                                    BillingSharingFailed,
-                                    BucketAccessRevokationFailed,
-                                    BucketSharingFailed,
-                                    ChangeEnvironmentInstanceTypeFailed,
-                                    CreateCloudGroupFailed,
-                                    CreateSharedBucketDirectoryFailed,
-                                    CreateSharedBucketFailed,
-                                    CreateWorkspaceFailed,
-                                    DeleteCloudGroupFailed,
-                                    DeleteEnvironmentFailed,
-                                    DeleteSharedBucketContentFailed,
-                                    DeleteSharedBucketFailed,
-                                    DeleteWorkspaceFailed,
-                                    EnvironmentCreationFailed,
-                                    GenerateSignedUrlFailed,
-                                    GetAvailableEnvironmentsFailed,
-                                    GetBillingAccountsListFailed,
-                                    GetGroupIAMRolesFailed,
-                                    GetGroupsIAMRolesFailed,
-                                    GetMonitoringDatasetsFailed,
-                                    GetSharedBucketContentFailed,
-                                    GetSharedBucketFailed,
-                                    GetSimplifiedWorkspaceFailed,
-                                    GetWorkflowFailed,
-                                    IdentityProvisioningFailed,
-                                    InvitedUserIsAccountOwner,
-                                    ListGroupRolesFailed,
-                                    RemoveRolesFromCloudGroupFailed,
-                                    RemoveWorkbenchCollaboratorFailed,
-                                    StartEnvironmentFailed,
-                                    StopEnvironmentFailed,
-                                    UpdateWorkspaceBillingAccountFailed)
-from environment.models import (BillingAccountSharingInvite,
-                                BucketSharingInvite, CloudGroup, CloudIdentity,
-                                VMInstance, Workflow)
+from environment.exceptions import (
+    AddRolesToCloudGroupFailed,
+    AddWorkbenchCollaboratorFailed,
+    BillingAccessRevokationFailed,
+    BillingSharingFailed,
+    BucketAccessRevokationFailed,
+    BucketSharingFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    CreateCloudGroupFailed,
+    CreateSharedBucketDirectoryFailed,
+    CreateSharedBucketFailed,
+    CreateWorkspaceFailed,
+    DeleteCloudGroupFailed,
+    DeleteEnvironmentFailed,
+    DeleteSharedBucketContentFailed,
+    DeleteSharedBucketFailed,
+    DeleteWorkspaceFailed,
+    EnvironmentCreationFailed,
+    GenerateSignedUrlFailed,
+    GetAvailableEnvironmentsFailed,
+    GetBillingAccountsListFailed,
+    GetGroupIAMRolesFailed,
+    GetGroupsIAMRolesFailed,
+    GetMonitoringDatasetsFailed,
+    GetSharedBucketContentFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
+    GetWorkflowFailed,
+    IdentityProvisioningFailed,
+    InvitedUserIsAccountOwner,
+    ListGroupRolesFailed,
+    RemoveRolesFromCloudGroupFailed,
+    RemoveWorkbenchCollaboratorFailed,
+    StartEnvironmentFailed,
+    StopEnvironmentFailed,
+    UpdateWorkspaceBillingAccountFailed,
+)
+from environment.models import (
+    BillingAccountSharingInvite,
+    BucketSharingInvite,
+    CloudGroup,
+    CloudIdentity,
+    VMInstance,
+    Workflow,
+)
 from environment.utilities import inner_join_iterators, left_join_iterators
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -93,14 +107,13 @@ def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> CloudIdentity:
     gcp_user_id = user.username
-    response = api.create_cloud_identity(
+    body = api.create_cloud_identity(
         gcp_user_id,
         user.profile.first_names,
         user.profile.last_name,
         password,
         recovery_email,
     )
-    body = response.json()
     identity = CloudIdentity.objects.create(
         user=user,
         gcp_user_id=gcp_user_id,
@@ -314,7 +327,8 @@ def create_shared_workspace(user: User, billing_account_id: str):
         user_email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    response_json = response.json()
+    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
     return response
 
 
@@ -337,7 +351,8 @@ def delete_workspace(
         billing_account_id=billing_account_id,
         region=region,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    response_json = response.json()
+    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
     return response
 
 
@@ -356,7 +371,8 @@ def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id:
         workspace_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    response_json = response.json()
+    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
     return response
 
 
@@ -426,10 +442,10 @@ def create_research_environment(
         sharing_bucket_identifiers,
         collaborators,
     )
-    response = api.create_workbench(**kwargs)
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    response_data = api.create_workbench(**kwargs)
+    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
 
-    return response.json()
+    return response_data
 
 
 def get_available_projects(user: User) -> Iterable[Any]:
@@ -477,9 +493,9 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     projects = PublishedProject.objects.accessible_by(user)
     # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
-    response = api.get_workspace_list(email)
-    # Process through full workspace deserialization to capture all service errors
-    raw_response = response.json()
+    raw_response = api.get_workspace_list(
+        email
+    )  # Process through full workspace deserialization to capture all service errors
     workspaces = deserialize_workspaces(raw_response["workspaces"], projects)
 
     # Extract all environments from all workspaces
@@ -603,8 +619,7 @@ def match_workspace_with_billing_id(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     projects = PublishedProject.objects.accessible_by(user)
-    response = api.get_workspace_list(email)
-    raw_response = response.json()
+    raw_response = api.get_workspace_list(email)
     return deserialize_workspaces(raw_response["workspaces"], projects)
 
 
@@ -617,8 +632,8 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     },
 )
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
-    response = api.list_quotas_data(workspace_project_id, region)
-    return deserialize_quotas(response.json())
+    response_data = api.list_quotas_data(workspace_project_id, region)
+    return deserialize_quotas(response_data)
 
 
 @handle_api_error(
@@ -627,8 +642,7 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
     lambda user: {"user_email": user.cloud_identity.email},
 )
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
-    response = api.get_shared_workspaces(user.cloud_identity.email)
-    raw_response = response.json()
+    raw_response = api.get_shared_workspaces(user.cloud_identity.email)
     return deserialize_shared_workspaces(raw_response["shared_workspaces"])
 
 
@@ -662,9 +676,9 @@ def stop_running_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
 
-    return response.json()
+    return response_data
 
 
 @handle_api_error(
@@ -689,9 +703,9 @@ def start_stopped_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
 
-    return response.json()
+    return response_data
 
 
 @handle_api_error(
@@ -719,9 +733,9 @@ def change_environment_machine_type(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
 
-    return response.json()
+    return response_data
 
 
 @handle_api_error(
@@ -746,9 +760,9 @@ def delete_environment(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
 
-    return response.json()
+    return response_data
 
 
 @handle_api_error(
@@ -863,9 +877,9 @@ def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
     },
 )
 def get_execution(execution_resource_name) -> ApiWorkflow:
-    response = api.get_workflow(execution_resource_name)
-    if response.json():
-        return deserialize_workflow_details(response.json())
+    response_data = api.get_workflow(execution_resource_name)
+    if response_data:
+        return deserialize_workflow_details(response_data)
 
 
 def mark_workflow_as_finished(execution_resource_name: str):
@@ -925,14 +939,12 @@ def get_running_workflows(user: User):
 )
 def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) -> str:
     user_email = user.cloud_identity.email
-    response = api.generate_signed_url(
+    body = api.generate_signed_url(
         bucket_name=bucket_name,
         size=size,
         filename=filename,
         user_email=user_email,
     )
-    body = response.json()
-
     return body["signed_url"]
 
 
@@ -949,10 +961,10 @@ def get_shared_bucket_content(
     bucket_name: str, user: User, subdir: str = ""
 ) -> Iterable[SharedBucketObject]:
     user_email = user.cloud_identity.email
-    response = api.get_shared_bucket_content(
+    response_data = api.get_shared_bucket_content(
         bucket_name=bucket_name, subdir=subdir, user_email=user_email
     )
-    return deserialize_shared_bucket_objects(response.json())
+    return deserialize_shared_bucket_objects(response_data)
 
 
 @handle_api_error(
@@ -1036,8 +1048,8 @@ def delete_cloud_group(group_name: str):
 
 @handle_api_error("Cloud Group Roles List", ListGroupRolesFailed, lambda: {})
 def list_cloud_group_roles():
-    response = api.list_cloud_group_roles()
-    return deserialize_cloud_roles(response.json())
+    response_data = api.list_cloud_group_roles()
+    return deserialize_cloud_roles(response_data)
 
 
 @handle_api_error(
@@ -1046,16 +1058,16 @@ def list_cloud_group_roles():
     lambda group_name: {"group_name": group_name},
 )
 def get_cloud_group_iam_roles(group_name: str):
-    response = api.get_cloud_group_iam_roles(group_name)
-    return deserialize_cloud_roles(response.json())
+    response_data = api.get_cloud_group_iam_roles(group_name)
+    return deserialize_cloud_roles(response_data)
 
 
 @handle_api_error(
     "Cloud Groups IAM Roles Retrieval", GetGroupsIAMRolesFailed, lambda: {}
 )
 def get_cloud_groups_iam_roles():
-    response = api.get_cloud_groups_iam_roles()
-    return response.json()
+    response_data = api.get_cloud_groups_iam_roles()
+    return response_data
 
 
 @handle_api_error(
@@ -1092,8 +1104,8 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
     "Monitoring Datasets Retrieval", GetMonitoringDatasetsFailed, lambda: {}
 )
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
-    response = api.get_datasets_monitoring_data()
-    return deserialize_datasets_monitoring_data(response.json())
+    response_data = api.get_datasets_monitoring_data()
+    return deserialize_datasets_monitoring_data(response_data)
 
 
 @handle_api_error(
