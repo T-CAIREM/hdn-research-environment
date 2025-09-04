@@ -9,9 +9,11 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 
-from environment.utilities import (_handle_api_error,
-                                   user_has_access_billing_account,
-                                   user_has_cloud_identity)
+from environment.utilities import (
+    _handle_api_error,
+    user_has_access_billing_account,
+    user_has_cloud_identity,
+)
 
 View = Callable[[HttpRequest], HttpResponse]
 
@@ -81,18 +83,17 @@ def handle_api_error(
     operation_name: str,
     exception_class,
     additional_context_func: Callable = None,
-    return_json: bool = True,
-    process_response_func: Callable = None,
 ):
     """
     Decorator that handles API errors automatically.
+
+    IMPORTANT: This decorator ONLY handles errors. It always returns the raw Response object.
+    The decorated function is responsible for calling response.json() when needed.
 
     Args:
         operation_name: Human-readable name of the operation
         exception_class: The exception class to raise on error
         additional_context_func: Optional function that takes function args/kwargs and returns additional context dict
-        return_json: Whether to automatically call .json() on successful responses (default: True)
-        process_response_func: Optional function that takes (response, *args, **kwargs) and processes the response
 
     The decorated function must return a response object with .ok attribute.
     """
@@ -100,7 +101,6 @@ def handle_api_error(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-
             response = func(*args, **kwargs)
 
             # Check if response indicates an error
@@ -120,16 +120,8 @@ def handle_api_error(
                     response, operation_name, exception_class, additional_context
                 )
 
-            # Process response if needed
-            if process_response_func:
-                process_response_func(response, *args, **kwargs)
-
-            # Return processed response or raw response
-            return (
-                response.json()
-                if return_json and hasattr(response, "json")
-                else response
-            )
+            # Always return the raw response - function handles JSON parsing
+            return response
 
         return wrapper
 

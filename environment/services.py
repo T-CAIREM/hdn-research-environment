@@ -107,13 +107,14 @@ def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> CloudIdentity:
     gcp_user_id = user.username
-    body = api.create_cloud_identity(
+    response = api.create_cloud_identity(
         gcp_user_id,
         user.profile.first_names,
         user.profile.last_name,
         password,
         recovery_email,
     )
+    body = response.json()
     identity = CloudIdentity.objects.create(
         user=user,
         gcp_user_id=gcp_user_id,
@@ -129,7 +130,7 @@ def create_cloud_identity(
 )
 def get_billing_accounts_list(user: User) -> list[dict]:
     response = api.list_billing_accounts(user.cloud_identity.email)
-    return response
+    return response.json()
 
 
 def is_billing_account_owner(user: User, billing_account_id: str):
@@ -222,7 +223,6 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
         "user_email": user_email,
         "billing_account_id": billing_account_id,
     },
-    return_json=False,
 )
 def share_billing_account(owner_email: str, user_email: str, billing_account_id: str):
     response = api.share_billing_account(
@@ -252,7 +252,6 @@ def revoke_billing_account_access(billing_account_sharing_invite_id: int):
         "user_email": billing_account_sharing_invite.user.cloud_identity.email,
         "billing_account_id": billing_account_sharing_invite.billing_account_id,
     },
-    return_json=False,
 )
 def _revoke_consumed_billing_account_access(
     billing_account_sharing_invite: BillingAccountSharingInvite,
@@ -297,10 +296,6 @@ def invite_user_to_shared_bucket(
         "billing_account_id": billing_account_id,
         "region": region,
     },
-    True,
-    lambda response, user, *args, **kwargs: persist_workflow(
-        user=user, workflow_id=response.json()["workflow_id"]
-    ),
 )
 def create_workspace(user: User, billing_account_id: str, region: str):
     response = api.create_workspace(
@@ -311,6 +306,8 @@ def create_workspace(user: User, billing_account_id: str, region: str):
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
     )
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
 
@@ -327,8 +324,8 @@ def create_shared_workspace(user: User, billing_account_id: str):
         user_email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
     )
-    response_json = response.json()
-    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
 
@@ -351,8 +348,8 @@ def delete_workspace(
         billing_account_id=billing_account_id,
         region=region,
     )
-    response_json = response.json()
-    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
 
@@ -371,8 +368,8 @@ def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id:
         workspace_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
     )
-    response_json = response.json()
-    persist_workflow(user=user, workflow_id=response_json["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
 
@@ -442,10 +439,10 @@ def create_research_environment(
         sharing_bucket_identifiers,
         collaborators,
     )
-    response_data = api.create_workbench(**kwargs)
-    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
-
-    return response_data
+    response = api.create_workbench(**kwargs)
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
 def get_available_projects(user: User) -> Iterable[Any]:
@@ -493,10 +490,10 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     projects = PublishedProject.objects.accessible_by(user)
     # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
-    raw_response = api.get_workspace_list(
-        email
-    )  # Process through full workspace deserialization to capture all service errors
-    workspaces = deserialize_workspaces(raw_response["workspaces"], projects)
+    response = api.get_workspace_list(email)
+    data = response.json()
+    # Process through full workspace deserialization to capture all service errors
+    workspaces = deserialize_workspaces(data["workspaces"], projects)
 
     # Extract all environments from all workspaces
     all_environments = []
@@ -619,8 +616,9 @@ def match_workspace_with_billing_id(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     projects = PublishedProject.objects.accessible_by(user)
-    raw_response = api.get_workspace_list(email)
-    return deserialize_workspaces(raw_response["workspaces"], projects)
+    response = api.get_workspace_list(email)
+    data = response.json()
+    return deserialize_workspaces(data["workspaces"], projects)
 
 
 @handle_api_error(
@@ -632,8 +630,9 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     },
 )
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
-    response_data = api.list_quotas_data(workspace_project_id, region)
-    return deserialize_quotas(response_data)
+    response = api.list_quotas_data(workspace_project_id, region)
+    data = response.json()
+    return deserialize_quotas(data)
 
 
 @handle_api_error(
@@ -642,8 +641,9 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
     lambda user: {"user_email": user.cloud_identity.email},
 )
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
-    raw_response = api.get_shared_workspaces(user.cloud_identity.email)
-    return deserialize_shared_workspaces(raw_response["shared_workspaces"])
+    response = api.get_shared_workspaces(user.cloud_identity.email)
+    data = response.json()
+    return deserialize_shared_workspaces(data["shared_workspaces"])
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
@@ -676,9 +676,9 @@ def stop_running_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
-
-    return response_data
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
 @handle_api_error(
@@ -703,9 +703,9 @@ def start_stopped_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
-
-    return response_data
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
 @handle_api_error(
@@ -733,9 +733,9 @@ def change_environment_machine_type(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
-
-    return response_data
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
 @handle_api_error(
@@ -760,9 +760,9 @@ def delete_environment(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    persist_workflow(user=user, workflow_id=response_data["workflow_id"])
-
-    return response_data
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
 @handle_api_error(
@@ -774,7 +774,6 @@ def delete_environment(
         "user_defined_bucket_name": user_defined_bucket_name,
         "workspace_project_id": workspace_project_id,
     },
-    return_json=False,
 )
 def create_shared_bucket(
     region: str,
@@ -795,7 +794,6 @@ def create_shared_bucket(
     "Shared Bucket Deletion",
     DeleteSharedBucketFailed,
     lambda bucket_name: {"bucket_name": bucket_name},
-    return_json=False,
 )
 def delete_shared_bucket(bucket_name: str):
     response = api.delete_shared_bucket(
@@ -814,7 +812,6 @@ def delete_shared_bucket(bucket_name: str):
         "workspace_project_id": workspace_project_id,
         "permissions": permissions,
     },
-    return_json=False,
 )
 def share_bucket(
     owner_email: str,
@@ -852,7 +849,6 @@ def revoke_shared_bucket_access(bucket_sharing_invite_id: str):
         "user_email": bucket_sharing_invite.user.cloud_identity.email,
         "bucket_name": bucket_sharing_invite.shared_bucket_name,
     },
-    return_json=False,
 )
 def _revoke_consumed_shared_bucket_access(bucket_sharing_invite: BucketSharingInvite):
     response = api.revoke_shared_bucket_access(
@@ -877,9 +873,10 @@ def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
     },
 )
 def get_execution(execution_resource_name) -> ApiWorkflow:
-    response_data = api.get_workflow(execution_resource_name)
-    if response_data:
-        return deserialize_workflow_details(response_data)
+    response = api.get_workflow(execution_resource_name)
+    data = response.json()
+    if data:
+        return deserialize_workflow_details(data)
 
 
 def mark_workflow_as_finished(execution_resource_name: str):
@@ -939,13 +936,14 @@ def get_running_workflows(user: User):
 )
 def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) -> str:
     user_email = user.cloud_identity.email
-    body = api.generate_signed_url(
+    response = api.generate_signed_url(
         bucket_name=bucket_name,
         size=size,
         filename=filename,
         user_email=user_email,
     )
-    return body["signed_url"]
+    data = response.json()
+    return data["signed_url"]
 
 
 @handle_api_error(
@@ -961,10 +959,11 @@ def get_shared_bucket_content(
     bucket_name: str, user: User, subdir: str = ""
 ) -> Iterable[SharedBucketObject]:
     user_email = user.cloud_identity.email
-    response_data = api.get_shared_bucket_content(
+    response = api.get_shared_bucket_content(
         bucket_name=bucket_name, subdir=subdir, user_email=user_email
     )
-    return deserialize_shared_bucket_objects(response_data)
+    data = response.json()
+    return deserialize_shared_bucket_objects(data)
 
 
 @handle_api_error(
@@ -976,7 +975,6 @@ def get_shared_bucket_content(
         "directory_name": directory_name,
         "user_email": user.cloud_identity.email,
     },
-    return_json=False,
 )
 def create_shared_bucket_directory(
     bucket_name: str, parent_path: str, directory_name: str, user: User
@@ -999,7 +997,6 @@ def create_shared_bucket_directory(
         "full_path": full_path,
         "user_email": user.cloud_identity.email,
     },
-    return_json=False,
 )
 def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
     user_email = user.cloud_identity.email
@@ -1026,7 +1023,6 @@ def remove_user_from_cloud_group(user: User, cloud_group_list: list[CloudGroup])
         "group_name": group_name,
         "description": description,
     },
-    return_json=False,
 )
 def create_cloud_group(group_name: str, description: str):
     response = api.create_cloud_user_group(group_name, description)
@@ -1038,7 +1034,6 @@ def create_cloud_group(group_name: str, description: str):
     "Cloud Group Deletion",
     DeleteCloudGroupFailed,
     lambda group_name: {"group_name": group_name},
-    return_json=False,
 )
 def delete_cloud_group(group_name: str):
     response = api.delete_cloud_user_group(group_name)
@@ -1048,8 +1043,9 @@ def delete_cloud_group(group_name: str):
 
 @handle_api_error("Cloud Group Roles List", ListGroupRolesFailed, lambda: {})
 def list_cloud_group_roles():
-    response_data = api.list_cloud_group_roles()
-    return deserialize_cloud_roles(response_data)
+    response = api.list_cloud_group_roles()
+    data = response.json()
+    return deserialize_cloud_roles(data)
 
 
 @handle_api_error(
@@ -1058,23 +1054,23 @@ def list_cloud_group_roles():
     lambda group_name: {"group_name": group_name},
 )
 def get_cloud_group_iam_roles(group_name: str):
-    response_data = api.get_cloud_group_iam_roles(group_name)
-    return deserialize_cloud_roles(response_data)
+    response = api.get_cloud_group_iam_roles(group_name)
+    data = response.json()
+    return deserialize_cloud_roles(data)
 
 
 @handle_api_error(
     "Cloud Groups IAM Roles Retrieval", GetGroupsIAMRolesFailed, lambda: {}
 )
 def get_cloud_groups_iam_roles():
-    response_data = api.get_cloud_groups_iam_roles()
-    return response_data
+    response = api.get_cloud_groups_iam_roles()
+    return response.json()
 
 
 @handle_api_error(
     "Cloud Group Roles Addition",
     AddRolesToCloudGroupFailed,
     lambda group_name, role_list: {"group_name": group_name, "role_list": role_list},
-    return_json=False,
 )
 def add_roles_to_cloud_group(group_name: str, role_list: list[str]):
     response = api.add_roles_to_cloud_group(group_name, role_list)
@@ -1085,7 +1081,6 @@ def add_roles_to_cloud_group(group_name: str, role_list: list[str]):
     "Cloud Group Roles Removal",
     RemoveRolesFromCloudGroupFailed,
     lambda group_name, role_list: {"group_name": group_name, "role_list": role_list},
-    return_json=False,
 )
 def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
     response = api.remove_roles_from_cloud_group(group_name, role_list)
@@ -1104,8 +1099,9 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
     "Monitoring Datasets Retrieval", GetMonitoringDatasetsFailed, lambda: {}
 )
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
-    response_data = api.get_datasets_monitoring_data()
-    return deserialize_datasets_monitoring_data(response_data)
+    response = api.get_datasets_monitoring_data()
+    data = response.json()
+    return deserialize_datasets_monitoring_data(data)
 
 
 @handle_api_error(
@@ -1115,7 +1111,6 @@ def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
         "workspace_project_id": workspace_project_id,
         "billing_account_id": billing_account_id,
     },
-    return_json=False,
 )
 def update_workspace_billing_account(
     workspace_project_id: str, billing_account_id: str
@@ -1159,7 +1154,6 @@ def get_workbench_collaborators(
         "service_account_name": service_account_name,
         "collaborator_email": collaborator_email,
     },
-    return_json=False,
 )
 def add_workbench_collaborator(
     workspace_project_id: str, service_account_name: str, collaborator_email: str
@@ -1180,7 +1174,6 @@ def add_workbench_collaborator(
         "service_account_name": service_account_name,
         "collaborator_email": collaborator_email,
     },
-    return_json=False,
 )
 def remove_workbench_collaborator(
     workspace_project_id: str, service_account_name: str, collaborator_email: str
