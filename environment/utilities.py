@@ -1,7 +1,13 @@
+import logging
+import traceback
+from functools import wraps
 from typing import Callable, Iterator, Optional, Tuple, TypeVar
 
 from django.db.models import Model
+
 from environment.entities import ServiceError
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -60,7 +66,10 @@ def has_error_type(workspace_or_workbench, error_type: str) -> bool:
     """Generic function to check if workspace or workbench has a specific error type."""
     if not has_service_errors(workspace_or_workbench):
         return False
-    return any(error.error_type == error_type for error in workspace_or_workbench.service_errors)
+    return any(
+        error.error_type == error_type
+        for error in workspace_or_workbench.service_errors
+    )
 
 
 def has_billing_error(workspace_or_workbench) -> bool:
@@ -82,7 +91,11 @@ def get_errors_by_type(workspace_or_workbench, error_type: str) -> list:
     """Get all errors of a specific type."""
     if not has_service_errors(workspace_or_workbench):
         return []
-    return [error for error in workspace_or_workbench.service_errors if error.error_type == error_type]
+    return [
+        error
+        for error in workspace_or_workbench.service_errors
+        if error.error_type == error_type
+    ]
 
 
 def get_critical_errors(workspace_or_workbench) -> list:
@@ -90,8 +103,11 @@ def get_critical_errors(workspace_or_workbench) -> list:
     critical_error_types = ["permission_denied", "not_found", "billing_disabled"]
     if not has_service_errors(workspace_or_workbench):
         return []
-    return [error for error in workspace_or_workbench.service_errors 
-            if error.error_type in critical_error_types]
+    return [
+        error
+        for error in workspace_or_workbench.service_errors
+        if error.error_type in critical_error_types
+    ]
 
 
 def has_billing_issues(workspace) -> bool:
@@ -102,19 +118,25 @@ def has_billing_issues(workspace) -> bool:
     # Check service errors first
     if has_billing_error(workspace):
         return True
-    
+
     # Additional validation: Check if billing account is properly configured
     if not workspace.gcp_billing_id:
         return True  # No billing account attached
-    
+
     # Check workspace accessibility (covers billing account access issues)
-    if hasattr(workspace, 'is_accessible') and not workspace.is_accessible:
+    if hasattr(workspace, "is_accessible") and not workspace.is_accessible:
         # Check if the access denial is billing-related
-        if hasattr(workspace, 'access_denial_reason') and workspace.access_denial_reason:
+        if (
+            hasattr(workspace, "access_denial_reason")
+            and workspace.access_denial_reason
+        ):
             billing_keywords = ["billing", "account", "closed", "inactive", "revoked"]
-            if any(keyword in workspace.access_denial_reason.lower() for keyword in billing_keywords):
+            if any(
+                keyword in workspace.access_denial_reason.lower()
+                for keyword in billing_keywords
+            ):
                 return True
-    
+
     return False
 
 
@@ -128,7 +150,9 @@ def requires_billing_change(workspace) -> bool:
 
 def get_billing_link(workspace_id: str) -> str:
     """Generate billing enable link for a workspace."""
-    return f"https://console.developers.google.com/billing/enable?project={workspace_id}"
+    return (
+        f"https://console.developers.google.com/billing/enable?project={workspace_id}"
+    )
 
 
 def format_error_message(error: ServiceError) -> str:
@@ -141,7 +165,7 @@ def format_error_message(error: ServiceError) -> str:
         "not_found": lambda e: f"❓ Resource not found: {e.message}",
         "unknown": lambda e: f"❌ Error: {e.message}",
     }
-    
+
     formatter = error_formats.get(error.error_type, error_formats["unknown"])
     return formatter(error)
 
@@ -150,7 +174,9 @@ def get_error_action_text(error: ServiceError) -> Optional[str]:
     """Get action text for error types that have user actions."""
     action_text_map = {
         "billing_disabled": "Enable billing",
-        "quota_exceeded": "Retry later" if hasattr(error, 'can_retry') and error.can_retry else None,
+        "quota_exceeded": (
+            "Retry later" if hasattr(error, "can_retry") and error.can_retry else None
+        ),
     }
     return action_text_map.get(error.error_type)
 
@@ -179,7 +205,7 @@ def get_error_severity(error: ServiceError) -> str:
     """Get error severity level."""
     severity_map = {
         "billing_disabled": "critical",
-        "permission_denied": "critical", 
+        "permission_denied": "critical",
         "not_found": "critical",
         "api_not_enabled": "warning",
         "quota_exceeded": "warning",
@@ -205,16 +231,88 @@ def workspace_is_functional(workspace) -> bool:
     # First check billing - this is now the primary gate
     if has_billing_issues(workspace):
         return False
-    
+
     # Then check service errors for other critical issues
     if not has_service_errors(workspace):
         return True
-    
+
     # Consider workspace non-functional if it has other critical errors
     critical_errors = ["permission_denied", "not_found", "api_not_enabled"]
-    return not any(error.error_type in critical_errors for error in workspace.service_errors)
+    return not any(
+        error.error_type in critical_errors for error in workspace.service_errors
+    )
 
 
 def workbench_is_accessible(workbench) -> bool:
     """Check if workbench is accessible (no service errors)."""
     return not has_service_errors(workbench)
+
+
+# API Utilities
+def _handle_api_error(
+    response, operation_name: str, exception_class, additional_context: dict = None
+):
+    """
+    Centralized API error handler with comprehensive logging including traceback.
+
+    Args:
+        response: The HTTP response object
+        operation_name: Human-readable name of the operation that failed
+        exception_class: The custom exception class to raise
+        additional_context: Optional dictionary with additional context for logging
+
+    Raises:
+        exception_class: The specified exception with appropriate error message
+    """
+    try:
+        # Try to extract error message from response
+        if response.content:
+            try:
+                error_data = response.json()
+                if isinstance(error_data, dict):
+                    error_message = error_data.get("error", "Unknown API error")
+                else:
+                    error_message = str(error_data)
+            except (ValueError, TypeError):
+                # Fallback if JSON parsing fails
+                error_message = response.text if response.text else "Unknown error"
+        else:
+            error_message = f"HTTP {response.status_code} - No response content"
+
+        # Prepare logging context
+        log_context = {
+            "operation": operation_name,
+            "status_code": response.status_code,
+            "url": getattr(response, "url", "unknown"),
+            "response_headers": (
+                dict(response.headers) if hasattr(response, "headers") else {}
+            ),
+            "error_message": error_message,
+        }
+
+        if additional_context:
+            log_context.update(additional_context)
+
+        # Log the full error with traceback
+        logger.error(
+            f"{exception_class.__name__}: {operation_name} failed - {error_message}",
+            extra={
+                "traceback": traceback.format_exc(),
+                "api_error_context": log_context,
+            },
+        )
+
+        # Raise the appropriate exception
+        raise exception_class(error_message)
+
+    except Exception as e:
+        # If error handling itself fails, log that and re-raise
+        if not isinstance(e, exception_class):
+            logger.error(
+                f"Error handling API failure for {operation_name}: {str(e)}",
+                extra={"traceback": traceback.format_exc()},
+            )
+            raise exception_class(
+                f"API call failed and error handling encountered issues: {str(e)}"
+            )
+        raise
