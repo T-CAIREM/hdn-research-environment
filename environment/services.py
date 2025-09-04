@@ -493,7 +493,7 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     response = api.get_workspace_list(email)
     data = response.json()
     # Process through full workspace deserialization to capture all service errors
-    workspaces = deserialize_workspaces(data["workspaces"], projects)
+    workspaces = deserialize_workspaces(data, projects)
 
     # Extract all environments from all workspaces
     all_environments = []
@@ -618,7 +618,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
     data = response.json()
-    return deserialize_workspaces(data["workspaces"], projects)
+    return deserialize_workspaces(data, projects)
 
 
 @handle_api_error(
@@ -643,7 +643,7 @@ def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaIn
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
     response = api.get_shared_workspaces(user.cloud_identity.email)
     data = response.json()
-    return deserialize_shared_workspaces(data["shared_workspaces"])
+    return deserialize_shared_workspaces(data)
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
