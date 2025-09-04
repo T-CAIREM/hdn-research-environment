@@ -27,6 +27,7 @@ from environment.api_types import (
     RawWorkspacesData,
     RawSharedWorkspacesData,
 )
+from environment.decorators import handle_api_error
 from environment.entities import (
     ResearchEnvironment,
     ResearchWorkspace,
@@ -224,17 +225,14 @@ def create_cloud_identity(
     return identity
 
 
+@handle_api_error(
+    "Billing Accounts List Retrieval", 
+    GetBillingAccountsListFailed, 
+    lambda user: {"user_email": user.cloud_identity.email}
+)
 def get_billing_accounts_list(user: User) -> list[dict]:
     response = api.list_billing_accounts(user.cloud_identity.email)
-    if not response.ok:
-        _handle_api_error(
-            response,
-            "Billing Accounts List Retrieval",
-            GetBillingAccountsListFailed,
-            {"user_email": user.cloud_identity.email}
-        )
-
-    return response.json()
+    return response
 
 
 def is_billing_account_owner(user: User, billing_account_id: str):
@@ -319,19 +317,19 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
     return invite
 
 
+@handle_api_error(
+    "Billing Account Sharing",
+    BillingSharingFailed,
+    lambda owner_email, user_email, billing_account_id: {"owner_email": owner_email, "user_email": user_email, "billing_account_id": billing_account_id},
+    return_json=False
+)
 def share_billing_account(owner_email: str, user_email: str, billing_account_id: str):
     response = api.share_billing_account(
         owner_email=owner_email,
         user_email=user_email,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        _handle_api_error(
-            response,
-            "Billing Account Sharing",
-            BillingSharingFailed,
-            {"owner_email": owner_email, "user_email": user_email, "billing_account_id": billing_account_id}
-        )
+    return response
 
 
 def revoke_billing_account_access(billing_account_sharing_invite_id: int):
@@ -345,6 +343,12 @@ def revoke_billing_account_access(billing_account_sharing_invite_id: int):
         _revoke_consumed_billing_account_access(billing_account_sharing_invite)
 
 
+@handle_api_error(
+    "Billing Account Access Revocation",
+    BillingAccessRevokationFailed,
+    lambda billing_account_sharing_invite: {"owner_email": billing_account_sharing_invite.owner.cloud_identity.email, "user_email": billing_account_sharing_invite.user.cloud_identity.email, "billing_account_id": billing_account_sharing_invite.billing_account_id},
+    return_json=False
+)
 def _revoke_consumed_billing_account_access(
     billing_account_sharing_invite: BillingAccountSharingInvite,
 ):
@@ -357,13 +361,7 @@ def _revoke_consumed_billing_account_access(
         user_email=user_email,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        _handle_api_error(
-            response,
-            "Billing Account Access Revocation",
-            BillingAccessRevokationFailed,
-            {"owner_email": owner_email, "user_email": user_email, "billing_account_id": billing_account_id}
-        )
+    return response
 
 
 def invite_user_to_shared_bucket(
@@ -386,6 +384,13 @@ def invite_user_to_shared_bucket(
     return invite
 
 
+@handle_api_error(
+    "Workspace Creation",
+    CreateWorkspaceFailed,
+    lambda user, billing_account_id, region: {"user_email": user.cloud_identity.email, "billing_account_id": billing_account_id, "region": region},
+    True,
+    lambda response, user, *args, **kwargs: persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+)
 def create_workspace(user: User, billing_account_id: str, region: str):
     response = api.create_workspace(
         email=user.cloud_identity.email,
@@ -395,15 +400,7 @@ def create_workspace(user: User, billing_account_id: str, region: str):
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
     )
-    if not response.ok:
-        _handle_api_error(
-            response,
-            "Workspace Creation",
-            CreateWorkspaceFailed,
-            {"user_email": user.cloud_identity.email, "billing_account_id": billing_account_id, "region": region}
-        )
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    return response
 
 
 def create_shared_workspace(user: User, billing_account_id: str):
