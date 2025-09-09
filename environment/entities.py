@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, List
 
 from django.apps import apps
 from environment.models import GCPRegion
@@ -101,12 +101,13 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
-    project: PublishedProject
+    project: Optional[PublishedProject]
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
     service_account_name: str
     workbench_owner_username: Optional[str]
+    service_errors: Optional[List["ServiceError"]] = None
 
     @property
     def is_running(self):
@@ -139,6 +140,9 @@ class ResearchWorkspace:
     status: WorkspaceStatus
     is_owner: bool
     workbenches: Iterable[ResearchEnvironment]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
 
 
 @dataclass(frozen=True, eq=True)
@@ -163,12 +167,36 @@ class SharedWorkspace:
     is_owner: bool
     status: WorkspaceStatus
     buckets: Iterable[SharedBucket]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
 
 
 @dataclass
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+    region: Optional[Region] = Region.US_CENTRAL
+    gcp_billing_id: Optional[str] = None
+    is_owner: bool = False
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    workbenches: Iterable[ResearchEnvironment] = None
+    service_errors: Optional[List["ServiceError"]] = None
+    
+    def __post_init__(self):
+        if self.workbenches is None:
+            self.workbenches = []
+
+
+@dataclass
+class ServiceError:
+    error_type: str
+    message: str
+    resource_id: str
+    service_name: str
+    details: Optional[str] = None
+    can_retry: bool = False
 
 
 @dataclass

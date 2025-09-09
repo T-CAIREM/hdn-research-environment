@@ -13,6 +13,7 @@ from environment.entities import (
 )
 
 from environment.models import VMInstance
+from environment.utilities import has_billing_issues
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -191,6 +192,7 @@ def shared_workspace_destroy_modal_button(
         "gcp_project_id": shared_workspace.gcp_project_id,
         "billing_account_id": shared_workspace.gcp_billing_id,
     }
+    has_billing_issues_flag = has_billing_issues(shared_workspace)
     result_data = {
         "shared_workspace": shared_workspace,
         "modal_id": f"shared-workspace-delete-{shared_workspace.gcp_project_id}",
@@ -198,7 +200,8 @@ def shared_workspace_destroy_modal_button(
         "request_url": reverse("delete_shared_workspace"),
         "request_method": "DELETE",
         "request_data": json.dumps(request_data),
-        "disabled": len(shared_workspace.buckets) > 0,
+        "disabled": len(shared_workspace.buckets) > 0 or has_billing_issues_flag,
+        "has_billing_issues": has_billing_issues_flag,
     }
     return result_data
 
