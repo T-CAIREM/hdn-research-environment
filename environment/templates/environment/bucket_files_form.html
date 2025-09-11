@@ -1,11 +1,9 @@
- <!-- Content manipulation buttons to trigger modals -->
+  <!-- Content manipulation buttons to trigger modals -->
   <div class="big-toolbar">
     <span class="big-toolbar-left">
-      <button id="upload-files-button" type="button" class="btn btn-primary mt-1" data-toggle="modal" data-target="#upload-files-modal">
-        <i class="fa fa-arrow-circle-up"></i> Upload Files
+      <button id="upload-files-button" type="button" class="btn btn-primary mt-1" {% if not workspace_has_errors %}data-toggle="modal" data-target="#upload-files-modal"{% endif %} {% if workspace_has_errors %}disabled{% endif %}>        <i class="fa fa-arrow-circle-up"></i> Upload Files
       </button>
-      <button id="create-folder-button" type="button" class="btn btn-primary mt-1" data-toggle="modal" data-target="#create-folder-modal">
-        <i class="fa fa-folder-open"></i> Create Folder
+      <button id="create-folder-button" type="button" class="btn btn-primary mt-1" {% if not workspace_has_errors %}data-toggle="modal" data-target="#create-folder-modal"{% endif %} {% if workspace_has_errors %}disabled{% endif %}>        <i class="fa fa-folder-open"></i> Create Folder
       </button>
     </span>
     <span class="big-toolbar-right">

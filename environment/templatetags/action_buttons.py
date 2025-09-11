@@ -209,6 +209,7 @@ def shared_workspace_destroy_modal_button(
 def delete_group_modal_button(
     cloud_group_name: str,
 ) -> dict:
+    has_billing_issues_flag = has_billing_issues(shared_workspace)
     result_data = {
         "button_text": "Delete Group",
         "modal_title": "Delete Group",
