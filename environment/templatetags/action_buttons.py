@@ -70,7 +70,7 @@ button_types = {
         "button_text": "Destroy",
         "button_class": "btn btn-danger",
         "modal_title": "Destroy",
-        "modal_body": "Are you sure you wnt to destroy this environment?",
+        "modal_body": "Are you sure you want to destroy this environment?",
         "action_button_type": "destroy",
     },
     "modal_start": {
