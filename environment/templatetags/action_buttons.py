@@ -38,7 +38,7 @@ button_types = {
         "button_text": "Save Instance",
         "http_method": "PATCH",
         "url_name": "change_environment_machine_type",
-        "button_class": "btn btn-primary",
+        "button_class": "btn btn-info m-1",
     },
     "destroy": {
         "button_text": "Destroy",
@@ -54,7 +54,7 @@ button_types = {
     },
     "modal_instance": {
         "button_text": "Change Instance Type",
-        "button_class": "btn-secondary",
+        "button_class": "btn-info m1",
         "modal_title": "Choose Instance Type",
         "modal_body": None,
         "action_button_type": "update",
@@ -192,7 +192,6 @@ def shared_workspace_destroy_modal_button(
         "gcp_project_id": shared_workspace.gcp_project_id,
         "billing_account_id": shared_workspace.gcp_billing_id,
     }
-    has_billing_issues_flag = has_billing_issues(shared_workspace)
     result_data = {
         "shared_workspace": shared_workspace,
         "modal_id": f"shared-workspace-delete-{shared_workspace.gcp_project_id}",

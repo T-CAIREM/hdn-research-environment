@@ -1,3 +1,99 @@
 .selector-chosen h2 {
+    background-color: #f8f9fa !important;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: bold;
+}
+
+.selector {
+    display: flex;
+    gap: 1rem;
+}
+
+.selector select {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.3rem;
+}
+
+.selector-available,
+.selector-chosen {
+    width: 100%;
+    border: none;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 0.3rem;
+    overflow: hidden;
+}
+
+.selector-available h2 {
     background-color: white !important;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: bold;
+}
+
+.selector-filter {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.5rem 1rem;
+    background-color: white;
+}
+
+.selector-filter input {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 50rem;
+}
+
+.selector-chooser {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+}
+
+.selector-chooser li {
+    list-style-type: none;
+}
+
+.selector-chooser li button {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selector-chooser li button:hover {
+    background-color: var(--light-color);
+    border-color: var(--primary-color);
+}
+
+.selector select {
+    height: 15rem;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.selector select option {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.selector select option:hover {
+    background-color: var(--rose-100);
 }
