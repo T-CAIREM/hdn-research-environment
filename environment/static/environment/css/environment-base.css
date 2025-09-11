@@ -140,6 +140,29 @@ input::placeholder {
   border-color: var(--primary-color);
 }
 
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+}
+
+.btn-outline-secondary {
+    color: #1E3765;
+    background-color: transparent;
+    border-color: var(--secondary-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-outline-secondary:hover {
+    color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
 .alert {
   border-radius: 0.3rem;
   border: none;
