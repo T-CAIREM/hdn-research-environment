@@ -156,7 +156,7 @@
                                                             <div class="loader" style="margin: 18px; font-size: 4px">Loading...</div>
                                                         {% elif environment.is_running or environment.is_paused %}
                                                             {% if environment.is_running %}
-                                                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
+                                                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-secondary m-1">Open</a>
                                                                 {% if workspace.is_owner %}
                                                                     {% environment_modal_button environment=environment button_type="modal_pause" %}
                                                                 {% endif %}
@@ -164,7 +164,7 @@
                                                                 {% environment_modal_button environment=environment button_type="modal_start" %}
                                                             {% endif %}
                                                             {% if environment.type.value == "collaborative" and user.username == environment.workbench_owner_username %}
-                                                                <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier workbench_owner_username=environment.workbench_owner_username service_account_name=environment.service_account_name %}" class="btn btn-sm btn-info m-1">
+                                                                <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier workbench_owner_username=environment.workbench_owner_username service_account_name=environment.service_account_name %}" class="btn btn-sm btn-primary m-1">
                                                                     Manage
                                                                 </a>
                                                             {% endif %}
