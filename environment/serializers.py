@@ -192,3 +192,23 @@ def serialize_quotas(objects: Iterable[QuotaInfo]) -> list[Dict]:
         }
         for obj in objects
     ]
+
+
+def serialize_static_page(page):
+    return {
+        "id": page.id,
+        "title": page.title,
+        "url": page.url,
+        "nav_bar": page.nav_bar,
+        "nav_order": page.nav_order,
+    }
+
+
+def serialize_front_page_button(button):
+    return {
+        "id": button.id,
+        "label": button.label,
+        "url": button.url,
+        "description": button.description,
+        "associated_image_path": button.associated_image_path,
+    }

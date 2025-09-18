@@ -580,3 +580,19 @@ def identity_provisioning(request):
         )
 
     return HttpResponse(status=201)
+
+
+@require_GET
+@login_required
+def api_static_pages(request):
+    pages = StaticPage.objects.all().order_by("nav_order")
+    data = [serializers.serialize_static_page(page) for page in pages]
+    return JsonResponse({"static_pages": data})
+
+
+@require_GET
+@login_required
+def api_front_page_buttons(request):
+    buttons = FrontPageButton.objects.all()
+    data = [serializers.serialize_front_page_button(btn) for btn in buttons]
+    return JsonResponse({"front_page_buttons": data})
