@@ -17,6 +17,7 @@ from environment.models import (
     BucketSharingInvite,
     BillingAccountSharingInvite,
 )
+from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 

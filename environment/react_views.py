@@ -32,6 +32,7 @@ from environment.decorators import (
     require_PATCH,
     billing_account_required,
 )
+from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
