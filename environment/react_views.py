@@ -154,13 +154,23 @@ def get_environment_resource_options(request):
     serialized_available_instances = serializers.serialize_vm_instances(
         VMInstance.objects.all()
     )
-    serialized_available_gpu_accelerators = serializers.serialize_gpu_accelerators(
-        GPUAccelerator.objects.all()
+    instance_projected_costs = serializers.serialize_instance_projected_costs(
+        VMInstance.objects.all(), constants.ProjectedWorkbenchCost
     )
+    gpu_projected_costs = serializers.serialize_gpu_projected_costs(
+        GPUAccelerator.objects.all(), constants.ProjectedWorkbenchCost
+    )
+    data_storage_projected_costs = {
+        str(region.value): cost._asdict()
+        for region, cost in constants.DATA_STORAGE_PROJECTED_COSTS.items()
+    }
+
     return JsonResponse(
         {
             "instances": serialized_available_instances,
-            "accelerators": serialized_available_gpu_accelerators,
+            "instance_projected_costs": instance_projected_costs,
+            "gpu_projected_costs": gpu_projected_costs,
+            "data_storage_projected_costs": data_storage_projected_costs,
         }
     )
 

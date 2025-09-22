@@ -213,3 +213,29 @@ def serialize_front_page_button(button):
         "description": button.description,
         "associated_image_path": button.associated_image_path,
     }
+
+
+def serialize_instance_projected_costs(
+    vm_instances: Iterable[VMInstance], ProjectedWorkbenchCost
+) -> list[dict]:
+    return [
+        {
+            "id": instance.id,
+            "projected_cost": ProjectedWorkbenchCost(
+                instance.id, instance.price
+            )._asdict(),
+        }
+        for instance in vm_instances
+    ]
+
+
+def serialize_gpu_projected_costs(
+    gpu_accelerators: Iterable, ProjectedWorkbenchCost
+) -> list[dict]:
+    return [
+        {
+            "name": gpu.name,
+            "projected_cost": ProjectedWorkbenchCost(gpu.name, gpu.price)._asdict(),
+        }
+        for gpu in gpu_accelerators
+    ]
