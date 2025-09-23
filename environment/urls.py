@@ -380,4 +380,9 @@ urlpatterns = [
         react_views.leave_shared_environment,
         name="api_leave_shared_environment",
     ),
+    path(
+        "api/environment/search-users-by-cloud-email/",
+        react_views.search_users_by_cloud_email,
+        name="search_users_by_cloud_email",
+    ),
 ]
