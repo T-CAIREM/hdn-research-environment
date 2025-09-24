@@ -746,13 +746,21 @@ def clear_all_notifications(request, workspace_project_id, service_account_name)
 @require_GET
 @login_required
 def search_users_by_cloud_email(request):
-    collaborator_email = request.GET.get("email").strip().lower()
+    collaborator_email = request.GET.get("email", "")
     project_id = request.GET.get("project_id")
+    collaborator_email = collaborator_email.strip().lower()
     if not collaborator_email:
         return JsonResponse({"results": []})
 
-    cloud_identities = CloudIdentity.objects.filter(
+    emails = CloudIdentity.objects.filter(
         email__icontains=collaborator_email
-    )[:3]
-    results = [ci.email for ci in cloud_identities]
+    ).values_list("email", flat=True)[:5]
+    results = []
+    for email in emails:
+        try:
+            if services.check_collaborator_project_access(email, project_id):
+                results.append(email)
+        except Exception:
+            continue
+
     return JsonResponse({"results": results})
