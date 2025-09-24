@@ -1,3 +1,4 @@
+{% if not has_billing_issues %}
 <span class="d-inline-block" data-toggle="popover" data-content="Disabled popover">
     <button
         type="button"
@@ -9,16 +10,18 @@
         <span aria-hidden="true">&times;</span>
     </button>
 </span>
+{% endif %}
 
+{% if not has_billing_issues %}
 <div class="modal fade" id="{{ modal_id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">
             {% if disabled %}
-                Cannot destroy {{ workspace.gcp_project_id }}
+                Cannot destroy {{ shared_workspace.gcp_project_id }}
             {% else %}
-                Destroy {{ workspace.gcp_project_id }}
+                Destroy {{ shared_workspace.gcp_project_id }}
             {% endif %}
         </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -31,7 +34,7 @@
             </div>
         {% else %}
             <div class="modal-body font-weight-normal">
-                You are about to destroy the {{ workspace.gcp_project_id }} workspace.
+                You are about to destroy the {{ shared_workspace.gcp_project_id }} workspace.
                 <br>
                 <br>
                 This action is irreversible and will cause all the underlying resources to be deleted.
@@ -49,3 +52,4 @@
     </div>
   </div>
 </div>
+{% endif %}

@@ -1,6 +1,7 @@
 import logging
+import traceback
 from collections import defaultdict
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
@@ -9,75 +10,73 @@ from django.db.models import Model, Q
 import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
+from environment.decorators import handle_api_error
 from environment.deserializers import (
     _project_data_group,
-    deserialize_research_environments,
-    deserialize_workflow_details,
-    deserialize_workspaces,
-    deserialize_shared_workspaces,
-    deserialize_shared_bucket_objects,
-    deserialize_quotas,
     deserialize_cloud_roles,
     deserialize_datasets_monitoring_data,
+    deserialize_quotas,
+    deserialize_shared_bucket_objects,
+    deserialize_shared_workspaces,
     deserialize_simplified_workspace,
+    deserialize_workflow_details,
+    deserialize_workspaces,
 )
 from environment.entities import (
+    DatasetsMonitoringEntry,
+    QuotaInfo,
     ResearchEnvironment,
     ResearchWorkspace,
-    SharedWorkspace,
     SharedBucket,
     SharedBucketObject,
-    QuotaInfo,
-    DatasetsMonitoringEntry,
+    SharedWorkspace,
 )
 from environment.entities import Workflow as ApiWorkflow
 from environment.exceptions import (
+    AddRolesToCloudGroupFailed,
+    AddWorkbenchCollaboratorFailed,
     BillingAccessRevokationFailed,
     BillingSharingFailed,
+    BucketAccessRevokationFailed,
+    BucketSharingFailed,
     ChangeEnvironmentInstanceTypeFailed,
+    CreateCloudGroupFailed,
+    CreateSharedBucketDirectoryFailed,
+    CreateSharedBucketFailed,
     CreateWorkspaceFailed,
+    DeleteCloudGroupFailed,
     DeleteEnvironmentFailed,
+    DeleteSharedBucketContentFailed,
+    DeleteSharedBucketFailed,
     DeleteWorkspaceFailed,
     EnvironmentCreationFailed,
+    GenerateSignedUrlFailed,
     GetAvailableEnvironmentsFailed,
     GetBillingAccountsListFailed,
-    GetWorkflowFailed,
-    IdentityProvisioningFailed,
-    StartEnvironmentFailed,
-    StopEnvironmentFailed,
-    CreateSharedBucketFailed,
-    DeleteSharedBucketFailed,
-    BucketSharingFailed,
-    BucketAccessRevokationFailed,
-    GenerateSignedUrlFailed,
-    GetSharedBucketContentFailed,
-    CreateSharedBucketDirectoryFailed,
-    DeleteSharedBucketContentFailed,
-    InvitedUserIsAccountOwner,
-    CreateCloudGroupFailed,
-    DeleteCloudGroupFailed,
-    ListGroupRolesFailed,
     GetGroupIAMRolesFailed,
-    AddRolesToCloudGroupFailed,
-    RemoveRolesFromCloudGroupFailed,
     GetGroupsIAMRolesFailed,
     GetMonitoringDatasetsFailed,
-    UpdateWorkspaceBillingAccountFailed,
-    AddWorkbenchCollaboratorFailed,
+    GetSharedBucketContentFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
+    GetWorkflowFailed,
+    IdentityProvisioningFailed,
+    InvitedUserIsAccountOwner,
+    ListGroupRolesFailed,
+    RemoveRolesFromCloudGroupFailed,
     RemoveWorkbenchCollaboratorFailed,
     PublishedProjectAccessFailed,
-    GetSharedBucketFailed,
-    GetSimplifiedWorkspaceFailed,
-    GetSharedBucketFailed,
-    GetSimplifiedWorkspaceFailed,
+    StartEnvironmentFailed,
+    StopEnvironmentFailed,
+    UpdateWorkspaceBillingAccountFailed,
 )
 from environment.models import (
     BillingAccountSharingInvite,
-    CloudIdentity,
-    CloudGroup,
-    Workflow,
     BucketSharingInvite,
+    CloudGroup,
+    CloudIdentity,
     VMInstance,
+    Workflow,
 )
 from environment.utilities import inner_join_iterators, left_join_iterators
 from project.authorization.access import can_access_project
@@ -99,9 +98,17 @@ def _environment_data_group(environment: ResearchEnvironment) -> str:
     return environment.dataset_identifier
 
 
+@handle_api_error(
+    "Cloud Identity Creation",
+    IdentityProvisioningFailed,
+    lambda user, password, recovery_email: {
+        "user_id": user.username,
+        "recovery_email": recovery_email,
+    },
+)
 def create_cloud_identity(
     user: User, password: str, recovery_email: str
-) -> Tuple[str, CloudIdentity]:
+) -> CloudIdentity:
     gcp_user_id = user.username
     response = api.create_cloud_identity(
         gcp_user_id,
@@ -110,11 +117,6 @@ def create_cloud_identity(
         password,
         recovery_email,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"IdentityProvisioningFailed: {error_message}")
-        raise IdentityProvisioningFailed(error_message)
-
     body = response.json()
     identity = CloudIdentity.objects.create(
         user=user,
@@ -124,13 +126,13 @@ def create_cloud_identity(
     return identity
 
 
-def get_billing_accounts_list(user: User):
+@handle_api_error(
+    "Billing Accounts List Retrieval",
+    GetBillingAccountsListFailed,
+    lambda user: {"user_email": user.cloud_identity.email},
+)
+def get_billing_accounts_list(user: User) -> list[dict]:
     response = api.list_billing_accounts(user.cloud_identity.email)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetBillingAccountsListFailed: {error_message}")
-        raise GetBillingAccountsListFailed(error_message)
-
     return response.json()
 
 
@@ -216,16 +218,22 @@ def consume_bucket_sharing_token(user: User, token: str) -> BucketSharingInvite:
     return invite
 
 
+@handle_api_error(
+    "Billing Account Sharing",
+    BillingSharingFailed,
+    lambda owner_email, user_email, billing_account_id: {
+        "owner_email": owner_email,
+        "user_email": user_email,
+        "billing_account_id": billing_account_id,
+    },
+)
 def share_billing_account(owner_email: str, user_email: str, billing_account_id: str):
     response = api.share_billing_account(
         owner_email=owner_email,
         user_email=user_email,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"BillingSharingFailed: {error_message}")
-        raise BillingSharingFailed(error_message)
+    return response
 
 
 def revoke_billing_account_access(billing_account_sharing_invite_id: int):
@@ -239,6 +247,15 @@ def revoke_billing_account_access(billing_account_sharing_invite_id: int):
         _revoke_consumed_billing_account_access(billing_account_sharing_invite)
 
 
+@handle_api_error(
+    "Billing Account Access Revocation",
+    BillingAccessRevokationFailed,
+    lambda billing_account_sharing_invite: {
+        "owner_email": billing_account_sharing_invite.owner.cloud_identity.email,
+        "user_email": billing_account_sharing_invite.user.cloud_identity.email,
+        "billing_account_id": billing_account_sharing_invite.billing_account_id,
+    },
+)
 def _revoke_consumed_billing_account_access(
     billing_account_sharing_invite: BillingAccountSharingInvite,
 ):
@@ -251,10 +268,7 @@ def _revoke_consumed_billing_account_access(
         user_email=user_email,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"BillingAccessRevokationFailed: {error_message}")
-        raise BillingAccessRevokationFailed(error_message)
+    return response
 
 
 def invite_user_to_shared_bucket(
@@ -277,6 +291,15 @@ def invite_user_to_shared_bucket(
     return invite
 
 
+@handle_api_error(
+    "Workspace Creation",
+    CreateWorkspaceFailed,
+    lambda user, billing_account_id, region: {
+        "user_email": user.cloud_identity.email,
+        "billing_account_id": billing_account_id,
+        "region": region,
+    },
+)
 def create_workspace(user: User, billing_account_id: str, region: str):
     response = api.create_workspace(
         email=user.cloud_identity.email,
@@ -286,27 +309,39 @@ def create_workspace(user: User, billing_account_id: str, region: str):
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"CreateWorkspaceFailed: {error_message}")
-        raise CreateWorkspaceFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return response
 
 
+@handle_api_error(
+    "Shared Workspace Creation",
+    CreateWorkspaceFailed,
+    lambda user, billing_account_id: {
+        "user_email": user.cloud_identity.email,
+        "billing_account_id": billing_account_id,
+    },
+)
 def create_shared_workspace(user: User, billing_account_id: str):
     response = api.create_shared_workspace(
         user_email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"CreateWorkspaceFailed: {error_message}")
-        raise CreateWorkspaceFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return response
 
 
+@handle_api_error(
+    "Workspace Deletion",
+    DeleteWorkspaceFailed,
+    lambda user, billing_account_id, region, gcp_project_id: {
+        "user_email": user.cloud_identity.email,
+        "gcp_project_id": gcp_project_id,
+        "billing_account_id": billing_account_id,
+        "region": region,
+    },
+)
 def delete_workspace(
     user: User, billing_account_id: str, region: str, gcp_project_id: str
 ):
@@ -316,31 +351,34 @@ def delete_workspace(
         billing_account_id=billing_account_id,
         region=region,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteWorkspaceFailed: {error_message}")
-        raise DeleteWorkspaceFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return response
 
 
+@handle_api_error(
+    "Shared Workspace Deletion",
+    DeleteWorkspaceFailed,
+    lambda user, billing_account_id, gcp_project_id: {
+        "user_email": user.cloud_identity.email,
+        "gcp_project_id": gcp_project_id,
+        "billing_account_id": billing_account_id,
+    },
+)
 def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id: str):
     response = api.delete_shared_workspace(
         user_email=user.cloud_identity.email,
         workspace_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteWorkspaceFailed: {error_message}")
-        raise DeleteWorkspaceFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return response
 
 
 def _create_workbench_kwargs(
     user: User,
-    project: PublishedProject,
+    project: Any,
     workspace_project_id: str,
     machine_type: VMInstance,
     workbench_type: str,
@@ -372,9 +410,19 @@ def _create_workbench_kwargs(
     }
 
 
+@handle_api_error(
+    "Research Environment Creation",
+    EnvironmentCreationFailed,
+    lambda user, project, workspace_project_id, machine_type, workbench_type, disk_size, gpu_accelerator_type=None, sharing_bucket_identifiers=None, collaborators=None: {
+        "user_email": user.cloud_identity.email,
+        "workspace_project_id": workspace_project_id,
+        "workbench_type": workbench_type,
+        "machine_type": machine_type.get_instance_value(),
+    },
+)
 def create_research_environment(
     user: User,
-    project: PublishedProject,
+    project: Any,
     workspace_project_id: str,
     machine_type: VMInstance,
     workbench_type: str,
@@ -395,20 +443,16 @@ def create_research_environment(
         collaborators,
     )
     response = api.create_workbench(**kwargs)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"EnvironmentCreationFailed: {error_message}")
-        raise EnvironmentCreationFailed(error_message)
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
-
-    return response.json()
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
-def get_available_projects(user: User) -> Iterable[PublishedProject]:
+def get_available_projects(user: User) -> Iterable[Any]:
     return PublishedProject.objects.accessible_by(user)
 
 
-def get_project(project_id: str) -> PublishedProject:
+def get_project(project_id: str) -> Any:
     return PublishedProject.objects.get(id=project_id)
 
 
@@ -434,7 +478,7 @@ def check_collaborator_project_access(collaborator_email: str, project_id: str) 
 
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
-) -> Iterable[PublishedProject]:
+) -> Iterable[Any]:
     dataset_identifiers = list(map(_environment_data_group, environments))
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
@@ -448,8 +492,8 @@ def _get_projects_for_environments(
 
 def _get_project_for_environment(
     dataset_identifier: str,
-    projects: Iterable[PublishedProject],
-) -> PublishedProject:
+    projects: Iterable[Any],
+) -> Any:
     return next(
         iter(
             project
@@ -459,22 +503,33 @@ def _get_project_for_environment(
     )
 
 
+@handle_api_error(
+    "Available Environments Retrieval",
+    GetAvailableEnvironmentsFailed,
+    lambda user: {"user_email": user.cloud_identity.email},
+)
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
+    projects = PublishedProject.objects.accessible_by(user)
+    # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
     response = api.get_workspace_list(email)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetAvailableEnvironmentsFailed: {error_message}")
-        raise GetAvailableEnvironmentsFailed(error_message)
+    data = response.json()
+    # Process through full workspace deserialization to capture all service errors
+    workspaces = deserialize_workspaces(data, projects)
 
-    all_environments = deserialize_research_environments(response.json())
+    # Extract all environments from all workspaces
+    all_environments = []
+    for workspace in workspaces:
+        if hasattr(workspace, "workbenches") and workspace.workbenches:
+            all_environments.extend(workspace.workbenches)
+
     return [environment for environment in all_environments if environment.is_active]
 
 
 def get_environments_with_projects(
     user: User,
-) -> Iterable[Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]]:
+) -> Iterable[Tuple[ResearchEnvironment, Any, Iterable[Workflow]]]:
     active_environments = get_active_environments(user)
     projects = _get_projects_for_environments(active_environments)
     environment_project_pairs = inner_join_iterators(
@@ -489,14 +544,11 @@ def get_environments_with_projects(
 def get_available_projects_with_environments(
     user: User,
     environments: Iterable[ResearchEnvironment],
-) -> Iterable[
-    Tuple[PublishedProject, Optional[ResearchEnvironment], Iterable[Workflow]]
-]:
+) -> Iterable[Tuple[Any, Optional[ResearchEnvironment], Iterable[Workflow]]]:
     available_projects = get_available_projects(user)
     project_environment_pairs = left_join_iterators(
         _project_data_group,
         available_projects,
-        _environment_data_group,
         environments,
     )
     return [
@@ -507,9 +559,9 @@ def get_available_projects_with_environments(
 
 def get_projects_with_environment_being_created(
     project_environment_workflow_triplets: Iterable[
-        Tuple[PublishedProject, Optional[ResearchEnvironment], Iterable[Workflow]]
+        Tuple[Any, Optional[ResearchEnvironment], Iterable[Workflow]]
     ],
-) -> Iterable[Tuple[None, PublishedProject, Iterable[Workflow]]]:
+) -> Iterable[Tuple[None, Any, Iterable[Workflow]]]:
     return [
         (environment, project, workflows)
         for project, environment, workflows in project_environment_workflow_triplets
@@ -526,7 +578,7 @@ def get_workspace_workflows(user: User) -> Iterable[Workflow]:
 
 def get_environment_project_pairs_with_expired_access(
     user: User,
-) -> Iterable[Tuple[ResearchEnvironment, PublishedProject]]:
+) -> Iterable[Tuple[ResearchEnvironment, Any]]:
     all_environment_project_pairs = get_environments_with_projects(user)
     return [
         (environment, project)
@@ -537,12 +589,12 @@ def get_environment_project_pairs_with_expired_access(
 
 def sort_environments_per_workspace(
     environment_project_workflow_triplets: Iterable[
-        Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]]
+        Tuple[ResearchEnvironment, Any, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
 ) -> Dict[
     ResearchWorkspace,
-    Tuple[ResearchEnvironment, PublishedProject, Iterable[Workflow]],
+    Tuple[ResearchEnvironment, Any, Iterable[Workflow]],
 ]:
     sorted_environments_project_workflow_triplets = defaultdict(
         list,
@@ -579,21 +631,42 @@ def match_workspace_with_billing_id(
     return billing_id_mapping
 
 
+@handle_api_error(
+    "Workspaces List Retrieval",
+    GetAvailableEnvironmentsFailed,
+    lambda user: {"user_email": user.cloud_identity.email},
+)
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
-    return deserialize_workspaces(response.json(), projects)
+    data = response.json()
+    return deserialize_workspaces(data, projects)
 
 
+@handle_api_error(
+    "Quotas Data Retrieval",
+    GetAvailableEnvironmentsFailed,
+    lambda workspace_project_id, region: {
+        "workspace_project_id": workspace_project_id,
+        "region": region,
+    },
+)
 def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
     response = api.list_quotas_data(workspace_project_id, region)
-    return deserialize_quotas(response.json())
+    data = response.json()
+    return deserialize_quotas(data)
 
 
+@handle_api_error(
+    "Shared Workspaces List Retrieval",
+    GetAvailableEnvironmentsFailed,
+    lambda user: {"user_email": user.cloud_identity.email},
+)
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
     response = api.get_shared_workspaces(user.cloud_identity.email)
-    return deserialize_shared_workspaces(response.json())
+    data = response.json()
+    return deserialize_shared_workspaces(data)
 
 
 def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedBucket]:
@@ -604,6 +677,16 @@ def get_shared_buckets(shared_workspaces: list[SharedWorkspace]) -> list[SharedB
     ]
 
 
+@handle_api_error(
+    "Environment Stop",
+    StopEnvironmentFailed,
+    lambda workbench_type, workbench_resource_id, user, workspace_project_id: {
+        "workbench_type": workbench_type,
+        "workbench_resource_id": workbench_resource_id,
+        "user_email": user.cloud_identity.email,
+        "workspace_project_id": workspace_project_id,
+    },
+)
 def stop_running_environment(
     workbench_type: str,
     workbench_resource_id: str,
@@ -616,16 +699,21 @@ def stop_running_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"StopEnvironmentFailed: {error_message}")
-        raise StopEnvironmentFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
-
-    return response.json()
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
+@handle_api_error(
+    "Environment Start",
+    StartEnvironmentFailed,
+    lambda workbench_type, workbench_resource_id, user, workspace_project_id: {
+        "workbench_type": workbench_type,
+        "workbench_resource_id": workbench_resource_id,
+        "user_email": user.cloud_identity.email,
+        "workspace_project_id": workspace_project_id,
+    },
+)
 def start_stopped_environment(
     workbench_type: str,
     workbench_resource_id: str,
@@ -638,16 +726,22 @@ def start_stopped_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"StartEnvironmentFailed: {error_message}")
-        raise StartEnvironmentFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
-
-    return response.json()
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
+@handle_api_error(
+    "Environment Instance Type Change",
+    ChangeEnvironmentInstanceTypeFailed,
+    lambda user, workspace_project_id, machine_type, workbench_type, workbench_resource_id: {
+        "workbench_type": workbench_type,
+        "machine_type": machine_type,
+        "user_email": user.cloud_identity.email,
+        "workspace_project_id": workspace_project_id,
+        "workbench_resource_id": workbench_resource_id,
+    },
+)
 def change_environment_machine_type(
     user: User,
     workspace_project_id: str,
@@ -662,16 +756,21 @@ def change_environment_machine_type(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"ChangeEnvironmentInstanceTypeFailed: {error_message}")
-        raise ChangeEnvironmentInstanceTypeFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
-
-    return response.json()
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
+@handle_api_error(
+    "Environment Deletion",
+    DeleteEnvironmentFailed,
+    lambda user, workspace_project_id, workbench_type, workbench_resource_id: {
+        "workbench_type": workbench_type,
+        "user_email": user.cloud_identity.email,
+        "workspace_project_id": workspace_project_id,
+        "workbench_resource_id": workbench_resource_id,
+    },
+)
 def delete_environment(
     user: User,
     workspace_project_id: str,
@@ -684,17 +783,22 @@ def delete_environment(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteEnvironmentFailed: {error_message}")
-        raise DeleteEnvironmentFailed(error_message)
-
-    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
-
-    return response.json()
+    data = response.json()
+    persist_workflow(user=user, workflow_id=data["workflow_id"])
+    return data
 
 
-def create_shared_buket(
+@handle_api_error(
+    "Shared Bucket Creation",
+    CreateSharedBucketFailed,
+    lambda region, workspace_project_id, user_defined_bucket_name, user: {
+        "region": region,
+        "user_email": user.cloud_identity.email,
+        "user_defined_bucket_name": user_defined_bucket_name,
+        "workspace_project_id": workspace_project_id,
+    },
+)
+def create_shared_bucket(
     region: str,
     workspace_project_id: str,
     user_defined_bucket_name: str,
@@ -706,22 +810,32 @@ def create_shared_buket(
         user_defined_bucket_name=user_defined_bucket_name,
         workspace_project_id=workspace_project_id,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"CreateSharedBucketFailed: {error_message}")
-        raise CreateSharedBucketFailed(error_message)
+    return response
 
 
+@handle_api_error(
+    "Shared Bucket Deletion",
+    DeleteSharedBucketFailed,
+    lambda bucket_name: {"bucket_name": bucket_name},
+)
 def delete_shared_bucket(bucket_name: str):
     response = api.delete_shared_bucket(
         bucket_name=bucket_name,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteSharedBucketFailed: {error_message}")
-        raise DeleteSharedBucketFailed(error_message)
+    return response
 
 
+@handle_api_error(
+    "Bucket Sharing",
+    BucketSharingFailed,
+    lambda owner_email, user_email, bucket_name, workspace_project_id, permissions: {
+        "owner_email": owner_email,
+        "user_email": user_email,
+        "bucket_name": bucket_name,
+        "workspace_project_id": workspace_project_id,
+        "permissions": permissions,
+    },
+)
 def share_bucket(
     owner_email: str,
     user_email: str,
@@ -736,10 +850,7 @@ def share_bucket(
         workspace_project_id=workspace_project_id,
         permissions=permissions,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"BucketSharingFailed: {error_message}")
-        raise BucketSharingFailed(error_message)
+    return response
 
 
 def revoke_shared_bucket_access(bucket_sharing_invite_id: str):
@@ -753,16 +864,22 @@ def revoke_shared_bucket_access(bucket_sharing_invite_id: str):
         _revoke_consumed_shared_bucket_access(bucket_sharing_invite)
 
 
+@handle_api_error(
+    "Bucket Access Revocation",
+    BucketAccessRevokationFailed,
+    lambda bucket_sharing_invite: {
+        "owner_email": bucket_sharing_invite.owner.cloud_identity.email,
+        "user_email": bucket_sharing_invite.user.cloud_identity.email,
+        "bucket_name": bucket_sharing_invite.shared_bucket_name,
+    },
+)
 def _revoke_consumed_shared_bucket_access(bucket_sharing_invite: BucketSharingInvite):
     response = api.revoke_shared_bucket_access(
         owner_email=bucket_sharing_invite.owner.cloud_identity.email,
         user_email=bucket_sharing_invite.user.cloud_identity.email,
         bucket_name=bucket_sharing_invite.shared_bucket_name,
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"BucketAccessRevokationFailed: {error_message}")
-        raise BucketAccessRevokationFailed(error_message)
+    return response
 
 
 def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
@@ -771,15 +888,18 @@ def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
     )
 
 
+@handle_api_error(
+    "Workflow Retrieval",
+    GetWorkflowFailed,
+    lambda execution_resource_name: {
+        "execution_resource_name": execution_resource_name
+    },
+)
 def get_execution(execution_resource_name) -> ApiWorkflow:
     response = api.get_workflow(execution_resource_name)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetWorkflowFailed: {error_message}")
-        raise GetWorkflowFailed(error_message)
-
-    if response.json():
-        return deserialize_workflow_details(response.json())
+    data = response.json()
+    if data:
+        return deserialize_workflow_details(data)
 
 
 def mark_workflow_as_finished(execution_resource_name: str):
@@ -827,6 +947,16 @@ def get_running_workflows(user: User):
     return Workflow.objects.filter(user=user, in_progress=True)
 
 
+@handle_api_error(
+    "Signed URL Generation",
+    GenerateSignedUrlFailed,
+    lambda bucket_name, size, filename, user: {
+        "bucket_name": bucket_name,
+        "size": size,
+        "filename": filename,
+        "user_email": user.cloud_identity.email,
+    },
+)
 def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) -> str:
     user_email = user.cloud_identity.email
     response = api.generate_signed_url(
@@ -835,17 +965,19 @@ def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) 
         filename=filename,
         user_email=user_email,
     )
-
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GenerateSignedUrlFailed: {error_message}")
-        raise GenerateSignedUrlFailed(error_message)
-
-    body = response.json()
-
-    return body["signed_url"]
+    data = response.json()
+    return data["signed_url"]
 
 
+@handle_api_error(
+    "Shared Bucket Content Retrieval",
+    GetSharedBucketContentFailed,
+    lambda bucket_name, user, subdir="": {
+        "bucket_name": bucket_name,
+        "subdir": subdir,
+        "user_email": user.cloud_identity.email,
+    },
+)
 def get_shared_bucket_content(
     bucket_name: str, user: User, subdir: str = ""
 ) -> Iterable[SharedBucketObject]:
@@ -853,15 +985,20 @@ def get_shared_bucket_content(
     response = api.get_shared_bucket_content(
         bucket_name=bucket_name, subdir=subdir, user_email=user_email
     )
-
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetSharedBucketContentFailed: {error_message}")
-        raise GetSharedBucketContentFailed(error_message)
-
-    return deserialize_shared_bucket_objects(response.json())
+    data = response.json()
+    return deserialize_shared_bucket_objects(data)
 
 
+@handle_api_error(
+    "Shared Bucket Directory Creation",
+    CreateSharedBucketDirectoryFailed,
+    lambda bucket_name, parent_path, directory_name, user: {
+        "bucket_name": bucket_name,
+        "parent_path": parent_path,
+        "directory_name": directory_name,
+        "user_email": user.cloud_identity.email,
+    },
+)
 def create_shared_bucket_directory(
     bucket_name: str, parent_path: str, directory_name: str, user: User
 ):
@@ -872,23 +1009,24 @@ def create_shared_bucket_directory(
         directory_name=directory_name,
         user_email=user_email,
     )
-
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"CreateSharedBucketDirectoryFailed: {error_message}")
-        raise CreateSharedBucketDirectoryFailed(error_message)
+    return response
 
 
+@handle_api_error(
+    "Shared Bucket Content Deletion",
+    DeleteSharedBucketContentFailed,
+    lambda bucket_name, full_path, user: {
+        "bucket_name": bucket_name,
+        "full_path": full_path,
+        "user_email": user.cloud_identity.email,
+    },
+)
 def delete_shared_bucket_content(bucket_name: str, full_path: str, user: User):
     user_email = user.cloud_identity.email
     response = api.delete_shared_bucket_content(
         bucket_name=bucket_name, full_path=full_path, user_email=user_email
     )
-
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteSharedBucketContentFailed: {error_message}")
-        raise DeleteSharedBucketContentFailed(error_message)
+    return response
 
 
 def add_user_to_cloud_group(user: User, cloud_group_list: list[CloudGroup]):
@@ -901,65 +1039,75 @@ def remove_user_from_cloud_group(user: User, cloud_group_list: list[CloudGroup])
         user.cloud_identity.user_groups.remove(cloud_group)
 
 
+@handle_api_error(
+    "Cloud Group Creation",
+    CreateCloudGroupFailed,
+    lambda group_name, description: {
+        "group_name": group_name,
+        "description": description,
+    },
+)
 def create_cloud_group(group_name: str, description: str):
     response = api.create_cloud_user_group(group_name, description)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"CreateCloudGroupFailed: {error_message}")
-        raise CreateCloudGroupFailed(error_message)
     CloudGroup.objects.create(name=group_name, description=description)
+    return response
 
 
+@handle_api_error(
+    "Cloud Group Deletion",
+    DeleteCloudGroupFailed,
+    lambda group_name: {"group_name": group_name},
+)
 def delete_cloud_group(group_name: str):
     response = api.delete_cloud_user_group(group_name)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"DeleteCloudGroupFailed: {error_message}")
-        raise DeleteCloudGroupFailed(error_message)
     CloudGroup.objects.filter(name=group_name).delete()
+    return response
 
 
+@handle_api_error("Cloud Group Roles List", ListGroupRolesFailed, lambda: {})
 def list_cloud_group_roles():
     response = api.list_cloud_group_roles()
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"ListGroupRolesFailed: {error_message}")
-        raise ListGroupRolesFailed(error_message)
-    return deserialize_cloud_roles(response.json())
+    data = response.json()
+    return deserialize_cloud_roles(data)
 
 
+@handle_api_error(
+    "Cloud Group IAM Roles Retrieval",
+    GetGroupIAMRolesFailed,
+    lambda group_name: {"group_name": group_name},
+)
 def get_cloud_group_iam_roles(group_name: str):
     response = api.get_cloud_group_iam_roles(group_name)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetGroupIAMRolesFailed: {error_message}")
-        raise GetGroupIAMRolesFailed(error_message)
-    return deserialize_cloud_roles(response.json())
+    data = response.json()
+    return deserialize_cloud_roles(data)
 
 
+@handle_api_error(
+    "Cloud Groups IAM Roles Retrieval", GetGroupsIAMRolesFailed, lambda: {}
+)
 def get_cloud_groups_iam_roles():
     response = api.get_cloud_groups_iam_roles()
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetGroupsIAMRolesFailed: {error_message}")
-        raise GetGroupsIAMRolesFailed(error_message)
     return response.json()
 
 
+@handle_api_error(
+    "Cloud Group Roles Addition",
+    AddRolesToCloudGroupFailed,
+    lambda group_name, role_list: {"group_name": group_name, "role_list": role_list},
+)
 def add_roles_to_cloud_group(group_name: str, role_list: list[str]):
     response = api.add_roles_to_cloud_group(group_name, role_list)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"AddRolesToCloudGroupFailed: {error_message}")
-        raise AddRolesToCloudGroupFailed(error_message)
+    return response
 
 
+@handle_api_error(
+    "Cloud Group Roles Removal",
+    RemoveRolesFromCloudGroupFailed,
+    lambda group_name, role_list: {"group_name": group_name, "role_list": role_list},
+)
 def remove_roles_from_cloud_group(group_name: str, role_list: list[str]):
     response = api.remove_roles_from_cloud_group(group_name, role_list)
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"RemoveRolesFromCloudGroupFailed: {error_message}")
-        raise RemoveRolesFromCloudGroupFailed(error_message)
+    return response
 
 
 def match_groups_with_roles(cloud_groups: list[CloudGroup]):
@@ -970,26 +1118,30 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
     }
 
 
+@handle_api_error(
+    "Monitoring Datasets Retrieval", GetMonitoringDatasetsFailed, lambda: {}
+)
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
     response = api.get_datasets_monitoring_data()
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"GetMonitoringDatasetsFailed: {error_message}")
-        raise GetMonitoringDatasetsFailed(error_message)
-
-    return deserialize_datasets_monitoring_data(response.json())
+    data = response.json()
+    return deserialize_datasets_monitoring_data(data)
 
 
+@handle_api_error(
+    "Workspace Billing Account Update",
+    UpdateWorkspaceBillingAccountFailed,
+    lambda workspace_project_id, billing_account_id: {
+        "workspace_project_id": workspace_project_id,
+        "billing_account_id": billing_account_id,
+    },
+)
 def update_workspace_billing_account(
     workspace_project_id: str, billing_account_id: str
 ):
     response = api.update_workspace_billing_account(
         workspace_project_id, billing_account_id
     )
-    if not response.ok:
-        error_message = response.json()["error"]
-        logger.error(f"UpdateWorkspaceBillingAccountFailed: {error_message}")
-        raise UpdateWorkspaceBillingAccountFailed(error_message)
+    return response
 
 
 def get_workbench_collaborators(
@@ -1001,14 +1153,31 @@ def get_workbench_collaborators(
     )
 
     if not response.ok:
-        error_message = response.json().get("error", "Failed to fetch collaborators")
-        logger.error(f"Failed to get workbench collaborators: {error_message}")
+        try:
+            error_message = response.json().get(
+                "error", "Failed to fetch collaborators"
+            )
+        except (ValueError, TypeError):
+            error_message = "Failed to fetch collaborators - Invalid response format"
+        logger.error(
+            f"Failed to get workbench collaborators: {error_message}",
+            extra={"traceback": traceback.format_exc()},
+        )
         return []
 
     collaborators_data = response.json()
     return collaborators_data.get("collaborators", [])
 
 
+@handle_api_error(
+    "Workbench Collaborator Addition",
+    AddWorkbenchCollaboratorFailed,
+    lambda workspace_project_id, service_account_name, collaborator_email: {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborator_email": collaborator_email,
+    },
+)
 def add_workbench_collaborator(
     workspace_project_id: str, service_account_name: str, collaborator_email: str
 ):
@@ -1017,13 +1186,18 @@ def add_workbench_collaborator(
         service_account_name=service_account_name,
         collaborators=[collaborator_email],
     )
-
-    if not response.ok:
-        error_message = response.json().get("error", "Failed to perform addition")
-        logger.error(f"AddWorkbenchCollaboratorFailed: {error_message}")
-        raise AddWorkbenchCollaboratorFailed(error_message)
+    return response
 
 
+@handle_api_error(
+    "Workbench Collaborator Removal",
+    RemoveWorkbenchCollaboratorFailed,
+    lambda workspace_project_id, service_account_name, collaborator_email: {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborator_email": collaborator_email,
+    },
+)
 def remove_workbench_collaborator(
     workspace_project_id: str, service_account_name: str, collaborator_email: str
 ):
@@ -1032,11 +1206,7 @@ def remove_workbench_collaborator(
         service_account_name=service_account_name,
         collaborators=[collaborator_email],
     )
-
-    if not response.ok:
-        error_message = response.json().get("error", "Failed to perform removal")
-        logger.error(f"RemoveWorkbenchCollaboratorFailed: {error_message}")
-        raise RemoveWorkbenchCollaboratorFailed(error_message)
+    return response
 
 
 def get_workbench_notifications(
@@ -1048,8 +1218,16 @@ def get_workbench_notifications(
     )
 
     if not response.ok:
-        error_message = response.json().get("error", "Failed to fetch notifications")
-        logger.error(f"Failed to get workbench notifications: {error_message}")
+        try:
+            error_message = response.json().get(
+                "error", "Failed to fetch notifications"
+            )
+        except (ValueError, TypeError):
+            error_message = "Failed to fetch notifications - Invalid response format"
+        logger.error(
+            f"Failed to get workbench notifications: {error_message}",
+            extra={"traceback": traceback.format_exc()},
+        )
         return []
 
     notifications_data = response.json()
@@ -1060,10 +1238,18 @@ def mark_notification_as_viewed(notification_id: int) -> bool:
     response = api.mark_notification_as_viewed(notification_id=notification_id)
 
     if not response.ok:
-        error_message = response.json().get(
-            "error", "Failed to mark notification as viewed"
+        try:
+            error_message = response.json().get(
+                "error", "Failed to mark notification as viewed"
+            )
+        except (ValueError, TypeError):
+            error_message = (
+                "Failed to mark notification as viewed - Invalid response format"
+            )
+        logger.error(
+            f"Failed to mark notification as viewed: {error_message}",
+            extra={"traceback": traceback.format_exc()},
         )
-        logger.error(f"Failed to mark notification as viewed: {error_message}")
         return False
 
     return True
@@ -1078,8 +1264,16 @@ def clear_all_notifications(
     )
 
     if not response.ok:
-        error_message = response.json().get("error", "Failed to clear notifications")
-        logger.error(f"Failed to clear notifications: {error_message}")
+        try:
+            error_message = response.json().get(
+                "error", "Failed to clear notifications"
+            )
+        except (ValueError, TypeError):
+            error_message = "Failed to clear notifications - Invalid response format"
+        logger.error(
+            f"Failed to clear notifications: {error_message}",
+            extra={"traceback": traceback.format_exc()},
+        )
         return False
 
     return True
