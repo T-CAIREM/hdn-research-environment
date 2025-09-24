@@ -37,7 +37,7 @@ from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
-
+CloudIdentity = apps.get_model("environment", "CloudIdentity")
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
