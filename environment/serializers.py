@@ -45,6 +45,7 @@ def serialize_workspace_details(workspace: ResearchWorkspace):
             else serialize_entity_scaffolding(wb)
             for wb in workspace.workbenches
         ],
+        "is_owner": workspace.is_owner,
     }
 
 
