@@ -612,16 +612,16 @@ def identity_provisioning(request):
 @login_required
 def static_pages(request):
     pages = StaticPage.objects.all().order_by("nav_order")
-    return JsonResponse({"static_pages": serializers.serialize_static_pages(pages)})
+    data = [serializers.serialize_static_page(page) for page in pages]
+    return JsonResponse({"static_pages": data})
 
 
 @require_GET
 @login_required
 def front_page_buttons(request):
     buttons = FrontPageButton.objects.all()
-    return JsonResponse(
-        {"front_page_buttons": serializers.serialize_front_page_buttons(buttons)}
-    )
+    data = [serializers.serialize_front_page_button(btn) for btn in buttons]
+    return JsonResponse({"front_page_buttons": data})
 
 
 @login_required
