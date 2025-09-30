@@ -1,7 +1,7 @@
 import concurrent
 from collections import namedtuple
 
-from environment.entities import WorkspaceStatus
+from environment.entities import WorkspaceStatus, WorkflowStatus
 from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
 from environment.models import VMInstance, GPUAccelerator, BucketSharingInvite
 from rest_framework.response import Response
@@ -766,3 +766,27 @@ def search_users_by_cloud_email(request):
             continue
 
     return JsonResponse({"results": results})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def check_execution_status(request):
+    execution_resource_name = request.GET["execution_resource_name"]
+    execution = services.get_execution(execution_resource_name=execution_resource_name)
+    finished = execution.status != WorkflowStatus.IN_PROGRESS
+    if finished:
+        services.mark_workflow_as_finished(
+            execution_resource_name=execution_resource_name,
+        )
+    return JsonResponse({"finished": finished})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_workflows(request):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    running_workflows = services.get_running_workflows(user)
+    data = list(running_workflows.values())
+    return JsonResponse({"workflows": data})

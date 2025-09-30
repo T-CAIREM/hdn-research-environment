@@ -385,4 +385,14 @@ urlpatterns = [
         react_views.search_users_by_cloud_email,
         name="react_views.search_users_by_cloud_email",
     ),
+    path(
+        "api/workflows",
+        react_views.get_workflows,
+        name="react_views.get_workflows",
+    ),
+    path(
+        "api/execution/check-status",
+        react_views.check_execution_status,
+        name="react_views.check_execution_status",
+    ),
 ]
