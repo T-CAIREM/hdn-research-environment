@@ -334,4 +334,14 @@ urlpatterns = [
         react_views.identity_provisioning,
         name="react_views.identity_provisioning",
     ),
+    path(
+        "api/workflows",
+        react_views.get_workflows,
+        name="react_views.get_workflows",
+    ),
+    path(
+        "api/execution/check-status",
+        react_views.check_execution_status,
+        name="react_views.check_execution_status",
+    ),
 ]
