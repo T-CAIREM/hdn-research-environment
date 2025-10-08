@@ -626,7 +626,7 @@ def front_page_buttons(request):
 
 @login_required
 @cloud_identity_required
-def manage_collaborative_environment_api(
+def manage_collaborative_environment(
     request, workspace_project_id, environment_name, service_account_name
 ):
     user = User.objects.get(
