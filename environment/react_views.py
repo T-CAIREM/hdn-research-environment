@@ -624,73 +624,20 @@ def front_page_buttons(request):
     return JsonResponse({"front_page_buttons": data})
 
 
+@require_GET
 @login_required
 @cloud_identity_required
-def manage_collaborative_environment(
+def get_collaborative_environment(
     request, workspace_project_id, environment_name, service_account_name
 ):
-    user = User.objects.get(
-        id=request.GET.get("user_id")
-        if request.method == "GET"
-        else json.loads(request.body).get("user_id")
-    )
-    workbench_owner_username = (
-        request.GET.get("workbench_owner_username")
-        if request.method == "GET"
-        else json.loads(request.body).get("workbench_owner_username")
-    )
+    user = User.objects.get(id=request.GET.get("user_id"))
+    workbench_owner_username = request.GET.get("workbench_owner_username")
 
     if not services.is_environment_owner(user, workbench_owner_username):
         return JsonResponse(
             {"error": f"Failed to access {environment_name} management panel"},
             status=403,
         )
-
-    if request.method == "POST":
-        data = json.loads(request.body)
-        action = data.get("action")
-
-        if action == "add_collaborator":
-            collaborator_email = data.get("collaborator_email")
-            if collaborator_email:
-                services.add_workbench_collaborator(
-                    workspace_project_id=workspace_project_id,
-                    service_account_name=service_account_name,
-                    collaborator_email=collaborator_email,
-                )
-                return HttpResponse(status=200)
-            else:
-                return HttpResponse("Missing collaborator email", status=400)
-
-        elif action == "remove_collaborator":
-            collaborator_email = data.get("collaborator_email")
-            if collaborator_email:
-                services.remove_workbench_collaborator(
-                    workspace_project_id=workspace_project_id,
-                    service_account_name=service_account_name,
-                    collaborator_email=collaborator_email,
-                )
-                return HttpResponse(status=200)
-            else:
-                return HttpResponse("Missing collaborator email", status=400)
-
-        elif action == "mark_notification_viewed":
-            notification_id = data.get("notification_id")
-            if notification_id:
-                success = services.mark_notification_as_viewed(notification_id)
-                return JsonResponse({"success": success})
-            else:
-                return HttpResponse("Missing notification ID", status=400)
-
-        elif action == "clear_all_notifications":
-            success = services.clear_all_notifications(
-                workspace_project_id=workspace_project_id,
-                service_account_name=service_account_name,
-            )
-            return JsonResponse({"success": success})
-
-        else:
-            return HttpResponse("Invalid action", status=400)
 
     collaborators = services.get_workbench_collaborators(
         workspace_project_id=workspace_project_id,
@@ -711,3 +658,86 @@ def manage_collaborative_environment(
             "workbench_owner_username": workbench_owner_username,
         }
     )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def add_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.add_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def remove_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.remove_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def mark_notification_viewed(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    notification_id = data.get("notification_id")
+    if not notification_id:
+        return HttpResponse("Missing notification ID", status=400)
+
+    success = services.mark_notification_as_viewed(notification_id)
+    return JsonResponse({"success": success})
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def clear_all_notifications(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    success = services.clear_all_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+    return JsonResponse({"success": success})
