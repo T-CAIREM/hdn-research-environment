@@ -65,6 +65,7 @@ from environment.exceptions import (
     ListGroupRolesFailed,
     RemoveRolesFromCloudGroupFailed,
     RemoveWorkbenchCollaboratorFailed,
+    PublishedProjectAccessFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
     UpdateWorkspaceBillingAccountFailed,
@@ -78,8 +79,10 @@ from environment.models import (
     Workflow,
 )
 from environment.utilities import inner_join_iterators, left_join_iterators
+from project.authorization.access import can_access_project
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+UserModel = apps.get_model("user", "User")
 
 
 User = Model
@@ -451,6 +454,26 @@ def get_available_projects(user: User) -> Iterable[Any]:
 
 def get_project(project_id: str) -> Any:
     return PublishedProject.objects.get(id=project_id)
+
+
+def get_collaborator_user_by_email(email: str):
+    return (
+        UserModel.objects.only("id", "is_credentialed")
+        .filter(cloud_identity__email=email)
+        .first()
+    )
+
+
+def check_collaborator_project_access(collaborator_email: str, project_id: str) -> bool:
+    collaborator_user = get_collaborator_user_by_email(collaborator_email)
+    if not collaborator_user:
+        return
+    project = get_project(project_id)
+    if not can_access_project(project, collaborator_user):
+        raise PublishedProjectAccessFailed(
+            f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to the chosen project."
+        )
+    return True
 
 
 def _get_projects_for_environments(
