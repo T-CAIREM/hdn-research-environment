@@ -5,7 +5,7 @@
     {% if recent_workflow_failed %}
     <div class="alert alert-danger" role="alert">
             {{ recent_workflow.display_type }}
-            failed! {{ workflow.error_information|default_if_none:"Try again later." }}
+            failed! {{ recent_workflow.error_information|default_if_none:"Try again later." }}
         </div>
     {% elif recent_workflow_succeeded %}
         <div class="alert alert-success" role="alert">
