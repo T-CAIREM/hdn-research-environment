@@ -37,7 +37,7 @@ from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
-
+CloudIdentity = apps.get_model("environment", "CloudIdentity")
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
@@ -741,3 +741,26 @@ def clear_all_notifications(request, workspace_project_id, service_account_name)
         service_account_name=service_account_name,
     )
     return JsonResponse({"success": success})
+
+
+@require_GET
+@login_required
+def search_users_by_cloud_email(request):
+    collaborator_email = request.GET.get("email", "")
+    project_id = request.GET.get("project_id")
+    collaborator_email = collaborator_email.strip().lower()
+    if not collaborator_email:
+        return JsonResponse({"results": []})
+
+    emails = CloudIdentity.objects.filter(
+        email__icontains=collaborator_email
+    ).values_list("email", flat=True)[:5]
+    results = []
+    for email in emails:
+        try:
+            if services.check_collaborator_project_access(email, project_id):
+                results.append(email)
+        except Exception:
+            continue
+
+    return JsonResponse({"results": results})

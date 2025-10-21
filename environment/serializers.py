@@ -66,6 +66,10 @@ def serialize_workbench(workbench):
         "machine_type": workbench.machine_type,
         "disk_size": workbench.disk_size,
         "gpu_accelerator_type": workbench.gpu_accelerator_type,
+        "workbench_owner_username": workbench.workbench_owner_username,
+        "service_account_name": workbench.service_account_name,
+        "project_id": workbench.project.id,
+        "is_running": workbench.is_running,
     }
 
 
