@@ -813,7 +813,6 @@ def renew_environment_certificate(
     return response.json()
 
 
-def create_shared_buket(
 @handle_api_error(
     "Shared Bucket Creation",
     CreateSharedBucketFailed,
