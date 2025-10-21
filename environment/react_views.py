@@ -9,6 +9,7 @@ import json
 import re
 
 from environment.utilities import user_has_cloud_identity
+import environment.constants as constants
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
@@ -222,6 +223,7 @@ def create_research_environment(request, workspace_project_id):
             disk_size=form.cleaned_data.get("disk_size"),
             gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
             sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
+            collaborators=form.cleaned_data.get("users_list", []),
         )
         return HttpResponse(status=202)
     else:
@@ -241,6 +243,19 @@ def delete_research_environment(request):
         workbench_resource_id=data["instance_id"],
     )
     return HttpResponse(status=202)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def leave_shared_environment(request):
+    data = json.loads(request.body)
+    services.remove_workbench_collaborator(
+        workspace_project_id=data["gcp_project_id"],
+        service_account_name=data["service_account_name"],
+        collaborator_email=request.user.cloud_identity.email,
+    )
+    return HttpResponse(status=200)
 
 
 @require_PATCH
@@ -607,3 +622,122 @@ def front_page_buttons(request):
     buttons = FrontPageButton.objects.all()
     data = [serializers.serialize_front_page_button(btn) for btn in buttons]
     return JsonResponse({"front_page_buttons": data})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_collaborative_environment(
+    request, workspace_project_id, environment_name, service_account_name
+):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    workbench_owner_username = request.GET.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse(
+            {"error": f"Failed to access {environment_name} management panel"},
+            status=403,
+        )
+
+    collaborators = services.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    notifications = services.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    return JsonResponse(
+        {
+            "workspace_project_id": workspace_project_id,
+            "environment_name": environment_name,
+            "collaborators": collaborators,
+            "notifications": serializers.serialize_notifications(notifications),
+            "workbench_owner_username": workbench_owner_username,
+        }
+    )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def add_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.add_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def remove_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.remove_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def mark_notification_viewed(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    notification_id = data.get("notification_id")
+    if not notification_id:
+        return HttpResponse("Missing notification ID", status=400)
+
+    success = services.mark_notification_as_viewed(notification_id)
+    return JsonResponse({"success": success})
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def clear_all_notifications(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    success = services.clear_all_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+    return JsonResponse({"success": success})

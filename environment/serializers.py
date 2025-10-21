@@ -45,6 +45,7 @@ def serialize_workspace_details(workspace: ResearchWorkspace):
             else serialize_entity_scaffolding(wb)
             for wb in workspace.workbenches
         ],
+        "is_owner": workspace.is_owner,
     }
 
 
@@ -238,4 +239,15 @@ def serialize_gpu_projected_costs(
             "projected_cost": ProjectedWorkbenchCost(gpu.name, gpu.price)._asdict(),
         }
         for gpu in gpu_accelerators
+    ]
+
+
+def serialize_notifications(notifications) -> list[Dict]:
+    return [
+        {
+            "id": notification.get("id"),
+            "email": notification.get("email"),
+            "timestamp": notification.get("timestamp"),
+        }
+        for notification in notifications
     ]
