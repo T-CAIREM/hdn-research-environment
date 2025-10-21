@@ -1,7 +1,41 @@
 .progress {
-    height: 20px;
+    height: 0.75rem;
+    border-radius: 1rem;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
 .progress-bar {
-    background-color: #007bff;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+    border-radius: 1rem;
+}
+
+.progress-bar-success {
+    background-color: #28a745;
+}
+
+.progress-bar-warning {
+    background-color: #ffc107;
+}
+
+.progress-bar-danger {
+    background-color: #dc3545;
+}
+
+.quota-card {
+    margin-bottom: 0.25rem;
+}
+
+
+.quota-label {
+    font-weight: 500;
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+}
+
+.quota-value {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    text-align: right;
 }
