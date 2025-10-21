@@ -52,7 +52,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
 class CreateWorkspaceForm(forms.Form):
     billing_account_id = forms.ChoiceField(label="Billing Account")
-    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
@@ -63,6 +62,17 @@ class CreateWorkspaceForm(forms.Form):
             )
             for billing_account in billing_accounts_list
         ]
+
+
+class MachineTypeField(forms.ModelChoiceField):
+    def to_python(self, value):
+        return int(value)
+
+    def validate(self, value):
+        if value is None:
+            raise ValidationError("Machine type is required.")
+        elif value not in VMInstance.objects.all().values_list("id", flat=True):
+            raise ValidationError(f"{value} is not a valid choice")
 
 
 class GPUAcceleratorField(forms.ModelChoiceField):
@@ -90,9 +100,13 @@ class CreateResearchEnvironmentForm(forms.Form):
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
-    workspace_region = forms.CharField(widget=forms.HiddenInput())
+    region = forms.ChoiceField(
+        label="Region",
+        choices=AVAILABLE_REGIONS,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
     project_id = forms.ChoiceField(label="Project")
-    machine_type = forms.ModelChoiceField(
+    machine_type = MachineTypeField(
         label="Instance type",
         queryset=VMInstance.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -136,18 +150,18 @@ class CreateResearchEnvironmentForm(forms.Form):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
-        self.fields["workspace_region"].initial = selected_workspace.region.value
 
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
-        self.fields["machine_type"].queryset = VMInstance.objects.filter(
-            region__region=selected_workspace.region.value
-        )
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
+
+    def clean_machine_type(self):
+        machine_type_id = self.cleaned_data.get("machine_type")
+        return VMInstance.objects.get(id=machine_type_id)
 
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")

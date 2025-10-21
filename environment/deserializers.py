@@ -18,6 +18,7 @@ from environment.entities import (
     SharedBucketObject,
     WorkspaceType,
     QuotaInfo,
+    RegionQuotas,
     CloudRole,
     DatasetsMonitoringEntry,
 )
@@ -40,7 +41,6 @@ def _project_data_group(project: PublishedProject) -> str:
 def deserialize_research_environments(
     workbenches: dict,
     gcp_project_id: str,
-    region: Region,
     projects: Iterable[PublishedProject],
 ) -> Iterable[ResearchEnvironment]:
     return [
@@ -52,7 +52,7 @@ def deserialize_research_environments(
             status=EnvironmentStatus(workbench["status"]),
             cpu=workbench["cpu"],
             memory=workbench["memory"],
-            region=region,
+            region=Region(workbench["region"]),
             type=EnvironmentType(workbench["workbench_type"]),
             machine_type=workbench["machine_type"],
             disk_size=workbench.get("disk_size"),
@@ -83,7 +83,6 @@ def deserialize_workspace_details(
     data: dict, projects: Iterable[PublishedProject]
 ) -> ResearchWorkspace:
     return ResearchWorkspace(
-        region=Region(data["region"]),
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=data["billing_info"]["billing_account_id"],
         status=WorkspaceStatus(data["status"]),
@@ -91,7 +90,6 @@ def deserialize_workspace_details(
         workbenches=deserialize_research_environments(
             data["workbenches"],
             data["gcp_project_id"],
-            Region(data["region"]),
             projects,
         ),
     )
@@ -170,15 +168,21 @@ def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject
     ]
 
 
-def deserialize_quotas(data) -> Iterable[QuotaInfo]:
+def deserialize_quotas(data) -> Iterable[RegionQuotas]:
     return [
-        QuotaInfo(
-            metric_name=quota["metric_name"],
-            limit=quota["limit"],
-            usage=quota["usage"],
-            usage_percentage=(quota["usage"] / quota["limit"]) * 100,
+        RegionQuotas(
+            region=region,
+            quotas=[
+                QuotaInfo(
+                    metric_name=quota["metric_name"],
+                    limit=quota["limit"],
+                    usage=quota["usage"],
+                    usage_percentage=(quota["usage"] / quota["limit"]) * 100,
+                )
+                for quota in quotas_list
+            ],
         )
-        for quota in data
+        for region, quotas_list in data.items()
     ]
 
 

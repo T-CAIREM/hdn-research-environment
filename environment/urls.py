@@ -63,7 +63,7 @@ urlpatterns = [
     path("workspace/create", views.create_workspace, name="create_workspace"),
     path("workspace/delete", views.delete_workspace, name="delete_workspace"),
     path(
-        "workspace/quotas/<workspace_region>/<workspace_project_id>",
+        "workspace/quotas/<workspace_project_id>",
         views.get_quotas,
         name="get_quotas",
     ),
@@ -164,8 +164,8 @@ urlpatterns = [
         name="update_workspace_billing_account",
     ),
     path(
-        "gpu-accelerators/",
-        views.get_available_gpu_accelerators_partial,
-        name="get_available_gpu_accelerators_partial",
+        "machine-types-and-gpus/",
+        views.get_available_machine_types_and_gpus_partial,
+        name="get_available_machine_types_and_gpus_partial",
     ),
 ]

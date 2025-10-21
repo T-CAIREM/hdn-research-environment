@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 from django.apps import apps
 from environment.models import GCPRegion
@@ -133,7 +133,6 @@ class ResearchEnvironment:
 
 @dataclass(frozen=True, eq=True)
 class ResearchWorkspace:
-    region: Region
     gcp_project_id: str
     gcp_billing_id: str
     status: WorkspaceStatus
@@ -188,6 +187,12 @@ class QuotaInfo:
     limit: int
     usage: int
     usage_percentage: float
+
+
+@dataclass
+class RegionQuotas:
+    region: str
+    quotas: List[QuotaInfo]
 
 
 @dataclass
