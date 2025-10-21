@@ -340,4 +340,34 @@ urlpatterns = [
         react_views.front_page_buttons,
         name="front_page_buttons",
     ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<environment_name>/<service_account_name>/",
+        react_views.get_collaborative_environment,
+        name="react_views.get_collaborative_environment",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/add",
+        react_views.add_collaborator,
+        name="react_views.add_collaborator",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/remove",
+        react_views.remove_collaborator,
+        name="react_views.remove_collaborator",
+    ),
+    path(
+        "api/environment/collaborative/notifications/mark-viewed",
+        react_views.mark_notification_viewed,
+        name="react_views.mark_notification_viewed",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/notifications/clear",
+        react_views.clear_all_notifications,
+        name="react_views.clear_all_notifications",
+    ),
+    path(
+        "api/environment/collaborative/leave/",
+        react_views.leave_shared_environment,
+        name="leave_shared_environment",
+    ),
 ]
