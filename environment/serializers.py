@@ -17,6 +17,7 @@ from environment.models import (
     BucketSharingInvite,
     BillingAccountSharingInvite,
 )
+from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 
@@ -191,4 +192,50 @@ def serialize_quotas(objects: Iterable[QuotaInfo]) -> list[Dict]:
             "usage_percentage": obj.usage_percentage,
         }
         for obj in objects
+    ]
+
+
+def serialize_static_page(page):
+    return {
+        "id": page.id,
+        "title": page.title,
+        "url": page.url,
+        "nav_bar": page.nav_bar,
+        "nav_order": page.nav_order,
+    }
+
+
+def serialize_front_page_button(button):
+    return {
+        "id": button.id,
+        "label": button.label,
+        "url": button.url,
+        "description": button.description,
+        "associated_image_path": button.associated_image_path,
+    }
+
+
+def serialize_instance_projected_costs(
+    vm_instances: Iterable[VMInstance], ProjectedWorkbenchCost
+) -> list[dict]:
+    return [
+        {
+            "id": instance.id,
+            "projected_cost": ProjectedWorkbenchCost(
+                instance.id, instance.price
+            )._asdict(),
+        }
+        for instance in vm_instances
+    ]
+
+
+def serialize_gpu_projected_costs(
+    gpu_accelerators: Iterable, ProjectedWorkbenchCost
+) -> list[dict]:
+    return [
+        {
+            "name": gpu.name,
+            "projected_cost": ProjectedWorkbenchCost(gpu.name, gpu.price)._asdict(),
+        }
+        for gpu in gpu_accelerators
     ]

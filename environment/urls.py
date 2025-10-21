@@ -339,4 +339,10 @@ urlpatterns = [
         react_views.identity_provisioning,
         name="react_views.identity_provisioning",
     ),
+    path("api/static-pages/", react_views.static_pages, name="static_pages"),
+    path(
+        "api/front-page-buttons/",
+        react_views.front_page_buttons,
+        name="front_page_buttons",
+    ),
 ]

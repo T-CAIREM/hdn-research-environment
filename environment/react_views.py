@@ -32,6 +32,7 @@ from environment.decorators import (
     require_PATCH,
     billing_account_required,
 )
+from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -153,13 +154,23 @@ def get_environment_resource_options(request):
     serialized_available_instances = serializers.serialize_vm_instances(
         VMInstance.objects.all()
     )
-    serialized_available_gpu_accelerators = serializers.serialize_gpu_accelerators(
-        GPUAccelerator.objects.all()
+    instance_projected_costs = serializers.serialize_instance_projected_costs(
+        VMInstance.objects.all(), constants.ProjectedWorkbenchCost
     )
+    gpu_projected_costs = serializers.serialize_gpu_projected_costs(
+        GPUAccelerator.objects.all(), constants.ProjectedWorkbenchCost
+    )
+    data_storage_projected_costs = {
+        str(region.value): cost._asdict()
+        for region, cost in constants.DATA_STORAGE_PROJECTED_COSTS.items()
+    }
+
     return JsonResponse(
         {
             "instances": serialized_available_instances,
-            "accelerators": serialized_available_gpu_accelerators,
+            "instance_projected_costs": instance_projected_costs,
+            "gpu_projected_costs": gpu_projected_costs,
+            "data_storage_projected_costs": data_storage_projected_costs,
         }
     )
 
@@ -580,3 +591,19 @@ def identity_provisioning(request):
         )
 
     return HttpResponse(status=201)
+
+
+@require_GET
+@login_required
+def static_pages(request):
+    pages = StaticPage.objects.all().order_by("nav_order")
+    data = [serializers.serialize_static_page(page) for page in pages]
+    return JsonResponse({"static_pages": data})
+
+
+@require_GET
+@login_required
+def front_page_buttons(request):
+    buttons = FrontPageButton.objects.all()
+    data = [serializers.serialize_front_page_button(btn) for btn in buttons]
+    return JsonResponse({"front_page_buttons": data})
