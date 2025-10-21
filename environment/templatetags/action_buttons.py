@@ -15,6 +15,7 @@ from environment.entities import (
 )
 
 from environment.models import VMInstance
+from environment.utilities import has_billing_issues
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 
@@ -27,7 +28,7 @@ button_types = {
         "button_text": "Pause",
         "http_method": "PATCH",
         "url_name": "stop_running_environment",
-        "button_class": "btn btn-primary m-1",
+        "button_class": "btn btn-outline-secondary m-1",
     },
     "start": {
         "button_text": "Start",
@@ -39,7 +40,7 @@ button_types = {
         "button_text": "Save Instance",
         "http_method": "PATCH",
         "url_name": "change_environment_machine_type",
-        "button_class": "btn btn-primary",
+        "button_class": "btn btn-primary m-1",
     },
     "destroy": {
         "button_text": "Destroy",
@@ -61,35 +62,35 @@ button_types = {
     },
     "modal_instance": {
         "button_text": "Change Instance Type",
-        "button_class": "btn-secondary",
+        "button_class": "btn btn-primary m-1",
         "modal_title": "Choose Instance Type",
         "modal_body": None,
         "action_button_type": "update",
     },
     "modal_pause": {
         "button_text": "Pause",
-        "button_class": "btn-primary",
+        "button_class": "btn btn-outline-secondary",
         "modal_title": "Pause",
         "modal_body": "Are you sure you want to pause this environment?",
         "action_button_type": "pause",
     },
     "modal_destroy": {
         "button_text": "Destroy",
-        "button_class": "btn-danger",
+        "button_class": "btn btn-danger",
         "modal_title": "Destroy",
         "modal_body": "Are you sure you want to destroy this environment?",
         "action_button_type": "destroy",
     },
     "modal_start": {
         "button_text": "Start",
-        "button_class": "btn-primary",
+        "button_class": "btn btn-secondary m1",
         "modal_title": "Start",
         "modal_body": "Are you sure you want to start this environment?",
         "action_button_type": "start",
     },
     "modal_leave": {
         "button_text": "Leave",
-        "button_class": "btn-danger",
+        "button_class": "btn btn-danger",
         "modal_title": "Leave Environment",
         "modal_body": "Are you sure you want to leave this shared environment? You will lose access to it.",
         "action_button_type": "leave",
@@ -251,6 +252,7 @@ def shared_workspace_destroy_modal_button(
         "gcp_project_id": shared_workspace.gcp_project_id,
         "billing_account_id": shared_workspace.gcp_billing_id,
     }
+    has_billing_issues_flag = has_billing_issues(shared_workspace)
     result_data = {
         "shared_workspace": shared_workspace,
         "modal_id": f"shared-workspace-delete-{shared_workspace.gcp_project_id}",
@@ -258,7 +260,8 @@ def shared_workspace_destroy_modal_button(
         "request_url": reverse("delete_shared_workspace"),
         "request_method": "DELETE",
         "request_data": json.dumps(request_data),
-        "disabled": len(shared_workspace.buckets) > 0,
+        "disabled": len(shared_workspace.buckets) > 0 or has_billing_issues_flag,
+        "has_billing_issues": has_billing_issues_flag,
     }
     return result_data
 

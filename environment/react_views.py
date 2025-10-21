@@ -9,6 +9,7 @@ import json
 import re
 
 from environment.utilities import user_has_cloud_identity
+import environment.constants as constants
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
@@ -32,10 +33,11 @@ from environment.decorators import (
     require_PATCH,
     billing_account_required,
 )
+from physionet.models import StaticPage, FrontPageButton
 
 User = get_user_model()
 PublishedProject = apps.get_model("project", "PublishedProject")
-
+CloudIdentity = apps.get_model("environment", "CloudIdentity")
 
 ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 
@@ -89,9 +91,7 @@ def create_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateWorkspaceForm(
-        data, billing_accounts_list=billing_accounts_list
-    )
+    form = CreateWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
     if form.is_valid():
         services.create_workspace(
             user=request.user,
@@ -125,9 +125,7 @@ def create_shared_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     billing_accounts_list = services.get_billing_accounts_list(user)
-    form = CreateSharedWorkspaceForm(
-        data, billing_accounts_list=billing_accounts_list
-    )
+    form = CreateSharedWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
     if form.is_valid():
         services.create_shared_workspace(
             user=request.user,
@@ -157,13 +155,23 @@ def get_environment_resource_options(request):
     serialized_available_instances = serializers.serialize_vm_instances(
         VMInstance.objects.all()
     )
-    serialized_available_gpu_accelerators = serializers.serialize_gpu_accelerators(
-        GPUAccelerator.objects.all()
+    instance_projected_costs = serializers.serialize_instance_projected_costs(
+        VMInstance.objects.all(), constants.ProjectedWorkbenchCost
     )
+    gpu_projected_costs = serializers.serialize_gpu_projected_costs(
+        GPUAccelerator.objects.all(), constants.ProjectedWorkbenchCost
+    )
+    data_storage_projected_costs = {
+        str(region.value): cost._asdict()
+        for region, cost in constants.DATA_STORAGE_PROJECTED_COSTS.items()
+    }
+
     return JsonResponse(
         {
             "instances": serialized_available_instances,
-            "accelerators": serialized_available_gpu_accelerators,
+            "instance_projected_costs": instance_projected_costs,
+            "gpu_projected_costs": gpu_projected_costs,
+            "data_storage_projected_costs": data_storage_projected_costs,
         }
     )
 
@@ -215,6 +223,7 @@ def create_research_environment(request, workspace_project_id):
             disk_size=form.cleaned_data.get("disk_size"),
             gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
             sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
+            collaborators=form.cleaned_data.get("users_list", []),
         )
         return HttpResponse(status=202)
     else:
@@ -234,6 +243,19 @@ def delete_research_environment(request):
         workbench_resource_id=data["instance_id"],
     )
     return HttpResponse(status=202)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def leave_shared_environment(request):
+    data = json.loads(request.body)
+    services.remove_workbench_collaborator(
+        workspace_project_id=data["gcp_project_id"],
+        service_account_name=data["service_account_name"],
+        collaborator_email=request.user.cloud_identity.email,
+    )
+    return HttpResponse(status=200)
 
 
 @require_PATCH
@@ -584,3 +606,161 @@ def identity_provisioning(request):
         )
 
     return HttpResponse(status=201)
+
+
+@require_GET
+@login_required
+def static_pages(request):
+    pages = StaticPage.objects.all().order_by("nav_order")
+    data = [serializers.serialize_static_page(page) for page in pages]
+    return JsonResponse({"static_pages": data})
+
+
+@require_GET
+@login_required
+def front_page_buttons(request):
+    buttons = FrontPageButton.objects.all()
+    data = [serializers.serialize_front_page_button(btn) for btn in buttons]
+    return JsonResponse({"front_page_buttons": data})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_collaborative_environment(
+    request, workspace_project_id, environment_name, service_account_name
+):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    workbench_owner_username = request.GET.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse(
+            {"error": f"Failed to access {environment_name} management panel"},
+            status=403,
+        )
+
+    collaborators = services.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    notifications = services.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    return JsonResponse(
+        {
+            "workspace_project_id": workspace_project_id,
+            "environment_name": environment_name,
+            "collaborators": collaborators,
+            "notifications": serializers.serialize_notifications(notifications),
+            "workbench_owner_username": workbench_owner_username,
+        }
+    )
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def add_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.add_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def remove_collaborator(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    collaborator_email = data.get("collaborator_email")
+    if not collaborator_email:
+        return HttpResponse("Missing collaborator email", status=400)
+
+    services.remove_workbench_collaborator(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+        collaborator_email=collaborator_email,
+    )
+    return HttpResponse(status=200)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def mark_notification_viewed(request):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    notification_id = data.get("notification_id")
+    if not notification_id:
+        return HttpResponse("Missing notification ID", status=400)
+
+    success = services.mark_notification_as_viewed(notification_id)
+    return JsonResponse({"success": success})
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def clear_all_notifications(request, workspace_project_id, service_account_name):
+    data = json.loads(request.body)
+    user = User.objects.get(id=data.get("user_id"))
+    workbench_owner_username = data.get("workbench_owner_username")
+
+    if not services.is_environment_owner(user, workbench_owner_username):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    success = services.clear_all_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+    return JsonResponse({"success": success})
+
+
+@require_GET
+@login_required
+def search_users_by_cloud_email(request):
+    collaborator_email = request.GET.get("email", "")
+    project_id = request.GET.get("project_id")
+    collaborator_email = collaborator_email.strip().lower()
+    if not collaborator_email:
+        return JsonResponse({"results": []})
+
+    emails = CloudIdentity.objects.filter(
+        email__icontains=collaborator_email
+    ).values_list("email", flat=True)[:5]
+    results = []
+    for email in emails:
+        try:
+            if services.check_collaborator_project_access(email, project_id):
+                results.append(email)
+        except Exception:
+            continue
+
+    return JsonResponse({"results": results})

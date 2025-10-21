@@ -388,13 +388,20 @@ def create_shared_bucket(request, workspace_id):
             request.POST, selected_shared_workspace=selected_shared_workspace
         )
         if form.is_valid():
-            services.create_shared_buket(
-                user=request.user,
-                region=form.cleaned_data["region"],
-                user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
-                workspace_project_id=form.cleaned_data["workspace_project_id"],
-            )
-            return redirect("research_environments")
+            try:
+                services.create_shared_bucket(
+                    user=request.user,
+                    region=form.cleaned_data["region"],
+                    user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
+                    workspace_project_id=form.cleaned_data["workspace_project_id"],
+                )
+                return redirect("research_environments")
+            except (f, ValueError, ConnectionError) as e:
+                # Capture bucket creation failure and add as message
+                messages.error(
+                    request,
+                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}"
+                )
     else:
         form = CreateSharedBucketForm(
             selected_shared_workspace=selected_shared_workspace
@@ -557,10 +564,15 @@ def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_nam
         shared_bucket_name, request.user
     )
 
+    # Check if the workspace has service errors
+    workspace = next((ws for ws in shared_workspaces_list if ws.gcp_project_id == shared_workspace_name), None)
+    workspace_has_errors = workspace and not workspace.is_accessible if workspace else False
+
     context = {
         "shared_bucket_name": shared_bucket_name,
         "shared_workspace_name": shared_workspace_name,
         "bucket_content": bucket_content,
+        "workspace_has_errors": workspace_has_errors,
     }
 
     return render(request, "environment/manage_shared_bucket_files.html", context)
@@ -691,6 +703,7 @@ def manage_collaborative_environment(
     environment_name,
     workbench_owner_username,
     service_account_name,
+    project_id,
 ):
     if not services.is_environment_owner(request.user, workbench_owner_username):
         messages.error(
@@ -705,12 +718,18 @@ def manage_collaborative_environment(
         if action == "add_collaborator":
             collaborator_email = request.POST.get("collaborator_email")
             if collaborator_email:
-                services.add_workbench_collaborator(
-                    workspace_project_id=workspace_project_id,
-                    service_account_name=service_account_name,
-                    collaborator_email=collaborator_email,
-                )
-                return redirect(request.path)
+                try:
+                    services.check_collaborator_project_access(
+                        collaborator_email, project_id
+                    )
+                    services.add_workbench_collaborator(
+                        workspace_project_id=workspace_project_id,
+                        service_account_name=service_account_name,
+                        collaborator_email=collaborator_email,
+                    )
+                    return redirect(request.path)
+                except services.PublishedProjectAccessFailed as e:
+                    messages.error(request, str(e))
 
         elif action == "remove_collaborator":
             collaborator_email = request.POST.get("collaborator_email")
@@ -1125,9 +1144,13 @@ def update_workspace_billing_account(
             billing_accounts_list=billing_accounts_list,
         )
 
-    current_billing_account = [
-        acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
-    ][0]
+    current_billing_account = None
+    if current_billing_account_id and current_billing_account_id != 'none':
+        current_billing_account_matches = [
+            acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
+        ]
+        current_billing_account = current_billing_account_matches[0] if current_billing_account_matches else None
+    
     context = {
         "form": form,
         "workspace_project_id": workspace_project_id,
@@ -1144,3 +1167,17 @@ def get_available_gpu_accelerators_partial(request):
     gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
     context = {"gpu_accelerators": gpu_accelerators}
     return render(request, "environment/gpu_accelerator_partial.html", context=context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def validate_collaborator_project_access(request):
+    collaborator_email = request.GET.get("collaborator_email")
+    project_id = request.GET.get("project_id")
+
+    try:
+        services.check_collaborator_project_access(collaborator_email, project_id)
+        return JsonResponse({"valid": True})
+    except services.PublishedProjectAccessFailed as e:
+        return JsonResponse({"valid": False, "error": str(e)})

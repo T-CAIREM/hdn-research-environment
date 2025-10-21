@@ -1,10 +1,10 @@
- <!-- Content manipulation buttons to trigger modals -->
+  <!-- Content manipulation buttons to trigger modals -->
   <div class="big-toolbar">
     <span class="big-toolbar-left">
-      <button id="upload-files-button" type="button" class="btn btn-success" data-toggle="modal" data-target="#upload-files-modal">
+      <button id="upload-files-button" type="button" class="btn btn-primary mt-1" {% if not workspace_has_errors %}data-toggle="modal" data-target="#upload-files-modal"{% endif %} {% if workspace_has_errors %}disabled{% endif %}>
         <i class="fa fa-arrow-circle-up"></i> Upload Files
       </button>
-      <button id="create-folder-button" type="button" class="btn btn-success" data-toggle="modal" data-target="#create-folder-modal">
+      <button id="create-folder-button" type="button" class="btn btn-primary mt-1" {% if not workspace_has_errors %}data-toggle="modal" data-target="#create-folder-modal"{% endif %} {% if workspace_has_errors %}disabled{% endif %}>
         <i class="fa fa-folder-open"></i> Create Folder
       </button>
     </span>
@@ -14,6 +14,14 @@
       </button>
     </span>
   </div>
+
+  <!-- Service issues warning -->
+  {% if workspace_has_errors %}
+  <div class="alert alert-warning" role="alert">
+    <strong>Service Issues Detected:</strong> Some functionality may be limited due to workspace service issues.
+    <br><small>For assistance, please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a></small>
+  </div>
+  {% endif %}
 
   <!-- File manipulation modals -->
   <div class="modal fade" id="upload-files-modal" tabindex="-1" role="dialog" aria-labelledby="upload-files-modal" aria-hidden="true">
@@ -30,7 +38,13 @@
             <br>
           </div>
           <div class="modal-footer">
-              <button id="upload-files-finish" type="button" data-dismiss="modal" class="btn btn-secondary" onclick="return navigateSharedBucketDir('{{ subdir }}')">Finish</button>
+              {% if workspace_has_errors %}
+                <div class="text-muted small">
+                  Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                </div>
+              {% else %}
+                <button id="upload-files-finish" type="button" data-dismiss="modal" class="btn btn-secondary" onclick="return navigateSharedBucketDir('{{ subdir }}')">Finish</button>
+              {% endif %}
           </div>
       </div>
     </div>
@@ -50,8 +64,14 @@
               <input id="create-directory-name-field" type="text"/>
           </div>
           <div class="modal-footer">
-            <button id="create-folder-button-submit" class="btn btn-success" name="create_folder" onclick="createSharedBucketDir('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-folder-open"></i> Create Folder</button>
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            {% if workspace_has_errors %}
+              <div class="text-muted small">
+                Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+              </div>
+            {% else %}
+              <button id="create-folder-button-submit" class="btn btn-success" name="create_folder" onclick="createSharedBucketDir('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-folder-open"></i> Create Folder</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            {% endif %}
           </div>
       </div>
     </div>
@@ -71,8 +91,14 @@
             <p id="delete-items-message"></p>
           </div>
           <div class="modal-footer">
-            <button id="delete-items-button-submit" class="btn btn-danger" name="delete_items" onclick="deleteSharedBucketItems('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-trash-alt"></i> Delete Items</button>
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            {% if workspace_has_errors %}
+              <div class="text-muted small">
+                Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+              </div>
+            {% else %}
+              <button id="delete-items-button-submit" class="btn btn-danger" name="delete_items" onclick="deleteSharedBucketItems('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-trash-alt"></i> Delete Items</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            {% endif %}
           </div>
       </div>
     </div>

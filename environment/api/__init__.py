@@ -409,11 +409,14 @@ def get_workbench_collaborators(
     workspace_project_id: str,
     service_account_name: str,
 ) -> Request:
-    json = {
-        "workspace_project_id": workspace_project_id,
-        "service_account_name": service_account_name,
-    }
-    return Request("GET", url="/workbench/collaborators", json=json)
+    return Request(
+        "GET",
+        url="/workbench/collaborators",
+        params={
+            "workspace_project_id": workspace_project_id,
+            "service_account_name": service_account_name,
+        },
+    )
 
 
 @api_request
@@ -449,11 +452,14 @@ def get_workbench_notifications(
     workspace_project_id: str,
     service_account_name: str,
 ) -> Request:
-    json = {
-        "workspace_project_id": workspace_project_id,
-        "service_account_name": service_account_name,
-    }
-    return Request("GET", url="/workbench/notifications", json=json)
+    return Request(
+        "GET",
+        url="/workbench/notifications",
+        params={
+            "workspace_project_id": workspace_project_id,
+            "service_account_name": service_account_name,
+        },
+    )
 
 
 @api_request

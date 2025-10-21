@@ -9,6 +9,9 @@
 {% block local_js_top %}
 <script src="{% static 'environment/js/pricing_change.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
+<script type="text/javascript">
+  var validateCollaboratorUrl = "{% url 'validate_collaborator_project_access' %}";
+</script>
 <script src="{% static 'environment/js/add_user_panel.js' %}"></script>
 {% endblock %}
 
@@ -120,6 +123,8 @@
           $("#id_gpu_accelerator").html(data);
         }
       });
+    } else {
+      $("#id_gpu_accelerator").html('<option value="">---------</option>');
     }
   }
 

@@ -150,6 +150,10 @@ class RenewEnvironmentCertificateFailed(Exception):
     pass
 
 
+class PublishedProjectAccessFailed(Exception):
+    pass
+
+
 class GetSimplifiedWorkspaceFailed(Exception):
     pass
 
