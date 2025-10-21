@@ -65,6 +65,11 @@ from environment.exceptions import (
     ListGroupRolesFailed,
     RemoveRolesFromCloudGroupFailed,
     RemoveWorkbenchCollaboratorFailed,
+    RenewEnvironmentCertificateFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
+    GetSharedBucketFailed,
+    GetSimplifiedWorkspaceFailed,
     PublishedProjectAccessFailed,
     StartEnvironmentFailed,
     StopEnvironmentFailed,
@@ -786,6 +791,26 @@ def delete_environment(
     data = response.json()
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
+
+
+def renew_environment_certificate(
+    user: User,
+    workspace_project_id: str,
+    workbench_resource_id: str,
+) -> str:
+    response = api.renew_environment_certificate(
+        user_email=user.cloud_identity.email,
+        workspace_project_id=workspace_project_id,
+        workbench_resource_id=workbench_resource_id,
+    )
+    if not response.ok:
+        error_message = response.json()["error"]
+        logger.error(f"RenewEnvironmentCertificateFailed: {error_message}")
+        raise RenewEnvironmentCertificateFailed(error_message)
+
+    persist_workflow(user=user, workflow_id=response.json()["workflow_id"])
+
+    return response.json()
 
 
 @handle_api_error(

@@ -146,6 +146,10 @@ class AddWorkbenchCollaboratorFailed(Exception):
     pass
 
 
+class RenewEnvironmentCertificateFailed(Exception):
+    pass
+
+
 class PublishedProjectAccessFailed(Exception):
     pass
 

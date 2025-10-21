@@ -71,8 +71,11 @@ def deserialize_research_environments(
                 workbench["dataset_identifier"], projects
             ),
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
-            service_account_name=workbench["service_account_name"],
-            workbench_owner_username=workbench["workbench_owner_username"],
+            service_account_name=workbench.get("service_account_name"),
+            workbench_owner_username=workbench.get("workbench_owner_username"),
+            rstudio_ssl_certificate_expiration_date=workbench.get(
+                "rstudio_ssl_certificate_expiration_date"
+            ),
             service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
         )
         if workbench.get("type") == "Workbench"

@@ -107,6 +107,7 @@ class ResearchEnvironment:
     gpu_accelerator_type: Optional[str]
     service_account_name: str
     workbench_owner_username: Optional[str]
+    rstudio_ssl_certificate_expiration_date: Optional[str]
     service_errors: Optional[List["ServiceError"]] = None
 
     @property
