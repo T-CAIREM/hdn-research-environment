@@ -215,7 +215,6 @@ def create_workspace(request):
             services.create_workspace(
                 user=request.user,
                 billing_account_id=form.cleaned_data["billing_account_id"],
-                region=form.cleaned_data["region"],
             )
             return redirect("research_environments")
     else:
@@ -316,6 +315,7 @@ def create_research_environment(request, workspace_id):
                             "shared_bucket"
                         ),
                         collaborators=form.cleaned_data.get("users_list", []),
+                        region=form.cleaned_data["region"],
                     )
                     messages.info(
                         request,
@@ -336,25 +336,26 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
 
-    instance_projected_cost = {}
-    region = Region(selected_workspace.region)
-    instances = VMInstance.objects.filter(region__region=region.value)
-    projected_costs = [
-        ProjectedWorkbenchCost(instance.id, instance.price) for instance in instances
-    ]
-    instance_projected_cost[region] = projected_costs
+    instance_projected_costs = {
+        region: [
+            ProjectedWorkbenchCost(instance.id, instance.price)
+            for instance in VMInstance.objects.filter(region__region=region.value)
+        ]
+        for region in Region
+    }
 
     gpu_projected_costs = {
         region: [
             ProjectedWorkbenchCost(gpu.name, gpu.price)
             for gpu in GPUAccelerator.objects.filter(region__region=region.value)
         ]
+        for region in Region
     }
 
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
-        "instance_projected_costs": instance_projected_cost,
+        "instance_projected_costs": instance_projected_costs,
         "gpu_projected_costs": gpu_projected_costs,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
@@ -788,7 +789,6 @@ def delete_workspace(request):
         user=request.user,
         gcp_project_id=data["gcp_project_id"],
         billing_account_id=data["billing_account_id"],
-        region=data["region"],
     )
     return JsonResponse({})
 
@@ -889,8 +889,8 @@ def delete_shared_bucket_content(request, bucket_name):
 @require_http_methods(["GET"])
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
     context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
     return render(request, "environment/quotas_list.html", context, status=200)
@@ -1157,6 +1157,28 @@ def update_workspace_billing_account(
         "current_billing_account": current_billing_account,
     }
     return render(request, "environment/update_workspace_billing_account.html", context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_available_machine_types_and_gpus_partial(request):
+    region = request.GET.get("region")
+    machine_types = VMInstance.objects.filter(region__region=region)
+    response = {
+        "machine_types": [
+            {"id": machine_type.id, "name": str(machine_type)}
+            for machine_type in machine_types
+        ],
+        "gpu_accelerators_by_machine_type": {
+            str(machine_type.id): [
+                {"name": gpu_accelerator.name, "label": str(gpu_accelerator)}
+                for gpu_accelerator in machine_type.gpu_accelerators.all()
+            ]
+            for machine_type in machine_types
+        },
+    }
+    return JsonResponse(response)
 
 
 @require_GET

@@ -111,29 +111,59 @@
 </div>
 
 <script>
-  function fetchGpuAccelerators() {
-    var machine_type_id = $("#id_machine_type").val();
-    if (machine_type_id) {
-      $.ajax({
-        url: "{% url 'get_available_gpu_accelerators_partial' %}",
-        data: {
-          'vm_instance': machine_type_id
-        },
-        success: function (data) {
-          $("#id_gpu_accelerator").html(data);
-        }
+  function fetchMachineTypesAndGpus() {
+    const region = $("#id_region").val();
+    if (!region) {
+      clearDropdowns();
+      return;
+    }
+    $.ajax({
+      url: "{% url 'get_available_machine_types_and_gpus_partial' %}",
+      data: { region },
+      success: handleMachineTypesAndGpusResponse
+    });
+  }
+
+  function handleMachineTypesAndGpusResponse(data) {
+    populateMachineTypeDropdown(data.machine_types);
+    gpuMapping = data.gpu_accelerators_by_machine_type;
+    clearGpuDropdown();
+  }
+
+  function populateMachineTypeDropdown(machineTypes) {
+    let options = '<option value="">---------</option>';
+    machineTypes.forEach(machine_type => {
+      options += `<option value="${machine_type.id}">${machine_type.name}</option>`;
+    });
+    $("#id_machine_type").html(options);
+  }
+
+  function clearDropdowns() {
+    $("#id_machine_type").html('<option value="">---------</option>');
+    clearGpuDropdown();
+  }
+
+  function clearGpuDropdown() {
+    $("#id_gpu_accelerator").html('<option value="">---------</option>');
+  }
+
+  function updateGpuDropdown() {
+    const machine_type_Id = $("#id_machine_type").val();
+    let options = '<option value="">---------</option>';
+    if (machine_type_Id && gpuMapping[machine_type_Id]) {
+        gpuMapping[machine_type_Id].forEach(gpu_accelerator => {
+        options += `<option value="${gpu_accelerator.name}">${gpu_accelerator.label}</option>`;
       });
     } else {
       $("#id_gpu_accelerator").html('<option value="">---------</option>');
     }
+    $("#id_gpu_accelerator").html(options);
   }
 
   $(document).ready(function () {
-    fetchGpuAccelerators();
-
-    $("#id_machine_type").change(function () {
-      fetchGpuAccelerators();
-    });
+    fetchMachineTypesAndGpus();
+    $("#id_region").change(fetchMachineTypesAndGpus);
+    $("#id_machine_type").change(updateGpuDropdown);
 
     const environmentTypeRadios = document.querySelectorAll(".environment-type input");
     const collaborativePanel = document.querySelector(".collaborative-panel");

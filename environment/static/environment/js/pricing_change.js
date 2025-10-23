@@ -1,5 +1,5 @@
 $(function(){
-    var current_region = $("#id_workspace_region").val()
+    var current_region = $("#id_region").val()
     var current_machine_type = $("#id_machine_type").val()
     var current_instance_price = $(`#${current_region}-${current_machine_type}`)
     var current_data_amount = $("#id_disk_size").val()
@@ -11,6 +11,7 @@ $(function(){
     $("#data_total_cost span").text((parseInt(current_data_amount) * current_data_price.attr("data-cost")).toFixed(2))
 
     function change_instance_shown_pricing() {
+        var current_region = $("#id_region").val()
         var current_machine_type = $("#id_machine_type").val()
         var current_instance_price = $(`#${current_region}-${current_machine_type}`)
         $("div.gpu-accelerator-costs").hide()
@@ -21,6 +22,7 @@ $(function(){
     };
 
     function change_gpu_shown_pricing() {
+        var current_region = $("#id_region").val()
         var current_gpu_accelerator = $("#id_gpu_accelerator").val()
         $("div.gpu-accelerator-costs").hide()
 
@@ -31,6 +33,7 @@ $(function(){
     };
 
     function change_data_storage_costs_shown_pricing() {
+        var current_region = $("#id_region").val()
         var current_data_amount = $("#id_disk_size").val()
         $("div.data-storage-costs").hide()
         $(`div[id*=${current_region}-Persistent]`).show()

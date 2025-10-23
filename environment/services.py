@@ -299,17 +299,16 @@ def invite_user_to_shared_bucket(
 @handle_api_error(
     "Workspace Creation",
     CreateWorkspaceFailed,
-    lambda user, billing_account_id, region: {
+    lambda user, billing_account_id: {
         "user_email": user.cloud_identity.email,
         "billing_account_id": billing_account_id,
-        "region": region,
     },
+  
 )
-def create_workspace(user: User, billing_account_id: str, region: str):
+def create_workspace(user: User, billing_account_id: str):
     response = api.create_workspace(
         email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
-        region=region,
         user_groups=list(
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
@@ -340,21 +339,19 @@ def create_shared_workspace(user: User, billing_account_id: str):
 @handle_api_error(
     "Workspace Deletion",
     DeleteWorkspaceFailed,
-    lambda user, billing_account_id, region, gcp_project_id: {
+    lambda user, billing_account_id, gcp_project_id: {
         "user_email": user.cloud_identity.email,
         "gcp_project_id": gcp_project_id,
         "billing_account_id": billing_account_id,
-        "region": region,
     },
 )
 def delete_workspace(
-    user: User, billing_account_id: str, region: str, gcp_project_id: str
+    user: User, billing_account_id: str, gcp_project_id: str
 ):
     response = api.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
-        region=region,
     )
     data = response.json()
     persist_workflow(user=user, workflow_id=data["workflow_id"])
@@ -388,6 +385,7 @@ def _create_workbench_kwargs(
     machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
+    region: str,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
@@ -403,6 +401,7 @@ def _create_workbench_kwargs(
         "cpu": machine_type.cpu,
         "dataset_identifier": _project_data_group(project),
         "disk_size": disk_size,
+        "region": region,
         "bucket_name": project.project_file_root(),
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": (
@@ -432,6 +431,7 @@ def create_research_environment(
     machine_type: VMInstance,
     workbench_type: str,
     disk_size: int,
+    region: str,
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
@@ -443,6 +443,7 @@ def create_research_environment(
         machine_type,
         workbench_type,
         disk_size,
+        region,
         gpu_accelerator_type,
         sharing_bucket_identifiers,
         collaborators,
@@ -652,13 +653,12 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 @handle_api_error(
     "Quotas Data Retrieval",
     GetAvailableEnvironmentsFailed,
-    lambda workspace_project_id, region: {
+    lambda workspace_project_id: {
         "workspace_project_id": workspace_project_id,
-        "region": region,
     },
 )
-def list_quotas_data(workspace_project_id: str, region: str) -> Iterable[QuotaInfo]:
-    response = api.list_quotas_data(workspace_project_id, region)
+def list_quotas_data(workspace_project_id: str) -> Iterable[QuotaInfo]:
+    response = api.list_quotas_data(workspace_project_id)
     data = response.json()
     return deserialize_quotas(data)
 
