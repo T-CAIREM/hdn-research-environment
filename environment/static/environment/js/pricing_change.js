@@ -13,13 +13,12 @@ $(function(){
     function change_instance_shown_pricing() {
         var current_region = $("#id_region").val()
         var current_machine_type = $("#id_machine_type").val()
+        var current_instance_price = $(`#${current_region}-${current_machine_type}`)
+        $("div.gpu-accelerator-costs").hide()
+        $("#gpu_accelerator_costs").hide()
         $("div.instance-costs").hide()
-
-        if(current_machine_type){
-            $("#instance-costs").show()
-            $(`#${current_region}-${current_machine_type}`).show()
-
-        };
+        current_instance_price.show()
+        $("#instance_total_cost span").text(current_instance_price.attr("data-cost") || "0")
     };
 
     function change_gpu_shown_pricing() {
@@ -43,15 +42,28 @@ $(function(){
 
     $("#id_machine_type, #id_region, #id_gpu_accelerator").on("change", function(){
         var current_machine_type = $("#id_machine_type").val()
-        var current_instance_price = $(`#${current_region}-${current_machine_type}`).attr("data-cost")
+        var current_instance_price = current_machine_type ? $(`#${current_region}-${current_machine_type}`).attr("data-cost"): "0"
         var current_gpu_accelerator = $("#id_gpu_accelerator").val()
-        var current_gpu_accelerator_price = $(`#${current_region}-${current_gpu_accelerator}`).attr("data-cost")
-        var instance_total_cost = parseFloat(current_instance_price) + parseFloat(current_gpu_accelerator_price)
+        var current_gpu_accelerator_price = current_gpu_accelerator ? $(`#${current_region}-${current_gpu_accelerator}`).attr("data-cost"): "0"
+        var instance_total_cost = 0;
 
-        if($("#id_gpu_accelerator").val()){
-            $("#instance_total_cost span").text(instance_total_cost.toFixed(2))
+        $("div.instance-costs").hide();
+        $("div.gpu-accelerator-costs").hide();
+
+        if (current_machine_type) {
+            $(`#${current_region}-${current_machine_type}`).show();
+            instance_total_cost += parseFloat(current_instance_price);
+        }
+        if (current_gpu_accelerator) {
+            $("#gpu_accelerator_costs").show();
+            $(`#${current_region}-${current_gpu_accelerator}`).show();
+            instance_total_cost += parseFloat(current_gpu_accelerator_price);
+        }
+
+        if (!current_machine_type && !current_gpu_accelerator) {
+            $("#instance_total_cost span").text("0");
         } else {
-            $("#instance_total_cost span").text(current_instance_price)
+            $("#instance_total_cost span").text(instance_total_cost.toFixed(2));
         }
     });
 

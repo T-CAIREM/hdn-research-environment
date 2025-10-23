@@ -1,6 +1,15 @@
-from typing import Iterable
+import logging
+from typing import Iterable, Optional, List, Any
 
-from django.apps import apps
+from django.apps import apps  # type: ignore
+from environment.api_types import (
+    RawServiceErrorsData,
+    RawWorkspacesData,
+    RawSharedWorkspacesData,
+    RawWorkbenchesData,
+    WorkspaceResponse,
+    SharedWorkspaceResponse,
+)
 
 from environment.entities import (
     EntityScaffolding,
@@ -21,6 +30,8 @@ from environment.entities import (
     RegionQuotas,
     CloudRole,
     DatasetsMonitoringEntry,
+    ServiceError,
+    SimplifiedResearchWorkspace,
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -39,7 +50,7 @@ def _project_data_group(project: PublishedProject) -> str:
 
 
 def deserialize_research_environments(
-    workbenches: dict,
+    workbenches: RawWorkbenchesData,
     gcp_project_id: str,
     projects: Iterable[PublishedProject],
 ) -> Iterable[ResearchEnvironment]:
@@ -62,6 +73,10 @@ def deserialize_research_environments(
             gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
             service_account_name=workbench.get("service_account_name"),
             workbench_owner_username=workbench.get("workbench_owner_username"),
+            rstudio_ssl_certificate_expiration_date=workbench.get(
+                "rstudio_ssl_certificate_expiration_date"
+            ),
+            service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
         )
         if workbench.get("type") == "Workbench"
         else deserialize_entity_scaffolding(workbench)
@@ -79,12 +94,39 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
     )
 
 
+def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> List[ServiceError]:
+    service_errors = []
+    # Handle case where service_errors_data might be None
+    if not service_errors_data:
+        return service_errors
+        
+    for error in service_errors_data:
+        error_obj = ServiceError(
+            error_type=error.get("error_type", "unknown"),
+            message=error.get("message", ""),
+            resource_id=error.get("resource_id", ""),
+            service_name=error.get("service_name", ""),
+            details=error.get("details"),
+            can_retry=error.get("can_retry", False),
+        )
+        service_errors.append(error_obj)
+    
+    return service_errors
+
+
 def deserialize_workspace_details(
-    data: dict, projects: Iterable[PublishedProject]
+    data: WorkspaceResponse, projects: Iterable[Any]
 ) -> ResearchWorkspace:
+    # Handle missing or invalid billing_info gracefully
+    billing_info = data.get("billing_info")
+    service_errors = deserialize_service_errors(data.get("service_errors", []))
+
+    # Safely extract billing account ID
+    billing_account_id = billing_info.get("billing_account_id")
+
     return ResearchWorkspace(
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=data["billing_info"]["billing_account_id"],
+        gcp_billing_id=billing_account_id,
         status=WorkspaceStatus(data["status"]),
         is_owner=data["is_owner"],
         workbenches=deserialize_research_environments(
@@ -92,27 +134,57 @@ def deserialize_workspace_details(
             data["gcp_project_id"],
             projects,
         ),
+    is_accessible=data.get("is_accessible", True),
+    access_denial_reason=data.get("access_denial_reason"),
+        service_errors=service_errors,
     )
 
 
-def deserialize_shared_bucket_details(buckets_data: dict) -> Iterable[SharedBucket]:
+def deserialize_simplified_workspace_details(data: dict) -> SimplifiedResearchWorkspace:
+    return SimplifiedResearchWorkspace(
+        gcp_project_id=data["gcp_project_id"],
+        status=WorkspaceStatus(data["status"]),
+        owner=data["owner"],
+        **({"region": Region(data["region"])} if data.get("region") else {})
+    )
+
+
+def deserialize_shared_bucket_details(buckets_data: List[dict]) -> Iterable[SharedBucket]:
     return [
         SharedBucket(
-            name=data["bucket_name"],
-            is_owner=data["is_owner"],
-            is_admin=data["is_admin"],
+            name=bucket["bucket_name"],
+            is_owner=bucket.get("is_owner", False),
+            is_admin=bucket.get("is_admin", False),
         )
-        for data in buckets_data
+        for bucket in buckets_data
     ]
 
 
-def deserialize_shared_workspace_details(data: dict) -> SharedWorkspace:
+
+
+def deserialize_shared_workspace_details(data: SharedWorkspaceResponse) -> SharedWorkspace:
+    service_errors = deserialize_service_errors(data.get("service_errors", []))
+    
+    # Handle missing or invalid billing_info gracefully
+    billing_info = data.get("billing_info")
+    if not billing_info or not isinstance(billing_info, dict):
+        billing_info = {
+            "billing_account_id": None,
+            "billing_enabled": False
+        }
+    
+    # Safely extract billing account ID
+    billing_account_id = billing_info.get("billing_account_id")
+    
     return SharedWorkspace(
         gcp_project_id=data["gcp_project_id"],
-        gcp_billing_id=data["billing_info"]["billing_account_id"],
+        gcp_billing_id=billing_account_id,
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
         is_owner=data["is_owner"],
+    is_accessible=data.get("is_accessible", True),
+    access_denial_reason=data.get("access_denial_reason"),
+        service_errors=service_errors,
     )
 
 
@@ -123,7 +195,7 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 
 
 def deserialize_workspaces(
-    data: dict, projects: Iterable[PublishedProject]
+    data: RawWorkspacesData, projects: Iterable[Any]
 ) -> Iterable[ResearchWorkspace]:
     return [
         deserialize_workspace_details(workspace_data, projects)
@@ -132,8 +204,11 @@ def deserialize_workspaces(
         for workspace_data in data
     ]
 
+def deserialize_simplified_workspace(data: dict):
+    return deserialize_simplified_workspace_details(data)
 
-def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
+
+def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
     return [
         deserialize_shared_workspace_details(workspace_data)
         if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
@@ -144,15 +219,18 @@ def deserialize_shared_workspaces(data: dict) -> Iterable[SharedWorkspace]:
 
 def _get_project_for_environment(
     dataset_identifier: str,
-    projects: Iterable[PublishedProject],
-) -> PublishedProject:
-    return next(
-        iter(
-            project
-            for project in projects
-            if _project_data_group(project) == dataset_identifier
+    projects: Iterable[Any],
+) -> Optional[Any]:
+    try:
+        return next(
+            iter(
+                project
+                for project in projects
+                if _project_data_group(project) == dataset_identifier
+            )
         )
-    )
+    except StopIteration:
+        return None
 
 
 def deserialize_shared_bucket_objects(data: dict) -> Iterable[SharedBucketObject]:

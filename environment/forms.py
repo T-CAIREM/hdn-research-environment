@@ -177,6 +177,12 @@ class CreateResearchEnvironmentForm(forms.Form):
         except json.JSONDecodeError:
             raise ValidationError("Invalid user list format.")
 
+    def clean_workspace_region(self):
+        workspace_region = self.cleaned_data.get("workspace_region")
+        if workspace_region:
+            return workspace_region
+        return self.fields["workspace_region"].initial
+
 
 class ShareBillingAccountForm(forms.Form):
     user_email = forms.EmailField(label="User E-Mail")
