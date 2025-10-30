@@ -35,12 +35,14 @@ $(function(){
     function change_data_storage_costs_shown_pricing() {
         var current_region = $("#id_region").val()
         var current_data_amount = $("#id_disk_size").val()
+        var current_data_price_element = $(`div[id*=${current_region}-Persistent]`)
         $("div.data-storage-costs").hide()
-        $(`div[id*=${current_region}-Persistent]`).show()
-        $("#data_total_cost span").text((parseInt(current_data_amount) * current_data_price.attr("data-cost")).toFixed(2))
+        current_data_price_element.show()
+        $("#data_total_cost span").text((parseInt(current_data_amount) * current_data_price_element.attr("data-cost")).toFixed(2))
     }
 
     $("#id_machine_type, #id_region, #id_gpu_accelerator").on("change", function(){
+        var current_region = $("#id_region").val()
         var current_machine_type = $("#id_machine_type").val()
         var current_instance_price = current_machine_type ? $(`#${current_region}-${current_machine_type}`).attr("data-cost"): "0"
         var current_gpu_accelerator = $("#id_gpu_accelerator").val()
