@@ -1,88 +1,74 @@
 $(function(){
-    var current_region = $("#id_region").val()
-    var current_machine_type = $("#id_machine_type").val()
-    var current_instance_price = $(`#${current_region}-${current_machine_type}`)
-    var current_data_amount = $("#id_disk_size").val()
-    var current_data_price = $(`div[id*=${current_region}-Persistent]`)
+    // Initialize pricing display on page load
+    updateInstancePricing();
+    updateDataStoragePricing();
 
-    current_instance_price.show()
-    current_data_price.show()
-    $("#instance_total_cost span").text(current_instance_price.attr("data-cost"))
-    $("#data_total_cost span").text((parseInt(current_data_amount) * current_data_price.attr("data-cost")).toFixed(2))
+    // Update pricing when selections change
+    $("#id_region, #id_machine_type, #id_gpu_accelerator").on("change", function(){
+        updateInstancePricing();
+    });
 
-    function change_instance_shown_pricing() {
-        var current_region = $("#id_region").val()
-        var current_machine_type = $("#id_machine_type").val()
-        var current_instance_price = $(`#${current_region}-${current_machine_type}`)
-        $("div.gpu-accelerator-costs").hide()
-        $("#gpu_accelerator_costs").hide()
-        $("div.instance-costs").hide()
-        current_instance_price.show()
-        $("#instance_total_cost span").text(current_instance_price.attr("data-cost") || "0")
-    };
+    $("#id_region, #id_disk_size").on("change", function(){
+        updateDataStoragePricing();
+    });
 
-    function change_gpu_shown_pricing() {
-        var current_region = $("#id_region").val()
-        var current_gpu_accelerator = $("#id_gpu_accelerator").val()
-        $("div.gpu-accelerator-costs").hide()
+    function updateInstancePricing() {
+        var current_region = $("#id_region").val();
+        var current_machine_type = $("#id_machine_type").val();
+        var current_gpu_accelerator = $("#id_gpu_accelerator").val();
 
-        if(current_gpu_accelerator){
-            $("#gpu_accelerator_costs").show()
-            $(`#${current_region}-${current_gpu_accelerator}`).show()
-        };
-    };
-
-    function change_data_storage_costs_shown_pricing() {
-        var current_region = $("#id_region").val()
-        var current_data_amount = $("#id_disk_size").val()
-        $("div.data-storage-costs").hide()
-        $(`div[id*=${current_region}-Persistent]`).show()
-        $("#data_total_cost span").text((parseInt(current_data_amount) * current_data_price.attr("data-cost")).toFixed(2))
-    }
-
-    $("#id_machine_type, #id_region, #id_gpu_accelerator").on("change", function(){
-        var current_machine_type = $("#id_machine_type").val()
-        var current_instance_price = current_machine_type ? $(`#${current_region}-${current_machine_type}`).attr("data-cost"): "0"
-        var current_gpu_accelerator = $("#id_gpu_accelerator").val()
-        var current_gpu_accelerator_price = current_gpu_accelerator ? $(`#${current_region}-${current_gpu_accelerator}`).attr("data-cost"): "0"
-        var instance_total_cost = 0;
-
+        // Hide all pricing displays
         $("div.instance-costs").hide();
         $("div.gpu-accelerator-costs").hide();
+        $("#gpu_accelerator_costs").hide();
 
-        if (current_machine_type) {
-            $(`#${current_region}-${current_machine_type}`).show();
-            instance_total_cost += parseFloat(current_instance_price);
+        var instance_total_cost = 0;
+
+        // Show and calculate instance cost
+        if (current_machine_type && current_region) {
+            var instance_element = $(`#${current_region}-${current_machine_type}`);
+            if (instance_element.length > 0) {
+                instance_element.show();
+                var instance_cost = parseFloat(instance_element.attr("data-cost")) || 0;
+                instance_total_cost += instance_cost;
+            }
         }
-        if (current_gpu_accelerator) {
-            $("#gpu_accelerator_costs").show();
-            $(`#${current_region}-${current_gpu_accelerator}`).show();
-            instance_total_cost += parseFloat(current_gpu_accelerator_price);
+
+        // Show and calculate GPU cost
+        if (current_gpu_accelerator && current_region) {
+            var gpu_element = $(`#${current_region}-${current_gpu_accelerator}`);
+            if (gpu_element.length > 0) {
+                $("#gpu_accelerator_costs").show();
+                gpu_element.show();
+                var gpu_cost = parseFloat(gpu_element.attr("data-cost")) || 0;
+                instance_total_cost += gpu_cost;
+            }
         }
 
-        if (!current_machine_type && !current_gpu_accelerator) {
-            $("#instance_total_cost span").text("0");
-        } else {
-            $("#instance_total_cost span").text(instance_total_cost.toFixed(2));
+        // Update total display
+        $("#instance_total_cost span").text(instance_total_cost.toFixed(2));
+    }
+
+    function updateDataStoragePricing() {
+        var current_region = $("#id_region").val();
+        var current_data_amount = parseInt($("#id_disk_size").val()) || 0;
+
+        // Hide all data storage costs
+        $("div.data-storage-costs").hide();
+
+        var data_total_cost = 0;
+
+        // Show and calculate data storage cost
+        if (current_region) {
+            var storage_element = $(`div[id*=${current_region}-Persistent]`);
+            if (storage_element.length > 0) {
+                storage_element.show();
+                var storage_cost_per_gb = parseFloat(storage_element.attr("data-cost")) || 0;
+                data_total_cost = current_data_amount * storage_cost_per_gb;
+            }
         }
-    });
 
-    $("#id_region").on("change", function(){
-        change_instance_shown_pricing();
-        change_gpu_shown_pricing();
-        change_data_storage_costs_shown_pricing();
-    });
-
-    $("#id_machine_type").on("change", function(){
-        change_instance_shown_pricing();
-    });
-
-    $("#id_gpu_accelerator").on("change", function(){
-        change_gpu_shown_pricing();
-    });
-
-    $("#id_disk_size").on("change", function(){
-        change_data_storage_costs_shown_pricing();
-    });
-
+        // Update total display
+        $("#data_total_cost span").text(data_total_cost.toFixed(2));
+    }
 });
