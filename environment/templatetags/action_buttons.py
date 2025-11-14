@@ -126,7 +126,9 @@ def environment_modal_button(
         for instance in VMInstance.objects.filter(
             region__region=environment.region.value
         ):
-            MACHINE_TYPE_SPECIFICATION[instance.get_instance_value()] = instance
+            instance_value = instance.get_instance_value()
+            if instance_value != environment.machine_type:
+                MACHINE_TYPE_SPECIFICATION[instance_value] = instance
         result_data["instances_dict"] = MACHINE_TYPE_SPECIFICATION
 
     return result_data
