@@ -96,7 +96,6 @@ def create_workspace(request):
         services.create_workspace(
             user=request.user,
             billing_account_id=form.cleaned_data["billing_account_id"],
-            region=form.cleaned_data["region"],
         )
         return HttpResponse(status=202)
     else:
