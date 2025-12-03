@@ -35,7 +35,6 @@ def serialize_workspaces(
 
 def serialize_workspace_details(workspace: ResearchWorkspace):
     return {
-        "region": workspace.region.value,
         "gcp_project_id": workspace.gcp_project_id,
         "gcp_billing_id": workspace.gcp_billing_id,
         "status": workspace.status.value,
