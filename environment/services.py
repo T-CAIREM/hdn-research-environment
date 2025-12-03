@@ -477,7 +477,7 @@ def check_collaborator_project_access(collaborator_email: str, project_id: str) 
     project = get_project(project_id)
     if not can_access_project(project, collaborator_user):
         raise PublishedProjectAccessFailed(
-            f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to the chosen project."
+            f"User '{collaborator_email}' cannoft be added as a collaborator because the user does not have access to the chosen project."
         )
     return True
 
@@ -593,6 +593,7 @@ def get_environment_project_pairs_with_expired_access(
     ]
 
 
+#todo: it is not used anymore - check
 def sort_environments_per_workspace(
     environment_project_workflow_triplets: Iterable[
         Tuple[ResearchEnvironment, Any, Iterable[Workflow]]
@@ -625,6 +626,7 @@ def sort_environments_per_workspace(
     return sorted_environments_project_workflow_triplets_with_billing_info
 
 
+#todo: it is not used anymore - check
 def match_workspace_with_billing_id(
     workspaces: Iterable[ResearchWorkspace], billing_accounts_list: Iterable
 ):
