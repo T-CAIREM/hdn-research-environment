@@ -112,7 +112,6 @@ def delete_workspace(request):
         user=user,
         gcp_project_id=data.get("gcp_project_id"),
         billing_account_id=data.get("billing_account_id"),
-        region=data.get("region"),
     )
     return HttpResponse(status=202)
 
@@ -194,11 +193,14 @@ def create_research_environment(request, workspace_project_id):
         workspace_get_feature = executor.submit(
             services.get_simplified_workspace, workspace_project_id, request.user
         )
-        get_shared_bucket_feature = executor.submit(
-            services.get_shared_bucket, data.get("shared_bucket"), request.user
-        )
+        shared_buckets = data.get("shared_bucket", [])  # assume this is a list
+        futures = [
+            executor.submit(services.get_shared_bucket, bucket, request.user)
+            for bucket in shared_buckets
+        ]
+
+    shared_bucket = [future.result() for future in futures]
     workspace = workspace_get_feature.result()
-    shared_bucket = get_shared_bucket_feature.result()
 
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
@@ -208,7 +210,7 @@ def create_research_environment(request, workspace_project_id):
         data,
         selected_workspace=workspace,
         projects_list=[project],
-        buckets_list=[shared_bucket] if shared_bucket is not None else [],
+        buckets_list=shared_bucket if shared_bucket is not None else [],
     )
 
     if form.is_valid():
@@ -223,6 +225,7 @@ def create_research_environment(request, workspace_project_id):
             gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
             sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
             collaborators=form.cleaned_data.get("users_list", []),
+            region=form.cleaned_data.get("region"),
         )
         return HttpResponse(status=202)
     else:
@@ -319,7 +322,7 @@ def create_shared_bucket(request, workspace_id):
 
     form = CreateSharedBucketForm(data, selected_shared_workspace=shared_workspace)
     if form.is_valid():
-        services.create_shared_buket(
+        services.create_shared_bucket(
             user=user,
             region=form.cleaned_data["region"],
             user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
