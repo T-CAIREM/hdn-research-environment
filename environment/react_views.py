@@ -584,8 +584,8 @@ def update_workspace_billing_account(request):
 @require_GET
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
 
     return JsonResponse({"quotas": serializers.serialize_quotas(quotas_data_list)})
 

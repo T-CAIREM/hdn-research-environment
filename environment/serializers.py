@@ -190,12 +190,12 @@ def serialize_shared_bucket_objects(
 def serialize_quotas(objects: Iterable[QuotaInfo]) -> list[Dict]:
     return [
         {
-            "metric_name": obj.metric_name,
+            "metric_name": f"{obj.metric_name} ({regionobj.region})",
             "limit": obj.limit,
             "usage": obj.usage,
             "usage_percentage": obj.usage_percentage,
         }
-        for obj in objects
+        for regionobj in objects for obj in regionobj.quotas
     ]
 
 
