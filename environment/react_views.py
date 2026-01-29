@@ -640,8 +640,8 @@ def update_workspace_billing_account(request):
 @require_GET
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
 
     return JsonResponse({"quotas": serializers.serialize_quotas(quotas_data_list)})
 
@@ -739,7 +739,6 @@ def add_collaborator(request, workspace_project_id, service_account_name):
         collaborator_email=collaborator_email,
     )
 
-    # Invalidate cache for the collaborator being added
     invalidate_user_caches([collaborator_email], ['workspaces'])
 
     return HttpResponse(status=200)
@@ -766,7 +765,6 @@ def remove_collaborator(request, workspace_project_id, service_account_name):
         collaborator_email=collaborator_email,
     )
 
-    # Invalidate cache for the collaborator being removed
     invalidate_user_caches([collaborator_email], ['workspaces'])
 
     return HttpResponse(status=200)
