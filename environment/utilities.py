@@ -3,6 +3,7 @@ import traceback
 from functools import wraps
 from typing import Callable, Iterator, Optional, Tuple, TypeVar
 
+from django.core.cache import cache
 from django.db.models import Model
 
 from environment.entities import ServiceError
@@ -118,7 +119,7 @@ def has_billing_issues(workspace) -> bool:
     # Don't show billing issues during workspace creation
     if hasattr(workspace, 'status') and workspace.status.value in ['creating', 'pending']:
         return False
-        
+
     # Check service errors first
     if has_billing_error(workspace):
         return True
@@ -320,3 +321,39 @@ def _handle_api_error(
                 f"API call failed and error handling encountered issues: {str(e)}"
             )
         raise
+
+
+def invalidate_user_caches(
+    user_emails: list[str], cache_types: list[str] = None
+) -> None:
+    """
+    Invalidate cache for multiple users by their email addresses.
+
+    Args:
+        user_emails: List of user email addresses
+        cache_types: List of cache types to invalidate.
+                    Options: ['workspaces', 'billing_accounts', 'shared_workspaces']
+                    If None, invalidates all cache types.
+
+    Example:
+        invalidate_user_caches(['user1@example.com', 'user2@example.com'], ['workspaces'])
+    """
+    from django.contrib.auth import get_user_model
+
+    Usermodel = get_user_model()
+
+    if cache_types is None:
+        cache_types = ["workspaces", "billing_accounts", "shared_workspaces"]
+
+    for email in user_emails:
+        try:
+            user = Usermodel.objects.get(cloud_identity__email=email)
+            for cache_type in cache_types:
+                cache_key = f"{cache_type}_{user.id}"
+                cache.delete(cache_key)
+        except Usermodel.DoesNotExist:
+            logger.warning(
+                f"Cannot invalidate cache: User with email {email} not found"
+            )
+        except Exception as e:
+            logger.error(f"Error invalidating cache for user {email}: {str(e)}")
