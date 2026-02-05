@@ -96,22 +96,20 @@ def identity_provisioning(request):
 @login_required
 @cloud_identity_required
 def research_environments(request):
-    # Service functions are now cached automatically via @cached_per_user decorator
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        workspaces_future = executor.submit(services.get_workspaces_list, request.user)
-        billing_accounts_future = executor.submit(
+        workspaces_list_future = executor.submit(
+            services.get_workspaces_list, request.user
+        )
+        billing_accounts_list_future = executor.submit(
             services.get_billing_accounts_list, request.user
         )
-        shared_workspaces_future = executor.submit(
+        shared_workspaces_list_feature = executor.submit(
             services.get_shared_workspaces_list, request.user
         )
 
-        workspaces = workspaces_future.result()
-        billing_accounts_list = billing_accounts_future.result()
-        shared_workspaces = shared_workspaces_future.result()
-
-
-
+    workspaces = workspaces_list_future.result()
+    billing_accounts_list = billing_accounts_list_future.result()
+    shared_workspaces = shared_workspaces_list_feature.result()
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -589,17 +587,8 @@ def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_nam
     )
 
     # Check if the workspace has service errors
-    workspace = next(
-        (
-            ws
-            for ws in shared_workspaces_list
-            if ws.gcp_project_id == shared_workspace_name
-        ),
-        None,
-    )
-    workspace_has_errors = (
-        workspace and not workspace.is_accessible if workspace else False
-    )
+    workspace = next((ws for ws in shared_workspaces_list if ws.gcp_project_id == shared_workspace_name), None)
+    workspace_has_errors = workspace and not workspace.is_accessible if workspace else False
 
     context = {
         "shared_bucket_name": shared_bucket_name,
