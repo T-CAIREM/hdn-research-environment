@@ -80,7 +80,7 @@ require_POST = require_http_methods(["POST"])
 logger = logging.getLogger(__name__)
 
 
-def cached_per_user(cache_key_prefix: str, timeout: int = 300):
+def cache_user_data(cache_key_prefix: str, timeout: int = 300):
     """
     Decorator to cache service function results per user.
 
@@ -91,17 +91,10 @@ def cached_per_user(cache_key_prefix: str, timeout: int = 300):
         timeout: Cache timeout in seconds (default: 300 = 5 minutes)
 
     Usage:
-        @cached_per_user('workspaces', timeout=300)
+        @cache_user_data('workspaces', timeout=300)
         def get_workspaces_list(user):
             # expensive operation
             return workspaces
-
-    Cache invalidation:
-        # For current user
-        cache.delete(f'workspaces_{user.id}')
-
-        # For multiple users (by email)
-        invalidate_user_caches(['user@example.com'], ['workspaces'])
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)

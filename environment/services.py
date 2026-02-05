@@ -10,7 +10,7 @@ from django.db.models import Model, Q
 import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
-from environment.decorators import handle_api_error, cached_per_user
+from environment.decorators import handle_api_error, cache_user_data
 from environment.deserializers import (
     _project_data_group,
     deserialize_cloud_roles,
@@ -131,7 +131,7 @@ def create_cloud_identity(
     return identity
 
 
-@cached_per_user('billing_accounts', timeout=86400)  # Cache for 24 hours
+@cache_user_data('billing_accounts', timeout=86400)  # Cache for 24 hours
 @handle_api_error(
     "Billing Accounts List Retrieval",
     GetBillingAccountsListFailed,
@@ -638,7 +638,7 @@ def match_workspace_with_billing_id(
     return billing_id_mapping
 
 
-@cached_per_user('workspaces', timeout=300)  # Cache for 5 minutes
+@cache_user_data('workspaces', timeout=300)  # Cache for 5 minutes
 @handle_api_error(
     "Workspaces List Retrieval",
     GetAvailableEnvironmentsFailed,
@@ -665,7 +665,7 @@ def list_quotas_data(workspace_project_id: str) -> Iterable[QuotaInfo]:
     return deserialize_quotas(data)
 
 
-@cached_per_user('shared_workspaces', timeout=21600)  # Cache for 6 hours
+@cache_user_data('shared_workspaces', timeout=21600)  # Cache for 6 hours
 @handle_api_error(
     "Shared Workspaces List Retrieval",
     GetAvailableEnvironmentsFailed,
