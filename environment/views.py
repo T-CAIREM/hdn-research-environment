@@ -56,7 +56,7 @@ from environment.models import (
     CloudIdentity,
     GPUAccelerator,
 )
-from environment.utilities import user_has_cloud_identity, invalidate_user_caches
+from environment.utilities import user_has_cloud_identity, invalidate_user_caches, invalidate_user_cache
 
 User = get_user_model()
 
@@ -92,40 +92,23 @@ def identity_provisioning(request):
 @login_required
 @cloud_identity_required
 def research_environments(request):
-    workspaces_key = f"workspaces_{request.user.id}"
-    billing_key = f"billing_accounts_{request.user.id}"
-    shared_workspaces_key = f"shared_workspaces_{request.user.id}"
-
-    workspaces = cache.get(workspaces_key)
-    billing_accounts_list = cache.get(billing_key)
-    shared_workspaces = cache.get(shared_workspaces_key)
-
-    futures = {}
+    # Service functions are now cached automatically via @cached_per_user decorator
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        if workspaces is None:
-            futures["workspaces"] = executor.submit(
-                services.get_workspaces_list, request.user
-            )
-        if billing_accounts_list is None:
-            futures["billing"] = executor.submit(
-                services.get_billing_accounts_list, request.user
-            )
-        if shared_workspaces is None:
-            futures["shared"] = executor.submit(
-                services.get_shared_workspaces_list, request.user
-            )
+        workspaces_future = executor.submit(
+            services.get_workspaces_list, request.user
+        )
+        billing_accounts_future = executor.submit(
+            services.get_billing_accounts_list, request.user
+        )
+        shared_workspaces_future = executor.submit(
+            services.get_shared_workspaces_list, request.user
+        )
 
-    if "workspaces" in futures:
-        workspaces = futures["workspaces"].result()
-        cache.set(workspaces_key, workspaces, 300)
+        workspaces = workspaces_future.result()
+        billing_accounts_list = billing_accounts_future.result()
+        shared_workspaces = shared_workspaces_future.result()
 
-    if "billing" in futures:
-        billing_accounts_list = futures["billing"].result()
-        cache.set(billing_key, billing_accounts_list, 86400)
 
-    if "shared" in futures:
-        shared_workspaces = futures["shared"].result()
-        cache.set(shared_workspaces_key, shared_workspaces, 21600)
 
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
@@ -239,7 +222,7 @@ def create_workspace(request):
                 user=request.user,
                 billing_account_id=form.cleaned_data["billing_account_id"],
             )
-            cache.delete(f"workspaces_{request.user.id}")
+            invalidate_user_cache(request.user, ["workspaces"])
             return redirect("research_environments")
     else:
         form = CreateWorkspaceForm(billing_accounts_list=billing_accounts_list)
@@ -268,7 +251,7 @@ def create_shared_workspace(request):
                 user=request.user,
                 billing_account_id=form.cleaned_data["billing_account_id"],
             )
-            cache.delete(f"shared_workspaces_{request.user.id}")
+            invalidate_user_cache(request.user, ['shared_workspaces'])
             return redirect("research_environments")
     else:
         form = CreateSharedWorkspaceForm(billing_accounts_list=billing_accounts_list)
@@ -347,7 +330,7 @@ def create_research_environment(request, workspace_id):
                         request,
                         "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
                     )
-                    cache.delete(f"workspaces_{request.user.id}")
+                    invalidate_user_cache(request.user, ['workspaces'])
                     if collaborators:
                         invalidate_user_caches(collaborators, ['workspaces'])
                     return redirect("research_environments")
@@ -425,7 +408,7 @@ def create_shared_bucket(request, workspace_id):
                     user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
                     workspace_project_id=form.cleaned_data["workspace_project_id"],
                 )
-                cache.delete(f"shared_workspaces_{request.user.id}")
+                invalidate_user_cache(request.user, ['shared_workspaces'])
                 return redirect("research_environments")
             except (f, ValueError, ConnectionError) as e:
                 # Capture bucket creation failure and add as message
@@ -468,13 +451,13 @@ def manage_billing_account(request, billing_account_id):
                     user_email=user_email,
                     billing_account_id=billing_account_id,
                 )
-                cache.delete(f"billing_accounts_{request.user.id}")
+                invalidate_user_cache(request.user, ['billing_accounts'])
                 return redirect(request.path)
         elif form_action == "revoke_access":
             share_id = request.POST["share_id"]
             share = BillingAccountSharingInvite.objects.get(id=share_id)
             if share.is_consumed and share.user:
-                cache.delete(f"billing_accounts_{share.user.id}")
+                invalidate_user_cache(share.user, ['billing_accounts'])
             services.revoke_billing_account_access(share_id)
             return redirect(request.path)
 
@@ -502,7 +485,7 @@ def confirm_billing_account_sharing(request):
     if request.method == "POST":
         token = request.POST["token"]
         services.consume_billing_account_sharing_token(user=request.user, token=token)
-        cache.delete(f"billing_accounts_{request.user.id}")
+        invalidate_user_cache(request.user, ['billing_accounts'])
         messages.info(
             request,
             "You accepted the billing invitation! The account will be accessible in a few moments.",
@@ -560,7 +543,7 @@ def manage_shared_bucket(request, shared_workspace_name, shared_bucket_name):
                     shared_workspace_name=shared_workspace_name,
                     permissions=bucket_sharing_form.cleaned_data["user_permissions"],
                 )
-                cache.delete(f"shared_workspaces_{request.user.id}")
+                invalidate_user_cache(request.user, ['shared_workspaces'])
                 return redirect(request.path)
         elif form_action == "revoke_access":
             services.revoke_shared_bucket_access(request.POST["share_id"])
@@ -636,7 +619,7 @@ def confirm_bucket_sharing(request):
             request,
             "You accepted the shared bucket invitation! The bucket will be accessible in a few moments.",
         )
-        cache.delete(f"shared_workspaces_{request.user.id}")
+        invalidate_user_cache(request.user, ['shared_workspaces'])
         return redirect("research_environments")
 
     token = request.GET.get("token")
@@ -665,7 +648,7 @@ def leave_shared_environment(request):
         service_account_name=data["service_account_name"],
         collaborator_email=request.user.cloud_identity.email,
     )
-    cache.delete(f"workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['workspaces'])
     return JsonResponse({})
 
 
@@ -680,7 +663,7 @@ def stop_running_environment(request):
         user=request.user,
         workspace_project_id=data["gcp_project_id"],
     )
-    cache.delete(f"workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['workspaces'])
     return JsonResponse({})
 
 
@@ -695,7 +678,7 @@ def start_stopped_environment(request):
         workbench_resource_id=data["instance_name"],
         workspace_project_id=data["gcp_project_id"],
     )
-    cache.delete(f"workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['workspaces'])
     return JsonResponse({})
 
 
@@ -712,7 +695,7 @@ def change_environment_machine_type(request):
             workbench_type=data["environment_type"],
             workbench_resource_id=data["instance_name"],
         )
-        cache.delete(f"workspaces_{request.user.id}")
+        invalidate_user_cache(request.user, ['workspaces'])
         return JsonResponse({})
     except ChangeEnvironmentInstanceTypeFailed as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -729,7 +712,7 @@ def delete_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
     )
-    cache.delete(f"workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['workspaces'])
     return JsonResponse({})
 
 
@@ -744,7 +727,7 @@ def renew_environment_certificate(request):
             workspace_project_id=data["gcp_project_id"],
             workbench_resource_id=data["instance_name"],
         )
-        cache.delete(f"workspaces_{request.user.id}")
+        invalidate_user_cache(request.user, ['workspaces'])
         return JsonResponse({})
     except RenewEnvironmentCertificateFailed as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -850,7 +833,7 @@ def delete_workspace(request):
         gcp_project_id=data["gcp_project_id"],
         billing_account_id=data["billing_account_id"],
     )
-    cache.delete(f"workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['workspaces'])
     return JsonResponse({})
 
 
@@ -864,7 +847,7 @@ def delete_shared_workspace(request):
         gcp_project_id=data["gcp_project_id"],
         billing_account_id=data["billing_account_id"],
     )
-    cache.delete(f"shared_workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['shared_workspaces'])
     return JsonResponse({})
 
 
@@ -874,7 +857,7 @@ def delete_shared_workspace(request):
 def delete_shared_bucket(request):
     data = json.loads(request.body)
     services.delete_shared_bucket(bucket_name=data["bucket_name"])
-    cache.delete(f"shared_workspaces_{request.user.id}")
+    invalidate_user_cache(request.user, ['shared_workspaces'])
     return JsonResponse({})
 
 
@@ -889,8 +872,7 @@ def check_execution_status(request):
         services.mark_workflow_as_finished(
             execution_resource_name=execution_resource_name,
         )
-        cache.delete(f"workspaces_{request.user.id}")
-        cache.delete(f"shared_workspaces_{request.user.id}")
+        invalidate_user_cache(request.user, ['workspaces', 'shared_workspaces'])
     return JsonResponse({"finished": finished})
 
 
@@ -1202,8 +1184,7 @@ def update_workspace_billing_account(
                 request,
                 f"Billing account updated for workspace {workspace_project_id}",
             )
-            cache.delete(f"workspaces_{request.user.id}")
-            cache.delete(f"billing_accounts_{request.user.id}")
+            invalidate_user_cache(request.user, ['workspaces', 'billing_accounts'])
             return redirect("research_environments")
     else:
         form = UpdateWorkspaceBillingAccountForm(

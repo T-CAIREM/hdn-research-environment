@@ -8,7 +8,7 @@ from rest_framework.response import Response
 import json
 import re
 
-from environment.utilities import user_has_cloud_identity, invalidate_user_caches
+from environment.utilities import user_has_cloud_identity, invalidate_user_caches, invalidate_user_cache
 import environment.constants as constants
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
@@ -119,7 +119,7 @@ def create_workspace(request):
             user=request.user,
             billing_account_id=form.cleaned_data["billing_account_id"],
         )
-        cache.delete(f'workspaces_{user.id}')
+        invalidate_user_cache(user, 'workspaces')
         return HttpResponse(status=202)
     else:
         return HttpResponse(status=400)
@@ -136,7 +136,7 @@ def delete_workspace(request):
         gcp_project_id=data.get("gcp_project_id"),
         billing_account_id=data.get("billing_account_id"),
     )
-    cache.delete(f'workspaces_{user.id}')
+    invalidate_user_cache(user, ['workspaces'])
     return HttpResponse(status=202)
 
 
@@ -153,7 +153,7 @@ def create_shared_workspace(request):
             user=request.user,
             billing_account_id=form.cleaned_data["billing_account_id"],
         )
-        cache.delete(f'shared_workspaces_{user.id}')
+        invalidate_user_cache(user)
         return HttpResponse(status=202)
     else:
         return HttpResponse(status=400)
@@ -170,7 +170,7 @@ def delete_shared_workspace(request):
         gcp_project_id=data.get("gcp_project_id"),
         billing_account_id=data.get("billing_account_id"),
     )
-    cache.delete(f'shared_workspaces_{user.id}')
+    invalidate_user_cache(user)
     return HttpResponse(status=202)
 
 
@@ -254,7 +254,7 @@ def create_research_environment(request, workspace_project_id):
             collaborators=collaborators,
             region=form.cleaned_data.get("region"),
         )
-        cache.delete(f'workspaces_{user.id}')
+        invalidate_user_cache(user, ['workspaces'])
         if collaborators:
             invalidate_user_caches(collaborators, ['workspaces'])
         return HttpResponse(status=202)
@@ -274,7 +274,7 @@ def delete_research_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_id"],
     )
-    cache.delete(f'workspaces_{user.id}')
+    invalidate_user_cache(user, ['workspaces'])
     return HttpResponse(status=202)
 
 
@@ -288,7 +288,7 @@ def leave_shared_environment(request):
         service_account_name=data["service_account_name"],
         collaborator_email=request.user.cloud_identity.email,
     )
-    cache.delete(f'workspaces_{request.user.id}')
+    invalidate_user_cache(request.user, 'workspaces')
     return HttpResponse(status=200)
 
 
@@ -304,7 +304,7 @@ def stop_running_environment(request):
         user=user,
         workspace_project_id=data["gcp_project_id"],
     )
-    cache.delete(f'workspaces_{user.id}')
+    invalidate_user_cache(user, ['workspaces'])
     return HttpResponse(status=200)
 
 
@@ -320,7 +320,7 @@ def start_stopped_environment(request):
         workbench_resource_id=data["instance_id"],
         workspace_project_id=data["gcp_project_id"],
     )
-    cache.delete(f'workspaces_{user.id}')
+    invalidate_user_cache(user, 'workspaces')
     return HttpResponse(status=200)
 
 
@@ -338,7 +338,7 @@ def change_environment_machine_type(request):
             workbench_type=data["environment_type"],
             workbench_resource_id=data["instance_name"],
         )
-        cache.delete(f'workspaces_{user.id}')
+        invalidate_user_cache(user, ['workspaces'])
         return HttpResponse(status=202)
     except ChangeEnvironmentInstanceTypeFailed as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -363,7 +363,7 @@ def create_shared_bucket(request, workspace_id):
             user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
             workspace_project_id=form.cleaned_data["workspace_project_id"],
         )
-        cache.delete(f'shared_workspaces_{user.id}')
+        invalidate_user_cache(user)
         return HttpResponse(status=202)
     else:
         return HttpResponse(status=400)
@@ -376,7 +376,7 @@ def delete_shared_bucket(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
     services.delete_shared_bucket(bucket_name=data["bucket_name"])
-    cache.delete(f'shared_workspaces_{user.id}')
+    invalidate_user_cache(user)
     return HttpResponse(status=200)
 
 
@@ -404,7 +404,7 @@ def share_bucket(request, shared_workspace_name, shared_bucket_name):
             shared_workspace_name=shared_workspace_name,
             permissions=bucket_sharing_form.cleaned_data["user_permissions"],
         )
-        cache.delete(f"shared_workspaces_{user.id}")
+        invalidate_user_cache(user)
         return HttpResponse(status=200)
     else:
         return HttpResponse(status=400)
@@ -441,7 +441,7 @@ def revoke_shared_bucket_access(request, shared_bucket_name):
     share_id = data["share_id"]
     share = BucketSharingInvite.objects.get(id=share_id)
     if share.is_consumed and share.user:
-        cache.delete(f"shared_workspaces_{share.user.id}")
+        invalidate_user_cache(share.user)
 
     services.revoke_shared_bucket_access(share_id)
 
@@ -455,7 +455,7 @@ def confirm_bucket_sharing(request):
     user = User.objects.get(id=data.get("user_id"))
     token = request.POST["token"]
     services.consume_bucket_sharing_token(user=user, token=token)
-    cache.delete(f'shared_workspaces_{user.id}')
+    invalidate_user_cache(user, ['shared_workspaces'])
     return HttpResponse(status=200)
 
 
@@ -496,7 +496,7 @@ def share_billing_account(request, billing_account_id):
             user_email=billing_account_sharing_form.cleaned_data["user_email"],
             billing_account_id=billing_account_id,
         )
-        cache.delete(f"billing_accounts_{user.id}")
+        invalidate_user_cache(user, ['billing_accounts'])
         return HttpResponse(status=200)
     else:
         return HttpResponse(status=400)
@@ -532,7 +532,7 @@ def revoke_billing_account_access(request, billing_account_id):
     share_id = data["share_id"]
     share = BillingAccountSharingInvite.objects.get(id=share_id)
     if share.is_consumed and share.user:
-        cache.delete(f"billing_accounts_{share.user.id}")
+        invalidate_user_cache(user, ['billing_accounts'])
 
     services.revoke_billing_account_access(share_id)
 
@@ -546,7 +546,7 @@ def confirm_billing_account_sharing(request):
     user = User.objects.get(id=data.get("user_id"))
     token = request.POST["token"]
     services.consume_billing_account_sharing_token(user=user, token=token)
-    cache.delete(f'billing_accounts_{user.id}')
+    invalidate_user_cache(user, ['billing_accounts'])
     return HttpResponse(status=200)
 
 
@@ -632,8 +632,7 @@ def update_workspace_billing_account(request):
             form.cleaned_data["workspace_project_id"],
             form.cleaned_data["billing_account_id"],
         )
-        cache.delete(f"workspaces_{user.id}")
-        cache.delete(f"billing_accounts_{user.id}")
+        invalidate_user_cache(user, ['workspaces', 'billing_accounts'])
     return HttpResponse(status=200)
 
 
@@ -841,8 +840,7 @@ def check_execution_status(request):
         services.mark_workflow_as_finished(
             execution_resource_name=execution_resource_name,
         )
-        cache.delete(f"workspaces_{request.user.id}")
-        cache.delete(f"shared_workspaces_{request.user.id}")
+        invalidate_user_cache(request.user, ['workspaces', 'shared_workspaces'])
     return JsonResponse({"finished": finished})
 
 

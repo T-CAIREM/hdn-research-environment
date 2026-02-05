@@ -4,6 +4,7 @@ from typing import Callable
 
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
+from django.core.cache import cache
 from django.db.models import Model
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
@@ -77,6 +78,60 @@ require_POST = require_http_methods(["POST"])
 
 
 logger = logging.getLogger(__name__)
+
+
+def cached_per_user(cache_key_prefix: str, timeout: int = 300):
+    """
+    Decorator to cache service function results per user.
+
+    The decorated function must accept 'user' as its first positional argument.
+
+    Args:
+        cache_key_prefix: Prefix for the cache key (e.g., 'workspaces', 'billing_accounts')
+        timeout: Cache timeout in seconds (default: 300 = 5 minutes)
+
+    Usage:
+        @cached_per_user('workspaces', timeout=300)
+        def get_workspaces_list(user):
+            # expensive operation
+            return workspaces
+
+    Cache invalidation:
+        # For current user
+        cache.delete(f'workspaces_{user.id}')
+
+        # For multiple users (by email)
+        invalidate_user_caches(['user@example.com'], ['workspaces'])
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(user, *args, **kwargs):
+            # Generate cache key based on user ID
+            cache_key = f"{cache_key_prefix}_{user.id}"
+
+            # Try to get from cache
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                logger.debug(f"Cache hit for {cache_key}")
+                return cached_result
+
+            # Cache miss - call the actual function
+            logger.debug(f"Cache miss for {cache_key}, calling {func.__name__}")
+            result = func(user, *args, **kwargs)
+
+            # Store in cache
+            cache.set(cache_key, result, timeout)
+
+            return result
+
+        # Attach metadata for introspection
+        wrapper.cache_key_prefix = cache_key_prefix
+        wrapper.cache_timeout = timeout
+        wrapper.is_cached = True
+
+        return wrapper
+
+    return decorator
 
 
 def handle_api_error(

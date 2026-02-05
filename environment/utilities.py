@@ -323,6 +323,29 @@ def _handle_api_error(
         raise
 
 
+def invalidate_user_cache(user: User, cache_types: list[str] = None) -> None:
+    """
+    Invalidate cache for a single user.
+
+    Args:
+        user: User object or user ID
+        cache_types: Cache type(s) to invalidate. Can be:
+                   - A list of strings: ['workspaces', 'billing_accounts']
+                   - None: invalidates all cache types
+
+    Example:
+        invalidate_user_cache(request.user, ['workspaces'])
+        invalidate_user_cache(user, ['workspaces', 'billing_accounts'])
+        invalidate_user_cache(request.user)  # Invalidates all caches
+    """
+
+    if cache_types is None:
+        cache_types = ['workspaces', 'billing_accounts', 'shared_workspaces']
+
+    for cache_type in cache_types:
+        cache.delete(f"{cache_type}_{user.id}")
+
+
 def invalidate_user_caches(
     user_emails: list[str], cache_types: list[str] = None
 ) -> None:
@@ -348,9 +371,7 @@ def invalidate_user_caches(
     for email in user_emails:
         try:
             user = Usermodel.objects.get(cloud_identity__email=email)
-            for cache_type in cache_types:
-                cache_key = f"{cache_type}_{user.id}"
-                cache.delete(cache_key)
+            invalidate_user_cache(user, cache_types)
         except Usermodel.DoesNotExist:
             logger.warning(
                 f"Cannot invalidate cache: User with email {email} not found"
