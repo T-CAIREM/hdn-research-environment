@@ -16,6 +16,8 @@ V = TypeVar("V")
 
 User = Model
 
+DEFAULT_CACHE_TYPES = ("workspaces", "billing_accounts", "shared_workspaces")
+
 
 def user_has_cloud_identity(user: User) -> bool:
     return hasattr(user, "cloud_identity")
@@ -340,7 +342,7 @@ def invalidate_user_cache(user: User, cache_types: list[str] = None) -> None:
     """
 
     if cache_types is None:
-        cache_types = ["workspaces", "billing_accounts", "shared_workspaces"]
+        cache_types = DEFAULT_CACHE_TYPES
 
     for cache_type in cache_types:
         cache.delete(f"{cache_type}_{user.id}")
@@ -366,7 +368,7 @@ def invalidate_user_caches(
     Usermodel = get_user_model()
 
     if cache_types is None:
-        cache_types = ["workspaces", "billing_accounts", "shared_workspaces"]
+        cache_types = DEFAULT_CACHE_TYPES
 
     for email in user_emails:
         try:
