@@ -340,7 +340,7 @@ def invalidate_user_cache(user: User, cache_types: list[str] = None) -> None:
     """
 
     if cache_types is None:
-        cache_types = ['workspaces', 'billing_accounts', 'shared_workspaces']
+        cache_types = ["workspaces", "billing_accounts", "shared_workspaces"]
 
     for cache_type in cache_types:
         cache.delete(f"{cache_type}_{user.id}")
