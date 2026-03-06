@@ -78,9 +78,9 @@ def serialize_shared_workspaces(
     shared_workspaces: Iterable[Union[SharedWorkspace, EntityScaffolding]]
 ):
     return [
-            serialize_shared_workspace_details(shared_workspace)
-            if isinstance(shared_workspace, SharedWorkspace)
-            else serialize_entity_scaffolding(shared_workspace)
+        serialize_shared_workspace_details(shared_workspace)
+        if isinstance(shared_workspace, SharedWorkspace)
+        else serialize_entity_scaffolding(shared_workspace)
         for shared_workspace in shared_workspaces
     ]
 
