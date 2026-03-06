@@ -18,6 +18,7 @@ from environment.models import (
     BillingAccountSharingInvite,
 )
 from physionet.models import StaticPage, FrontPageButton
+from environment.utilities import user_has_cloud_identity
 
 User = get_user_model()
 
@@ -77,9 +78,9 @@ def serialize_shared_workspaces(
     shared_workspaces: Iterable[Union[SharedWorkspace, EntityScaffolding]]
 ):
     return [
-        serialize_shared_workspace_details(shared_workspace)
-        if isinstance(shared_workspace, SharedWorkspace)
-        else serialize_entity_scaffolding(shared_workspace)
+            serialize_shared_workspace_details(shared_workspace)
+            if isinstance(shared_workspace, SharedWorkspace)
+            else serialize_entity_scaffolding(shared_workspace)
         for shared_workspace in shared_workspaces
     ]
 
@@ -110,6 +111,7 @@ def serialize_user(user: User):
         "can_view_admin_console": user.has_access_to_admin_console(),
         "can_view_events": user.has_perms(["view_event_menu"]),
         "is_admin": user.is_admin,
+        "has_cloud_identity": user_has_cloud_identity(user),
     }
 
 
