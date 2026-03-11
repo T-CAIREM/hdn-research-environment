@@ -535,14 +535,14 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
 
 def get_environments_with_projects(
     user: User,
-) -> Iterable[Tuple[ResearchEnvironment, Any, Iterable[Workflow]]]:
+) -> Iterable[Tuple[ResearchEnvironment, Any]]:
     active_environments = get_active_environments(user)
     projects = _get_projects_for_environments(active_environments)
     environment_project_pairs = inner_join_iterators(
         _environment_data_group, active_environments, _project_data_group, projects
     )
     return [
-        (environment, project, project.workflows.in_progress().filter(user=user))
+        (environment, project)
         for environment, project in environment_project_pairs
     ]
 
@@ -550,7 +550,7 @@ def get_environments_with_projects(
 def get_available_projects_with_environments(
     user: User,
     environments: Iterable[ResearchEnvironment],
-) -> Iterable[Tuple[Any, Optional[ResearchEnvironment], Iterable[Workflow]]]:
+) -> Iterable[Tuple[Any, Optional[ResearchEnvironment]]]:
     available_projects = get_available_projects(user)
     project_environment_pairs = left_join_iterators(
         _project_data_group,
@@ -558,7 +558,7 @@ def get_available_projects_with_environments(
         environments,
     )
     return [
-        (project, environment, project.workflows.in_progress().filter(user=user))
+        (project, environment)
         for project, environment in project_environment_pairs
     ]
 
