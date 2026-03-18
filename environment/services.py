@@ -474,8 +474,8 @@ def check_collaborator_project_access(collaborator_email: str, project_id: str) 
     collaborator_user = get_collaborator_user_by_email(collaborator_email)
     if not collaborator_user:
         return
-    project = get_project(project_id)
-    if not can_access_project(project, collaborator_user):
+
+    if not PublishedProject.objects.accessible_by(collaborator_user).filter(id=project_id).exists():
         raise PublishedProjectAccessFailed(
             f"User '{collaborator_email}' cannot be added as a collaborator because the user does not have access to the chosen project."
         )
