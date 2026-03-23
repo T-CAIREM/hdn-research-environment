@@ -963,6 +963,9 @@ def exceeded_quotas(user) -> Iterable[str]:
 
 
 def persist_workflow(user: User, workflow_id: str):
+    if not workflow_id:
+        logger.error("persist_workflow called with null workflow_id")
+        return
     Workflow.objects.create(
         user=user,
         execution_resource_name=workflow_id,
