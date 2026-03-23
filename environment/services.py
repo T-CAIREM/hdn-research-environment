@@ -20,7 +20,7 @@ from environment.deserializers import (
     deserialize_shared_workspaces,
     deserialize_simplified_workspace,
     deserialize_workflow_details,
-    deserialize_workspaces,
+    deserialize_workspaces, deserialize_shared_bucket_details,
 )
 from environment.entities import (
     DatasetsMonitoringEntry,
@@ -1323,4 +1323,4 @@ def get_shared_bucket(bucket_name: str, user: User):
         error_message = response.json()["error"]
         logger.error(f"GetSharedBucketFailed: {error_message}")
         raise GetSharedBucketFailed(error_message)
-    return deserialize_shared_bucket_objects({"bucket": [response.json()]})
+    return deserialize_shared_bucket_details([response.json()])[0]

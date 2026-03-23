@@ -1,7 +1,7 @@
 import concurrent
 from collections import namedtuple
 
-from environment.entities import WorkspaceStatus
+from environment.entities import WorkspaceStatus, WorkflowStatus
 from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
 from environment.models import VMInstance, GPUAccelerator, BucketSharingInvite
 from rest_framework.response import Response
@@ -96,7 +96,6 @@ def create_workspace(request):
         services.create_workspace(
             user=request.user,
             billing_account_id=form.cleaned_data["billing_account_id"],
-            region=form.cleaned_data["region"],
         )
         return HttpResponse(status=202)
     else:
@@ -113,7 +112,6 @@ def delete_workspace(request):
         user=user,
         gcp_project_id=data.get("gcp_project_id"),
         billing_account_id=data.get("billing_account_id"),
-        region=data.get("region"),
     )
     return HttpResponse(status=202)
 
@@ -195,11 +193,14 @@ def create_research_environment(request, workspace_project_id):
         workspace_get_feature = executor.submit(
             services.get_simplified_workspace, workspace_project_id, request.user
         )
-        get_shared_bucket_feature = executor.submit(
-            services.get_shared_bucket, data.get("shared_bucket"), request.user
-        )
+        shared_buckets = data.get("shared_bucket", [])  # assume this is a list
+        futures = [
+            executor.submit(services.get_shared_bucket, bucket, request.user)
+            for bucket in shared_buckets
+        ]
+
+    shared_bucket = [future.result() for future in futures]
     workspace = workspace_get_feature.result()
-    shared_bucket = get_shared_bucket_feature.result()
 
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
@@ -209,7 +210,7 @@ def create_research_environment(request, workspace_project_id):
         data,
         selected_workspace=workspace,
         projects_list=[project],
-        buckets_list=[shared_bucket] if shared_bucket is not None else [],
+        buckets_list=shared_bucket if shared_bucket is not None else [],
     )
 
     if form.is_valid():
@@ -224,6 +225,7 @@ def create_research_environment(request, workspace_project_id):
             gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
             sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
             collaborators=form.cleaned_data.get("users_list", []),
+            region=form.cleaned_data.get("region"),
         )
         return HttpResponse(status=202)
     else:
@@ -320,7 +322,7 @@ def create_shared_bucket(request, workspace_id):
 
     form = CreateSharedBucketForm(data, selected_shared_workspace=shared_workspace)
     if form.is_valid():
-        services.create_shared_buket(
+        services.create_shared_bucket(
             user=user,
             region=form.cleaned_data["region"],
             user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
@@ -582,8 +584,8 @@ def update_workspace_billing_account(request):
 @require_GET
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
 
     return JsonResponse({"quotas": serializers.serialize_quotas(quotas_data_list)})
 
@@ -764,3 +766,27 @@ def search_users_by_cloud_email(request):
             continue
 
     return JsonResponse({"results": results})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def check_execution_status(request):
+    execution_resource_name = request.GET["execution_resource_name"]
+    execution = services.get_execution(execution_resource_name=execution_resource_name)
+    finished = execution.status != WorkflowStatus.IN_PROGRESS
+    if finished:
+        services.mark_workflow_as_finished(
+            execution_resource_name=execution_resource_name,
+        )
+    return JsonResponse({"finished": finished})
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def get_workflows(request):
+    user = User.objects.get(id=request.GET.get("user_id"))
+    running_workflows = services.get_running_workflows(user)
+    data = list(running_workflows.values())
+    return JsonResponse({"workflows": data})

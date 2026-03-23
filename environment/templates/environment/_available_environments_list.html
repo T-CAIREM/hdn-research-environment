@@ -68,8 +68,6 @@
                                 {% endif %}
                             {% elif workspace.status.value == "created" %}
                                 <small class="text-muted">(shared)</small>
-                            {% else %}
-                    <small class="text-muted">(shared)</small>
                     {% if not workspace.gcp_billing_id and workspace.status.value == "created" %}
                         <div class="mt-2">
                             <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
@@ -78,7 +76,7 @@
                         </div>
                     {% endif %}
                 {% endif %}
-            
+
             {# Display service errors as badges #}
             {% service_error_display entity=workspace %}
                         </div>

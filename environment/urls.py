@@ -335,7 +335,7 @@ urlpatterns = [
         name="react_views.update_workspace_billing_account",
     ),
     path(
-        "api/workspace/quotas/<workspace_region>/<workspace_project_id>",
+        "api/workspace/quotas/<workspace_project_id>",
         react_views.get_quotas,
         name="react_views.get_quotas",
     ),
@@ -384,5 +384,15 @@ urlpatterns = [
         "api/environment/search-users-by-cloud-email/",
         react_views.search_users_by_cloud_email,
         name="react_views.search_users_by_cloud_email",
+    ),
+    path(
+        "api/workflows",
+        react_views.get_workflows,
+        name="react_views.get_workflows",
+    ),
+    path(
+        "api/execution/check-status",
+        react_views.check_execution_status,
+        name="react_views.check_execution_status",
     ),
 ]
