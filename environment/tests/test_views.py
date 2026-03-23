@@ -25,14 +25,24 @@ class IdentityProvisioningTestCase(TestCase):
         self.assertRedirects(response, redirect_url)
 
     @patch("environment.services.create_cloud_identity")
-    def test_saves_one_time_password_in_session(self, mock_create_cloud_identity):
-        otp = "otp"
-        mock_create_cloud_identity.return_value = (otp, "identity object")
+    def test_redirects_after_successful_identity_creation(
+        self, mock_create_cloud_identity
+    ):
         user = create_user_without_cloud_identity()
         self.client.force_login(user=user)
 
-        self.client.post(self.url)
-        self.assertEqual(self.client.session["cloud_identity_otp"], otp)
+        response = self.client.post(
+            self.url,
+            {
+                "password": "Str0ng!Pass",
+                "confirm_password": "Str0ng!Pass",
+                "recovery_email": "recovery@example.com",
+            },
+        )
+        mock_create_cloud_identity.assert_called_once()
+        self.assertRedirects(
+            response, reverse("research_environments"), fetch_redirect_response=False
+        )
 
 
 @skipIf(
@@ -54,19 +64,28 @@ class ResearchEnvironmentsTestCase(TestCase):
         response = self.client.get(self.url)
         self.assertRedirects(response, reverse("identity_provisioning"))
 
-    @patch("environment.services.get_available_projects_with_environments")
-    @patch("environment.services.get_environments_with_projects")
+    @patch("environment.services.get_running_workflows")
+    @patch("environment.services.get_shared_workspaces_list")
+    @patch("environment.services.get_billing_accounts_list")
+    @patch("environment.services.get_workspaces_list")
     def test_fetches_and_matches_available_environments_and_projects(
         self,
-        mock_get_available_projects_with_environments,
-        mock_get_environments_with_projects,
+        mock_get_workspaces_list,
+        mock_get_billing_accounts_list,
+        mock_get_shared_workspaces_list,
+        mock_get_running_workflows,
     ):
+        mock_get_workspaces_list.return_value = []
+        mock_get_billing_accounts_list.return_value = []
+        mock_get_shared_workspaces_list.return_value = []
+        mock_get_running_workflows.return_value = []
+
         user = create_user_with_cloud_identity()
         self.client.force_login(user=user)
 
         response = self.client.get(self.url)
-        mock_get_environments_with_projects.assert_called()
-        mock_get_available_projects_with_environments.assert_called()
+        mock_get_workspaces_list.assert_called()
+        mock_get_billing_accounts_list.assert_called()
         self.assertEqual(response.status_code, 200)
 
 
@@ -77,7 +96,7 @@ class ResearchEnvironmentsTestCase(TestCase):
 class CreateResearchEnvironmentTestCase(TestCase):
     url = reverse(
         "create_research_environment",
-        kwargs={"project_slug": "some_slug", "project_version": "some_version"},
+        kwargs={"workspace_id": "some_workspace_id"},
     )
 
     def test_redirects_to_login_if_not_logged_in(self):
