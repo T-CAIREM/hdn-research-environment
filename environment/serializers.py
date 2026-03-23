@@ -18,6 +18,7 @@ from environment.models import (
     BillingAccountSharingInvite,
 )
 from physionet.models import StaticPage, FrontPageButton
+from environment.utilities import user_has_cloud_identity
 
 User = get_user_model()
 
@@ -109,6 +110,7 @@ def serialize_user(user: User):
         "can_view_admin_console": user.has_access_to_admin_console(),
         "can_view_events": user.has_perms(["view_event_menu"]),
         "is_admin": user.is_admin,
+        "has_cloud_identity": user_has_cloud_identity(user),
     }
 
 
