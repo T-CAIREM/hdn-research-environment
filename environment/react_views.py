@@ -90,6 +90,9 @@ def get_user(request):
 def create_workspace(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
+    exceeded = services.exceeded_quotas(user)
+    if exceeded:
+        return JsonResponse({"error": exceeded[0]}, status=400)
     billing_accounts_list = services.get_billing_accounts_list(user)
     form = CreateWorkspaceForm(data, billing_accounts_list=billing_accounts_list)
     if form.is_valid():
@@ -214,12 +217,32 @@ def create_research_environment(request, workspace_project_id):
     )
 
     if form.is_valid():
+        machine_type = form.cleaned_data["machine_type"]
+        workspaces = services.get_workspaces_list(user)
+        running_cpu = sum(
+            workbench.cpu
+            for workspace in workspaces
+            if hasattr(workspace, "workbenches")
+            for workbench in workspace.workbenches
+            if hasattr(workbench, "is_running") and workbench.is_running
+        )
+        if running_cpu + machine_type.cpu > constants.MAX_CPU_USAGE:
+            return JsonResponse(
+                {
+                    "error": (
+                        f"CPU limit exceeded. You are currently using {running_cpu} vCPUs "
+                        f"out of the {constants.MAX_CPU_USAGE} vCPU limit. "
+                        f"Starting this environment requires {machine_type.cpu + running_cpu - constants.MAX_CPU_USAGE} additional vCPUs."
+                    )
+                },
+                status=400,
+            )
         project = services.get_project(form.cleaned_data["project_id"])
         services.create_research_environment(
             user=user,
             project=project,
             workspace_project_id=form.cleaned_data["workspace_project_id"],
-            machine_type=form.cleaned_data["machine_type"],
+            machine_type=machine_type,
             workbench_type=form.cleaned_data["environment_type"],
             disk_size=form.cleaned_data.get("disk_size"),
             gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
@@ -281,6 +304,38 @@ def stop_running_environment(request):
 def start_stopped_environment(request):
     data = json.loads(request.body)
     user = User.objects.get(id=data.get("user_id"))
+    workspaces = services.get_workspaces_list(user)
+    target_workbench = next(
+        (
+            workbench
+            for workspace in workspaces
+            if hasattr(workspace, "workbenches")
+            for workbench in workspace.workbenches
+            if hasattr(workbench, "gcp_identifier")
+            and workbench.gcp_identifier == data["instance_id"]
+        ),
+        None,
+    )
+    if target_workbench is not None:
+        running_cpu = sum(
+            workbench.cpu
+            for workspace in workspaces
+            if hasattr(workspace, "workbenches")
+            for workbench in workspace.workbenches
+            if hasattr(workbench, "is_running") and workbench.is_running
+        )
+        if running_cpu + target_workbench.cpu > constants.MAX_CPU_USAGE:
+            return JsonResponse(
+                {
+                    "error": (
+                        f"CPU limit exceeded. You are currently using {running_cpu} vCPUs "
+                        f"out of the {constants.MAX_CPU_USAGE} vCPU limit. "
+                        f"Starting this environment requires {target_workbench.cpu + running_cpu - constants.MAX_CPU_USAGE} additional vCPUs."
+
+                    )
+                },
+                status=400,
+            )
     services.start_stopped_environment(
         user=user,
         workbench_type=data["environment_type"],
