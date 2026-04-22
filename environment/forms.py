@@ -1,3 +1,5 @@
+import json
+
 from typing import Iterable
 
 from django import forms
@@ -50,7 +52,6 @@ class CloudIdentityPasswordForm(forms.Form):
 
 class CreateWorkspaceForm(forms.Form):
     billing_account_id = forms.ChoiceField(label="Billing Account")
-    region = forms.ChoiceField(label="Region", choices=AVAILABLE_REGIONS)
 
     def __init__(self, *args, billing_accounts_list: Iterable[str], **kwargs):
         super(CreateWorkspaceForm, self).__init__(*args, **kwargs)
@@ -61,6 +62,17 @@ class CreateWorkspaceForm(forms.Form):
             )
             for billing_account in billing_accounts_list
         ]
+
+
+class MachineTypeField(forms.ModelChoiceField):
+    def to_python(self, value):
+        return int(value)
+
+    def validate(self, value):
+        if value is None:
+            raise ValidationError("Machine type is required.")
+        elif value not in VMInstance.objects.all().values_list("id", flat=True):
+            raise ValidationError(f"{value} is not a valid choice")
 
 
 class GPUAcceleratorField(forms.ModelChoiceField):
@@ -78,6 +90,7 @@ class CreateResearchEnvironmentForm(forms.Form):
     AVAILABLE_ENVIRONMENT_TYPES = [
         ("jupyter", "Jupyter"),
         ("rstudio", "RStudio"),
+        ("collaborative", "Collaborative Jupyter"),
     ]
 
     workspace_project_id = forms.CharField(
@@ -87,9 +100,13 @@ class CreateResearchEnvironmentForm(forms.Form):
         ),
         widget=forms.TextInput(attrs={"class": "text-muted"}),
     )
-    workspace_region = forms.CharField(widget=forms.HiddenInput())
+    region = forms.ChoiceField(
+        label="Region",
+        choices=AVAILABLE_REGIONS,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
     project_id = forms.ChoiceField(label="Project")
-    machine_type = forms.ModelChoiceField(
+    machine_type = MachineTypeField(
         label="Instance type",
         queryset=VMInstance.objects.none(),
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -98,6 +115,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         label="Environment type",
         choices=AVAILABLE_ENVIRONMENT_TYPES,
         widget=forms.RadioSelect(attrs={"class": "environment-type"}),
+    )
+    users_list = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False,
     )
     disk_size = forms.IntegerField(
         label="Persistent data disk size [GB]",
@@ -112,9 +133,9 @@ class CreateResearchEnvironmentForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-control"}),
         required=False,
     )
-    shared_bucket = forms.ChoiceField(
+    shared_bucket = forms.MultipleChoiceField(
         label="Shared Bucket",
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.SelectMultiple(attrs={"class": "form-control"}),
         required=False,
     )
 
@@ -129,22 +150,38 @@ class CreateResearchEnvironmentForm(forms.Form):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
-        self.fields["workspace_region"].initial = selected_workspace.region.value
 
         self.fields["project_id"].choices = [
             (project.id, project) for project in projects_list
         ]
-        self.fields["machine_type"].queryset = VMInstance.objects.filter(
-            region__region=selected_workspace.region.value
-        )
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
 
+    def clean_machine_type(self):
+        machine_type_id = self.cleaned_data.get("machine_type")
+        return VMInstance.objects.get(id=machine_type_id)
+
     def clean_gpu_accelerator(self):
         gpu_accelerator = self.cleaned_data.get("gpu_accelerator")
         return None if gpu_accelerator == "" else gpu_accelerator
+
+    def clean_users_list(self):
+        users_list = self.cleaned_data.get("users_list")
+        if not users_list:
+            return []
+        try:
+            users = json.loads(users_list)
+            return users
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid user list format.")
+
+    def clean_workspace_region(self):
+        workspace_region = self.cleaned_data.get("workspace_region")
+        if workspace_region:
+            return workspace_region
+        return self.fields["workspace_region"].initial
 
 
 class ShareBillingAccountForm(forms.Form):
@@ -225,6 +262,7 @@ class BucketSharingForm(forms.Form):
             owner=self.invitation_owner,
             user_contact_email=user_email,
             is_consumed=False,
+            is_revoked=False,
             shared_bucket_name=self.shared_bucket_name,
         ):
             raise forms.ValidationError(

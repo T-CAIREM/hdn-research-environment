@@ -1,6 +1,13 @@
+import logging
+import traceback
+from functools import wraps
 from typing import Callable, Iterator, Optional, Tuple, TypeVar
 
 from django.db.models import Model
+
+from environment.entities import ServiceError
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -45,3 +52,271 @@ def left_join_iterators(
 ) -> Iterator[Tuple[T, Optional[U]]]:
     right_dict = {key_right(element): element for element in right}
     return [(element, right_dict.get(key_left(element))) for element in left]
+
+
+def has_service_errors(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has service errors."""
+    return (
+        workspace_or_workbench.service_errors is not None
+        and len(workspace_or_workbench.service_errors) > 0
+    )
+
+
+def has_error_type(workspace_or_workbench, error_type: str) -> bool:
+    """Generic function to check if workspace or workbench has a specific error type."""
+    if not has_service_errors(workspace_or_workbench):
+        return False
+    return any(
+        error.error_type == error_type
+        for error in workspace_or_workbench.service_errors
+    )
+
+
+def has_billing_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has billing-related errors."""
+    return has_error_type(workspace_or_workbench, "billing_disabled")
+
+
+def has_api_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has API-related errors."""
+    return has_error_type(workspace_or_workbench, "api_not_enabled")
+
+
+def has_permission_error(workspace_or_workbench) -> bool:
+    """Check if workspace or workbench has permission-related errors."""
+    return has_error_type(workspace_or_workbench, "permission_denied")
+
+
+def get_errors_by_type(workspace_or_workbench, error_type: str) -> list:
+    """Get all errors of a specific type."""
+    if not has_service_errors(workspace_or_workbench):
+        return []
+    return [
+        error
+        for error in workspace_or_workbench.service_errors
+        if error.error_type == error_type
+    ]
+
+
+def get_critical_errors(workspace_or_workbench) -> list:
+    """Get all critical errors that would make the entity non-functional."""
+    critical_error_types = ["permission_denied", "not_found", "billing_disabled"]
+    if not has_service_errors(workspace_or_workbench):
+        return []
+    return [
+        error
+        for error in workspace_or_workbench.service_errors
+        if error.error_type in critical_error_types
+    ]
+
+
+def has_billing_issues(workspace) -> bool:
+    """
+    Comprehensive billing validation for workspaces.
+    Returns True if the workspace has any billing problems that should zone it out.
+    """
+    # Don't show billing issues during workspace creation
+    if hasattr(workspace, 'status') and workspace.status.value in ['creating', 'pending']:
+        return False
+        
+    # Check service errors first
+    if has_billing_error(workspace):
+        return True
+
+    # Additional validation: Check if billing account is properly configured
+    if not workspace.gcp_billing_id:
+        return True  # No billing account attached
+
+    # Check workspace accessibility (covers billing account access issues)
+    if hasattr(workspace, "is_accessible") and not workspace.is_accessible:
+        # Check if the access denial is billing-related
+        if (
+            hasattr(workspace, "access_denial_reason")
+            and workspace.access_denial_reason
+        ):
+            billing_keywords = ["billing", "account", "closed", "inactive", "revoked"]
+            if any(
+                keyword in workspace.access_denial_reason.lower()
+                for keyword in billing_keywords
+            ):
+                return True
+
+    return False
+
+
+def requires_billing_change(workspace) -> bool:
+    """
+    Check if workspace requires billing account change to become functional.
+    This determines if we should show the 'Change Billing' button.
+    """
+    return has_billing_issues(workspace)
+
+
+def get_billing_link(workspace_id: str) -> str:
+    """Generate billing enable link for a workspace."""
+    return (
+        f"https://console.developers.google.com/billing/enable?project={workspace_id}"
+    )
+
+
+def format_error_message(error: ServiceError) -> str:
+    """Format error message for display in templates."""
+    error_formats = {
+        "billing_disabled": lambda e: f"⚠️ Billing disabled: {e.message}",
+        "api_not_enabled": lambda e: f"⏳ APIs enabling: {e.service_name} APIs are being enabled",
+        "permission_denied": lambda e: f"🚫 Access denied: {e.message}",
+        "quota_exceeded": lambda e: f"📊 Quota exceeded: {e.message}",
+        "not_found": lambda e: f"❓ Resource not found: {e.message}",
+        "unknown": lambda e: f"❌ Error: {e.message}",
+    }
+
+    formatter = error_formats.get(error.error_type, error_formats["unknown"])
+    return formatter(error)
+
+
+def get_error_action_text(error: ServiceError) -> Optional[str]:
+    """Get action text for error types that have user actions."""
+    action_text_map = {
+        "billing_disabled": "Enable billing",
+        "quota_exceeded": (
+            "Retry later" if hasattr(error, "can_retry") and error.can_retry else None
+        ),
+    }
+    return action_text_map.get(error.error_type)
+
+
+def get_error_action_link(error: ServiceError) -> Optional[str]:
+    """Get action link for error types that have user actions."""
+    if error.error_type == "billing_disabled":
+        return get_billing_link(error.resource_id)
+    return None
+
+
+def get_error_css_class(error: ServiceError) -> str:
+    """Get CSS class for error type."""
+    error_type_map = {
+        "billing_disabled": "error-billing",
+        "api_not_enabled": "error-api",
+        "permission_denied": "error-permission",
+        "quota_exceeded": "error-quota",
+        "not_found": "error-permission",
+        "unknown": "error-unknown",
+    }
+    return error_type_map.get(error.error_type, "error-unknown")
+
+
+def get_error_severity(error: ServiceError) -> str:
+    """Get error severity level."""
+    severity_map = {
+        "billing_disabled": "critical",
+        "permission_denied": "critical",
+        "not_found": "critical",
+        "api_not_enabled": "warning",
+        "quota_exceeded": "warning",
+        "unknown": "info",
+    }
+    return severity_map.get(error.error_type, "info")
+
+
+def group_errors_by_severity(errors: list) -> dict:
+    """Group errors by severity level."""
+    grouped = {"critical": [], "warning": [], "info": []}
+    for error in errors:
+        severity = get_error_severity(error)
+        grouped[severity].append(error)
+    return grouped
+
+
+def workspace_is_functional(workspace) -> bool:
+    """
+    Check if workspace is functional (no critical errors AND billing is properly configured).
+    This determines if workspace features should be available to users.
+    """
+    # First check billing - this is now the primary gate
+    if has_billing_issues(workspace):
+        return False
+
+    # Then check service errors for other critical issues
+    if not has_service_errors(workspace):
+        return True
+
+    # Consider workspace non-functional if it has other critical errors
+    critical_errors = ["permission_denied", "not_found", "api_not_enabled"]
+    return not any(
+        error.error_type in critical_errors for error in workspace.service_errors
+    )
+
+
+def workbench_is_accessible(workbench) -> bool:
+    """Check if workbench is accessible (no service errors)."""
+    return not has_service_errors(workbench)
+
+
+# API Utilities
+def _handle_api_error(
+    response, operation_name: str, exception_class, additional_context: dict = None
+):
+    """
+    Centralized API error handler with comprehensive logging including traceback.
+
+    Args:
+        response: The HTTP response object
+        operation_name: Human-readable name of the operation that failed
+        exception_class: The custom exception class to raise
+        additional_context: Optional dictionary with additional context for logging
+
+    Raises:
+        exception_class: The specified exception with appropriate error message
+    """
+    try:
+        # Try to extract error message from response
+        if response.content:
+            try:
+                error_data = response.json()
+                if isinstance(error_data, dict):
+                    error_message = error_data.get("error", "Unknown API error")
+                else:
+                    error_message = str(error_data)
+            except (ValueError, TypeError):
+                # Fallback if JSON parsing fails
+                error_message = response.text if response.text else "Unknown error"
+        else:
+            error_message = f"HTTP {response.status_code} - No response content"
+
+        # Prepare logging context
+        log_context = {
+            "operation": operation_name,
+            "status_code": response.status_code,
+            "url": getattr(response, "url", "unknown"),
+            "response_headers": (
+                dict(response.headers) if hasattr(response, "headers") else {}
+            ),
+            "error_message": error_message,
+        }
+
+        if additional_context:
+            log_context.update(additional_context)
+
+        # Log the full error with traceback
+        logger.error(
+            f"{exception_class.__name__}: {operation_name} failed - {error_message}",
+            extra={
+                "traceback": traceback.format_exc(),
+                "api_error_context": log_context,
+            },
+        )
+
+        # Raise the appropriate exception
+        raise exception_class(error_message)
+
+    except Exception as e:
+        # If error handling itself fails, log that and re-raise
+        if not isinstance(e, exception_class):
+            logger.error(
+                f"Error handling API failure for {operation_name}: {str(e)}",
+                extra={"traceback": traceback.format_exc()},
+            )
+            raise exception_class(
+                f"API call failed and error handling encountered issues: {str(e)}"
+            )
+        raise

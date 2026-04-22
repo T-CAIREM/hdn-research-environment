@@ -58,25 +58,23 @@ def revoke_billing_account_access(
 
 @api_request
 def create_workspace(
-    email: str, billing_account_id: str, region: str, user_groups: list[str]
+    email: str, billing_account_id: str, user_groups: list[str]
 ) -> Request:
     json = {
         "user_email": email,
         "user_groups": user_groups,
         "billing_account_id": billing_account_id,
-        "region": region,
     }
     return Request("POST", url="/workspace/create", json=json)
 
 
 @api_request
 def delete_workspace(
-    email: str, billing_account_id: str, region: str, gcp_project_id: str
+    email: str, billing_account_id: str, gcp_project_id: str
 ) -> Request:
     json = {
         "user_email": email,
         "billing_account_id": billing_account_id,
-        "region": region,
         "workspace_project_id": gcp_project_id,
     }
     return Request("DELETE", url=f"/workspace/delete", json=json)
@@ -88,8 +86,8 @@ def get_workspace_list(email: str) -> Request:
 
 
 @api_request
-def list_quotas_data(region: str, workspace_project_id: str) -> Request:
-    return Request("GET", url=f"/workspace/quotas/{region}/{workspace_project_id}")
+def list_quotas_data(workspace_project_id: str) -> Request:
+    return Request("GET", url=f"/workspace/quotas/{workspace_project_id}")
 
 
 @api_request
@@ -106,11 +104,13 @@ def create_workbench(
     cpu: int,
     dataset_identifier: str,
     disk_size: str,
+    region: str,
     bucket_name: str,
     workspace_project_id: str,
     user_groups: list[str],
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
+    collaborators: Optional[list[str]] = None,
 ):
     json = {
         "workbench_type": workbench_type,
@@ -122,9 +122,11 @@ def create_workbench(
         "user_email": user_email,
         "bucket_name": bucket_name,
         "disk_size": disk_size,
+        "region": region,
         "user_groups": user_groups,
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": sharing_bucket_identifiers,
+        "collaborators": collaborators,
     }
 
     return Request("POST", url="/workbench/create", json=json)
@@ -194,6 +196,20 @@ def delete_workbench(
         "workbench_resource_id": workbench_resource_id,
     }
     return Request("DELETE", url="/workbench/destroy", json=json)
+
+
+@api_request
+def renew_environment_certificate(
+    user_email: str,
+    workspace_project_id: str,
+    workbench_resource_id: str,
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "user_email": user_email,
+        "workbench_resource_id": workbench_resource_id,
+    }
+    return Request("PUT", url="/workbench/renew-ssl-certificate", json=json)
 
 
 @api_request
@@ -386,3 +402,101 @@ def update_workspace_billing_account(
         "billing_account_id": billing_account_id,
     }
     return Request("POST", url="/workspace/update_billing", json=json)
+
+
+@api_request
+def get_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    return Request(
+        "GET",
+        url="/workbench/collaborators",
+        params={
+            "workspace_project_id": workspace_project_id,
+            "service_account_name": service_account_name,
+        },
+    )
+
+
+@api_request
+def add_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+    collaborators: list[str],
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborators": collaborators,
+    }
+    return Request("POST", url="/workbench/collaborators", json=json)
+
+
+@api_request
+def remove_workbench_collaborators(
+    workspace_project_id: str,
+    service_account_name: str,
+    collaborators: list[str],
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+        "collaborators": collaborators,
+    }
+    return Request("DELETE", url="/workbench/collaborators", json=json)
+
+
+@api_request
+def get_workbench_notifications(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    return Request(
+        "GET",
+        url="/workbench/notifications",
+        params={
+            "workspace_project_id": workspace_project_id,
+            "service_account_name": service_account_name,
+        },
+    )
+
+
+@api_request
+def mark_notification_as_viewed(notification_id: int) -> Request:
+    json = {
+        "notification_id": notification_id,
+    }
+    return Request("POST", url="/workbench/mark-notification-viewed", json=json)
+
+
+@api_request
+def clear_all_notifications(
+    workspace_project_id: str,
+    service_account_name: str,
+) -> Request:
+    json = {
+        "workspace_project_id": workspace_project_id,
+        "service_account_name": service_account_name,
+    }
+    return Request("DELETE", url="/workbench/notifications", json=json)
+
+
+@api_request
+def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
+    return Request("GET", url=f"/workspace/{email}/{workspace_project_id}")
+
+
+@api_request
+def get_shared_bucket(bucket_name: str, email: str) -> Request:
+    return Request("GET", url=f"/sharing/{email}/{bucket_name}")
+
+
+@api_request
+def get_simplified_workspace(workspace_project_id: str, email: str) -> Request:
+    return Request("GET", url=f"/workspace/{email}/{workspace_project_id}")
+
+
+@api_request
+def get_shared_bucket(bucket_name: str, email: str) -> Request:
+    return Request("GET", url=f"/sharing/{email}/{bucket_name}")

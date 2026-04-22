@@ -9,6 +9,10 @@
 {% block local_js_top %}
 <script src="{% static 'environment/js/pricing_change.js' %}"></script>
 <script src="{% static 'environment/js/forms.js' %}"></script>
+<script type="text/javascript">
+  var validateCollaboratorUrl = "{% url 'validate_collaborator_project_access' %}";
+</script>
+<script src="{% static 'environment/js/add_user_panel.js' %}"></script>
 {% endblock %}
 
 {% block local_css %}
@@ -28,6 +32,7 @@
           <form class="single-submit-form" action="{% url 'create_research_environment' selected_workspace.gcp_project_id %}" method="post" style="width: 24rem;">
             {% csrf_token %}
             {{ form }}
+            <input type="hidden" id="users-list" name="users_list" value="">
             <button class="btn btn-primary mt-3" type="submit">
               Create environment
             </button>
@@ -35,6 +40,21 @@
         </div>
       </div>
       <div class="card billing-information">
+        <div class="container mt-4 collaborative-panel hidden">
+          <h5 class="mb-3">Add Collaborators</h5>
+          <form id="add-user-form" class="mb-3">
+            <div class="form-group">
+              <label for="user-email">Add User Email</label>
+              <input type="email" id="user-email" class="form-control" placeholder="Enter user email" required>
+              <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2">Add User</button>
+          </form>
+          <h6>Added Users</h6>
+          <ul id="user-list" class="list-group">
+            <li class="list-group-item text-muted">No users added yet.</li>
+          </ul>
+        </div>
         <div class="card-body">
           <h3 class="card-title">
             Projected Costs
@@ -91,18 +111,77 @@
 </div>
 
 <script>
-  $("#id_machine_type").change(function () {
-    var machine_type_id = $(this).val();
+  function fetchMachineTypesAndGpus() {
+    const region = $("#id_region").val();
+    if (!region) {
+      clearDropdowns();
+      return;
+    }
     $.ajax({
-      url: "{% url 'get_available_gpu_accelerators_partial' %}",
-      data: {
-        'vm_instance': machine_type_id
-      },
-      success: function (data) {
-        $("#id_gpu_accelerator").html(data);
+      url: "{% url 'get_available_machine_types_and_gpus_partial' %}",
+      data: { region },
+      success: handleMachineTypesAndGpusResponse
+    });
+  }
+
+  function handleMachineTypesAndGpusResponse(data) {
+    populateMachineTypeDropdown(data.machine_types);
+    gpuMapping = data.gpu_accelerators_by_machine_type;
+    clearGpuDropdown();
+  }
+
+  function populateMachineTypeDropdown(machineTypes) {
+    let options = '<option value="">---------</option>';
+    machineTypes.forEach(machine_type => {
+      options += `<option value="${machine_type.id}">${machine_type.name}</option>`;
+    });
+    $("#id_machine_type").html(options);
+  }
+
+  function clearDropdowns() {
+    $("#id_machine_type").html('<option value="">---------</option>');
+    clearGpuDropdown();
+  }
+
+  function clearGpuDropdown() {
+    $("#id_gpu_accelerator").html('<option value="">---------</option>');
+  }
+
+  function updateGpuDropdown() {
+    const machine_type_Id = $("#id_machine_type").val();
+    let options = '<option value="">---------</option>';
+    if (machine_type_Id && gpuMapping[machine_type_Id]) {
+        gpuMapping[machine_type_Id].forEach(gpu_accelerator => {
+        options += `<option value="${gpu_accelerator.name}">${gpu_accelerator.label}</option>`;
+      });
+    } else {
+      $("#id_gpu_accelerator").html('<option value="">---------</option>');
+    }
+    $("#id_gpu_accelerator").html(options);
+  }
+
+  $(document).ready(function () {
+    fetchMachineTypesAndGpus();
+    $("#id_region").change(fetchMachineTypesAndGpus);
+    $("#id_machine_type").change(updateGpuDropdown);
+
+    const environmentTypeRadios = document.querySelectorAll(".environment-type input");
+    const collaborativePanel = document.querySelector(".collaborative-panel");
+
+    function toggleCollaborativePanel() {
+      const selectedType = document.querySelector(".environment-type input:checked");
+      if (selectedType && selectedType.value === "collaborative") {
+        collaborativePanel.classList.remove("hidden");
+      } else {
+        collaborativePanel.classList.add("hidden");
       }
+    }
+
+    environmentTypeRadios.forEach((radio) => {
+      radio.addEventListener("change", toggleCollaborativePanel);
     });
 
+    toggleCollaborativePanel();
   });
 </script>
 

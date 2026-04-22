@@ -136,3 +136,35 @@ class GetMonitoringDatasetsFailed(Exception):
 
 class UpdateWorkspaceBillingAccountFailed(Exception):
     pass
+
+
+class RemoveWorkbenchCollaboratorFailed(Exception):
+    pass
+
+
+class AddWorkbenchCollaboratorFailed(Exception):
+    pass
+
+
+class RenewEnvironmentCertificateFailed(Exception):
+    pass
+
+
+class PublishedProjectAccessFailed(Exception):
+    pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass
+
+
+class GetSimplifiedWorkspaceFailed(Exception):
+    pass
+
+
+class GetSharedBucketFailed(Exception):
+    pass

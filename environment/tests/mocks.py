@@ -228,3 +228,23 @@ get_workspace_list_json = {
         }
     ],
 }
+get_billing_account_list_json = [
+  {
+    "id": "billing-001",
+    "name": "AI Research Cloud Account",
+    "cloud_link": "https://cloud.example.com/billing/accounts/billing-001",
+    "is_owner": True
+  },
+  {
+    "id": "billing-002",
+    "name": "Data Science Sandbox",
+    "cloud_link": "https://cloud.example.com/billing/accounts/billing-002",
+    "is_owner": False
+  },
+  {
+    "id": "billing-003",
+    "name": "Genome Analysis Project Billing",
+    "cloud_link": "https://cloud.example.com/billing/accounts/billing-003",
+    "is_owner": True
+  }
+]

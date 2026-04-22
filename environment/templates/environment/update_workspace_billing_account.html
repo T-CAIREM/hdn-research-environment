@@ -13,13 +13,17 @@
 
 {% block content %}
 <div class="container">
-    <h2>Update Workspace Billing Account</h2>
-    <p>Current billing account for {{ workspace_project_id }}: <b>{{current_billing_account.name}}, {{current_billing_account.id}}</b></p>
-    <form class="single-submit-form" action="{% url 'update_workspace_billing_account' workspace_project_id=workspace_project_id current_billing_account_id=current_billing_account.id %}" method="post" style="width: 24rem;">
+    <h2>{% if current_billing_account %}Update{% else %}Connect{% endif %} Workspace Billing Account</h2>
+    {% if current_billing_account %}
+        <p>Current billing account for {{ workspace_project_id }}: <b>{{current_billing_account.name}}, {{current_billing_account.id}}</b></p>
+    {% else %}
+        <p>No billing account currently connected to workspace {{ workspace_project_id }}</p>
+    {% endif %}
+    <form class="single-submit-form" action="{% url 'update_workspace_billing_account' workspace_project_id=workspace_project_id current_billing_account_id=current_billing_account.id|default:'none' %}" method="post" style="width: 24rem;">
         {% csrf_token %}
         {{ form }}
         <button class="btn btn-primary mt-3" type="submit">
-            Submit
+            {% if current_billing_account %}Update{% else %}Connect{% endif %} Billing Account
         </button>
     </form>
 </div>

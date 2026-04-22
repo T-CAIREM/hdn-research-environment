@@ -1,0 +1,25 @@
+.quotas-region-toggle {
+  width: 100%;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 10px 15px;
+  margin-bottom: 0;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.quotas-region-toggle:hover {
+  background-color: #e9ecef;
+}
+.quotas-region-panel {
+  padding: 10px 0 0 0;
+}
+.collapse-indicator {
+  transition: transform 0.3s ease;
+}
+.collapsed .collapse-indicator {
+  transform: rotate(180deg);
+}
+

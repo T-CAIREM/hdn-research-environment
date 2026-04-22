@@ -126,13 +126,10 @@ class EventSignalsTestCase(TestCase):
         self, mock_stop_event_participants_environments_with_expired_access
     ):
         host = User()
-        participant = User(username="participant", email="participant@email.com")
         host.save()
-        participant.save()
 
         event = Event(host_id=host.id, end_date=datetime(year=2000, month=12, day=12))
         event.save()
-        event.enroll_user(participant)
 
         mock_stop_event_participants_environments_with_expired_access.assert_called_with(
             event.id, schedule=event.end_date

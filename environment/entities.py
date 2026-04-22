@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 from django.apps import apps
 from environment.models import GCPRegion
@@ -18,10 +18,6 @@ class Region(Enum):
 class BucketObjectType(Enum):
     DIRECTORY = "directory"
     FILE = "file"
-
-
-class GPUAcceleratorType(Enum):
-    NVIDIA_TESLA_T4 = "nvidia-tesla-t4"
 
 
 class EnvironmentStatus(Enum):
@@ -42,6 +38,7 @@ class EnvironmentType(Enum):
     UNKNOWN = "unknown"
     JUPYTER = "jupyter"
     RSTUDIO = "rstudio"
+    COLLABORATIVE = "collaborative"
 
     @classmethod
     def from_string_or_none(cls, maybe_string: Optional[str]) -> "EnvironmentType":
@@ -104,10 +101,14 @@ class ResearchEnvironment:
     memory: float
     region: Region
     type: EnvironmentType
-    project: PublishedProject
+    project: Optional[PublishedProject]
     machine_type: Optional[str]
     disk_size: Optional[int]
     gpu_accelerator_type: Optional[str]
+    service_account_name: str
+    workbench_owner_username: Optional[str]
+    rstudio_ssl_certificate_expiration_date: Optional[str]
+    service_errors: Optional[List["ServiceError"]] = None
 
     @property
     def is_running(self):
@@ -134,11 +135,22 @@ class ResearchEnvironment:
 
 @dataclass(frozen=True, eq=True)
 class ResearchWorkspace:
-    region: Region
     gcp_project_id: str
     gcp_billing_id: str
     status: WorkspaceStatus
+    is_owner: bool
     workbenches: Iterable[ResearchEnvironment]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
+
+
+@dataclass(frozen=True, eq=True)
+class SimplifiedResearchWorkspace:
+    gcp_project_id: str
+    status: WorkspaceStatus
+    owner: str
+    region: Optional[Region] = None
 
 
 @dataclass
@@ -155,12 +167,36 @@ class SharedWorkspace:
     is_owner: bool
     status: WorkspaceStatus
     buckets: Iterable[SharedBucket]
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    service_errors: Optional[List["ServiceError"]] = None
 
 
 @dataclass
 class EntityScaffolding:
     status: Union[WorkspaceStatus, EnvironmentStatus]
     gcp_project_id: str
+    region: Optional[Region] = Region.US_CENTRAL
+    gcp_billing_id: Optional[str] = None
+    is_owner: bool = False
+    is_accessible: bool = True
+    access_denial_reason: Optional[str] = None
+    workbenches: Iterable[ResearchEnvironment] = None
+    service_errors: Optional[List["ServiceError"]] = None
+    
+    def __post_init__(self):
+        if self.workbenches is None:
+            self.workbenches = []
+
+
+@dataclass
+class ServiceError:
+    error_type: str
+    message: str
+    resource_id: str
+    service_name: str
+    details: Optional[str] = None
+    can_retry: bool = False
 
 
 @dataclass
@@ -188,6 +224,12 @@ class QuotaInfo:
     limit: int
     usage: int
     usage_percentage: float
+
+
+@dataclass
+class RegionQuotas:
+    region: str
+    quotas: List[QuotaInfo]
 
 
 @dataclass

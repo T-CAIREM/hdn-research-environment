@@ -1,10 +1,11 @@
 {% load action_buttons %}
+{% load environment_templatetags %}
 
 {% if recent_workflow %}
     {% if recent_workflow_failed %}
     <div class="alert alert-danger" role="alert">
             {{ recent_workflow.display_type }}
-            failed! {{ workflow.error_information|default_if_none:"Try again later." }}
+            failed! {{ recent_workflow.error_information|default_if_none:"Try again later." }}
         </div>
     {% elif recent_workflow_succeeded %}
         <div class="alert alert-success" role="alert">
@@ -23,62 +24,100 @@
 <div id="accordion">
     {% if workspaces_with_workbenches %}
         {% for workspace in workspaces_with_workbenches %}
-            <div class="card">
+            <div class="card {{ workspace|has_errors|yesno:'workspace-with-errors,' }}">
                 <div class="card-header py-3" id="{{ heading }}">
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="mb-0">
                                 {{ workspace.gcp_project_id }}
                             </h6>
-                            {% if workspace.gcp_billing_id %}
-                                <small class="d-block">
-                                    <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
-                                        Billing Account:
-                                    </span>
-                                    <span class="d-inline font-weight-normal">
-                                        ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
-                                    </span>
-                                </small>
-                            {% endif %}
-                            {% if workspace.status.value == "created" %}
-                                <small class="d-block">
-                                    <span style="padding-top: 0.375rem;">
-                                        <a class="m-auto" href="{% url 'get_quotas' workspace_region=workspace.region.value|default:'us-central1' workspace_project_id=workspace.gcp_project_id %}">
-                                            Check workspace quotas
-                                        </a>
-                                    </span>
-                                </small>
+                            {% if workspace.is_owner %}
                                 {% if workspace.gcp_billing_id %}
                                     <small class="d-block">
+                                        <span class="d-inline font-weight-bold" style="padding-top: 0.375rem;">
+                                            Billing Account:
+                                        </span>
+                                        <span class="d-inline font-weight-normal">
+                                            ({{ billing_account_id_to_name_map|get_dict_value:workspace.gcp_billing_id }}, {{ workspace.gcp_billing_id }})
+                                        </span>
+                                    </small>
+                                {% elif workspace.status.value == "created" %}
+                                    <div class="mt-2">
+                                        <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
+                                            Connect billing account
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if workspace.status.value == "created" %}
+                                    <small class="d-block">
                                         <span style="padding-top: 0.375rem;">
-                                            <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
-                                                Change billing account
+                                            <a class="m-auto" href="{% url 'get_quotas' workspace_project_id=workspace.gcp_project_id %}">
+                                                Check workspace quotas
                                             </a>
                                         </span>
                                     </small>
+                                    {% if workspace.gcp_billing_id %}
+                                        <small class="d-block">
+                                            <span style="padding-top: 0.375rem;">
+                                                <a class="m-auto" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id=workspace.gcp_billing_id %}">
+                                                    Change billing account
+                                                </a>
+                                            </span>
+                                        </small>
+                                    {% endif %}
+                                {% endif %}
+                            {% elif workspace.status.value == "created" %}
+                                <small class="text-muted">(shared)</small>
+                    {% if not workspace.gcp_billing_id and workspace.status.value == "created" %}
+                        <div class="mt-2">
+                            <a class="btn btn-warning btn-sm" href="{% url 'update_workspace_billing_account' workspace_project_id=workspace.gcp_project_id current_billing_account_id='__none__' %}">
+                                Connect billing account
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+            {# Display service errors as badges #}
+            {% service_error_display entity=workspace %}
+                        </div>
+                        <div class="d-flex align-items-center">
+                            {% if not workspace.status.value == "created" %}
+                                <div class="d-flex align-items-center">
+                                    <h6 class="m-0 mr-3">{{ workspace.status.value|capfirst }}...</h6>
+                                    <div class="loader" style="font-size: 3.5px; margin: 0;">Loading...</div>
+                                </div>
+                            {% else %}
+                                {% if workspace.is_accessible is not None and not workspace.is_accessible %}
+                                    <span class="badge badge-danger ml-2" {% if workspace.access_denial_reason %}title="{{ workspace.access_denial_reason }}"{% endif %}>Inaccessible</span>
+                                {% elif workspace|has_errors %}
+                                    <span class="badge badge-warning ml-2">Service Issues</span>
+                                {% elif workspace.is_owner %}
+                                    <div class="d-flex flex-column align-items-end px-2 mb-1">
+                                        <div class="mb-1">
+                                            {% workspace_destroy_modal_button workspace=workspace %}
+                                        </div>
+                                        {% if should_display_google_link %}
+                                            <a class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/welcome?&project={{ workspace.gcp_project_id }}">
+                                              Go to Google console
+                                            </a>
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             {% endif %}
                         </div>
-                        {% if not workspace.status.value == "created" %}
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h6 class="m-0 mr-5">
-                                    {{ workspace.status.value|capfirst }}...
-                                </h6>
-                                <div class="loader" style="font-size: 3.5px; margin: 0; margin-right: 0.3rem;">Loading...</div>
-                            </div>
-                        {% else %}
-                            {% workspace_destroy_modal_button workspace=workspace %}
-                        {% endif %}
                     </div>
                 </div>
 
                 {% if workspace.status.value == "created" %}
                     <div class="card-body">
                         {% if workspace.workbenches %}
+                            {% comment %} Show workbenches even if there are service errors {% endcomment %}
                             <ul class="list-group list-group-flush">
                                 {% for environment in workspace.workbenches %}
-                                    <li class="list-group-item">
+                                    <li class="list-group-item {{ environment|has_errors|yesno:'workbench-with-errors,' }}">
                                         <div class="row">
+                                            {# Show workbench service errors #}
+                                            {% service_error_display entity=environment error_prefix="Workbench Error" %}
                                             {% if environment.status.value == "creating" %}
                                                 <div class="d-flex m-auto">
                                                     <span class="mr-5">Creating...</span>
@@ -92,7 +131,15 @@
                                                 </div>
                                                 <div class="col-md-3">
                                                     <small>
-                                                        <i>Environment type:</i> {{ environment.type.value|capfirst }}<br>
+                                                        {% if not environment.is_in_progress and  environment.type.value == "rstudio" %}
+                                                            {% environment_renew_certificate_modal environment button_type="modal_renew" %}
+                                                        {% endif %}
+                                                        <i>Environment type:</i>
+                                                        {% if environment.type.value == "collaborative" %}
+                                                            Collaborative Jupyter
+                                                        {% else %}
+                                                            {{ environment.type.value|capfirst }}
+                                                        {% endif %}<br>
                                                         <i>CPU:</i> {{ environment.cpu }}<br>
                                                         <i>Memory:</i> {{ environment.memory }}<br>
                                                         <i>Region:</i> {{ environment.region.value }}
@@ -103,17 +150,31 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="d-flex flex-wrap">
-                                                        {% if environment.is_in_progress %}
+                                                        {% if environment|has_errors %}
+                                                            {# Workbench has errors - show disabled state #}
+                                                            <span class="badge badge-danger">Unavailable</span>
+                                                        {% elif environment.is_in_progress %}
                                                             <div class="loader" style="margin: 18px; font-size: 4px">Loading...</div>
                                                         {% elif environment.is_running or environment.is_paused %}
                                                             {% if environment.is_running %}
-                                                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-success m-1">Open</a>
-                                                                {% environment_modal_button environment=environment button_type="modal_pause" %}
-                                                            {% else %}
+                                                                <a href="{{ environment.url }}" target="_blank" class="btn btn-sm btn-secondary m-1">Open</a>
+                                                                {% if workspace.is_owner %}
+                                                                    {% environment_modal_button environment=environment button_type="modal_pause" %}
+                                                                {% endif %}
+                                                            {% elif workspace.is_owner %}
                                                                 {% environment_modal_button environment=environment button_type="modal_start" %}
                                                             {% endif %}
-                                                            {% environment_modal_button environment=environment button_type="modal_instance" %}
-                                                            {% environment_modal_button environment=environment button_type="modal_destroy" %}
+                                                            {% if environment.type.value == "collaborative" and user.username == environment.workbench_owner_username %}
+                                                                <a href="{% url 'manage_collaborative_environment' workspace_project_id=workspace.gcp_project_id environment_name=environment.gcp_identifier workbench_owner_username=environment.workbench_owner_username service_account_name=environment.service_account_name project_id=environment.project.id %}" class="btn btn-sm btn-primary m-1">
+                                                                    Manage
+                                                                </a>
+                                                            {% endif %}
+                                                            {% if workspace.is_owner %}
+                                                                {% environment_modal_button environment=environment button_type="modal_instance" %}
+                                                                {% environment_modal_button environment=environment button_type="modal_destroy" %}
+                                                            {% elif environment.type.value == "collaborative" and environment.service_account_name %}
+                                                                {% environment_modal_button environment=environment button_type="modal_leave" %}
+                                                            {% endif %}
                                                         {% endif %}
                                                     </div>
                                                 </div>
@@ -124,15 +185,51 @@
                             </ul>
                         {% else %}
                             <div class="text-center">
-                                You don't have any workbenches in this workspace.<br>
-                                Create one using the button below.
+                                {% if workspace|has_errors %}
+                                    <div class="text-muted mb-2">
+                                        No workbenches available due to service issues above.
+                                    </div>
+                                {% else %}
+                                    You don't have any workbenches in this workspace.<br>
+                                    Create one using the button below.
+                                {% endif %}
                             </div>
                         {% endif %}
-                        <div class="row mt-3">
-                            <a class="m-auto" href="{% url 'create_research_environment' workspace_id=workspace.gcp_project_id %}">
-                                Launch Research Environment
-                            </a>
-                        </div>
+                        {% if workspace.is_owner %}
+                            {% if workspace.is_accessible is not None and not workspace.is_accessible %}
+                                <div class="row mt-3">
+                                    <div class="m-auto text-muted">
+                                        <small>
+                                            Workspace inaccessible{% if workspace.access_denial_reason %}: {{ workspace.access_denial_reason }}{% endif %}.<br>
+                                            Reach out to <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                                        </small>
+                                    </div>
+                                </div>
+                            {% elif workspace|workspace_functional %}
+                                <div class="row mt-3">
+                                    <a class="m-auto" href="{% url 'create_research_environment' workspace_id=workspace.gcp_project_id %}">
+                                        Launch Research Environment
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="row mt-3">
+                                    <div class="m-auto text-muted">
+                                        <small>Cannot create research environment due to service issues above</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            {% if workspace.is_accessible is not None and not workspace.is_accessible %}
+                                <div class="row mt-3">
+                                    <div class="m-auto text-muted">
+                                        <small>
+                                            Shared workspace inaccessible{% if workspace.access_denial_reason %}: {{ workspace.access_denial_reason }}{% endif %}.<br>
+                                            Reach out to <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for help.
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

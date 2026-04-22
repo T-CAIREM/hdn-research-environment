@@ -18,12 +18,19 @@ from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
     require_PATCH,
+    require_POST,
     billing_account_required,
     console_permission_required,
     try_except_context_decorator,
 )
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
-from environment.exceptions import CreateCloudGroupFailed
+from environment.exceptions import (
+    CreateCloudGroupFailed,
+    ChangeEnvironmentInstanceTypeFailed,
+    EnvironmentCreationFailed,
+    RenewEnvironmentCertificateFailed,
+)
+
 from environment.forms import (
     CloudIdentityPasswordForm,
     CreateResearchEnvironmentForm,
@@ -46,6 +53,7 @@ from environment.models import (
     VMInstance,
     CloudGroup,
     CloudIdentity,
+    GPUAccelerator,
 )
 from environment.utilities import user_has_cloud_identity
 
@@ -102,6 +110,9 @@ def research_environments(request):
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
     }
+    should_display_google_link = (
+        CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
+    )
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -110,6 +121,7 @@ def research_environments(request):
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
+        "should_display_google_link": should_display_google_link,
     }
 
     return render(
@@ -141,6 +153,9 @@ def research_environments_partial(request):
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
     }
+    should_display_google_link = (
+        CloudIdentity.objects.get(user=request.user).user_groups.count() > 0
+    )
 
     context = {
         "shared_workspaces": shared_workspaces,
@@ -149,6 +164,7 @@ def research_environments_partial(request):
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
+        "should_display_google_link": should_display_google_link,
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")
@@ -202,7 +218,6 @@ def create_workspace(request):
             services.create_workspace(
                 user=request.user,
                 billing_account_id=form.cleaned_data["billing_account_id"],
-                region=form.cleaned_data["region"],
             )
             return redirect("research_environments")
     else:
@@ -290,22 +305,29 @@ def create_research_environment(request, workspace_id):
                 services.cpu_usage(available_workspaces) + workbench_cpu_usage
             )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
-                project = services.get_project(form.cleaned_data["project_id"])
-                services.create_research_environment(
-                    user=request.user,
-                    project=project,
-                    workspace_project_id=form.cleaned_data["workspace_project_id"],
-                    machine_type=form.cleaned_data["machine_type"],
-                    workbench_type=form.cleaned_data["environment_type"],
-                    disk_size=form.cleaned_data.get("disk_size"),
-                    gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
-                    sharing_bucket_identifiers=form.cleaned_data.get("shared_bucket"),
-                )
-                messages.info(
-                    request,
-                    "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
-                )
-                return redirect("research_environments")
+                try:
+                    project = services.get_project(form.cleaned_data["project_id"])
+                    services.create_research_environment(
+                        user=request.user,
+                        project=project,
+                        workspace_project_id=form.cleaned_data["workspace_project_id"],
+                        machine_type=form.cleaned_data["machine_type"],
+                        workbench_type=form.cleaned_data["environment_type"],
+                        disk_size=form.cleaned_data.get("disk_size"),
+                        gpu_accelerator_type=form.cleaned_data.get("gpu_accelerator"),
+                        sharing_bucket_identifiers=form.cleaned_data.get(
+                            "shared_bucket"
+                        ),
+                        collaborators=form.cleaned_data.get("users_list", []),
+                        region=form.cleaned_data["region"],
+                    )
+                    messages.info(
+                        request,
+                        "Workbench creation has been started - it takes between 3 and 10 minutes based on the selected configuration.",
+                    )
+                    return redirect("research_environments")
+                except EnvironmentCreationFailed as e:
+                    messages.error(request, str(e))
             else:
                 messages.error(
                     request,
@@ -318,19 +340,27 @@ def create_research_environment(request, workspace_id):
             buckets_list=shared_buckets,
         )
 
-    instance_projected_cost = {}
-    region = Region(selected_workspace.region)
-    instances = VMInstance.objects.filter(region__region=region.value)
-    projected_costs = [
-        ProjectedWorkbenchCost(instance.id, instance.price) for instance in instances
-    ]
-    instance_projected_cost[region] = projected_costs
+    instance_projected_costs = {
+        region: [
+            ProjectedWorkbenchCost(instance.id, instance.price)
+            for instance in VMInstance.objects.filter(region__region=region.value)
+        ]
+        for region in Region
+    }
+
+    gpu_projected_costs = {
+        region: [
+            ProjectedWorkbenchCost(gpu.name, gpu.price)
+            for gpu in GPUAccelerator.objects.filter(region__region=region.value)
+        ]
+        for region in Region
+    }
 
     context = {
         "selected_workspace": selected_workspace,
         "form": form,
-        "instance_projected_costs": instance_projected_cost,
-        "gpu_projected_costs": constants.GPU_PROJECTED_COSTS,
+        "instance_projected_costs": instance_projected_costs,
+        "gpu_projected_costs": gpu_projected_costs,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
     }
     return render(request, "environment/create_research_environment.html", context)
@@ -363,13 +393,20 @@ def create_shared_bucket(request, workspace_id):
             request.POST, selected_shared_workspace=selected_shared_workspace
         )
         if form.is_valid():
-            services.create_shared_buket(
-                user=request.user,
-                region=form.cleaned_data["region"],
-                user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
-                workspace_project_id=form.cleaned_data["workspace_project_id"],
-            )
-            return redirect("research_environments")
+            try:
+                services.create_shared_bucket(
+                    user=request.user,
+                    region=form.cleaned_data["region"],
+                    user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
+                    workspace_project_id=form.cleaned_data["workspace_project_id"],
+                )
+                return redirect("research_environments")
+            except (f, ValueError, ConnectionError) as e:
+                # Capture bucket creation failure and add as message
+                messages.error(
+                    request,
+                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}"
+                )
     else:
         form = CreateSharedBucketForm(
             selected_shared_workspace=selected_shared_workspace
@@ -532,10 +569,15 @@ def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_nam
         shared_bucket_name, request.user
     )
 
+    # Check if the workspace has service errors
+    workspace = next((ws for ws in shared_workspaces_list if ws.gcp_project_id == shared_workspace_name), None)
+    workspace_has_errors = workspace and not workspace.is_accessible if workspace else False
+
     context = {
         "shared_bucket_name": shared_bucket_name,
         "shared_workspace_name": shared_workspace_name,
         "bucket_content": bucket_content,
+        "workspace_has_errors": workspace_has_errors,
     }
 
     return render(request, "environment/manage_shared_bucket_files.html", context)
@@ -567,6 +609,19 @@ def confirm_bucket_sharing(request):
         "is_owner": request.user == invite.owner,
     }
     return render(request, "environment/manage_shared_bucket_invitation.html", context)
+
+
+@require_POST
+@login_required
+@cloud_identity_required
+def leave_shared_environment(request):
+    data = json.loads(request.body)
+    services.remove_workbench_collaborator(
+        workspace_project_id=data["gcp_project_id"],
+        service_account_name=data["service_account_name"],
+        collaborator_email=request.user.cloud_identity.email,
+    )
+    return JsonResponse({})
 
 
 @require_PATCH
@@ -602,14 +657,17 @@ def start_stopped_environment(request):
 @cloud_identity_required
 def change_environment_machine_type(request):
     data = json.loads(request.body)
-    services.change_environment_machine_type(
-        user=request.user,
-        workspace_project_id=data["gcp_project_id"],
-        machine_type=data["machine_type"],
-        workbench_type=data["environment_type"],
-        workbench_resource_id=data["instance_name"],
-    )
-    return JsonResponse({})
+    try:
+        services.change_environment_machine_type(
+            user=request.user,
+            workspace_project_id=data["gcp_project_id"],
+            machine_type=data["machine_type"],
+            workbench_type=data["environment_type"],
+            workbench_resource_id=data["instance_name"],
+        )
+        return JsonResponse({})
+    except ChangeEnvironmentInstanceTypeFailed as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @require_DELETE
@@ -626,6 +684,106 @@ def delete_environment(request):
     return JsonResponse({})
 
 
+@require_PATCH
+@login_required
+@cloud_identity_required
+def renew_environment_certificate(request):
+    data = json.loads(request.body)
+    try:
+        services.renew_environment_certificate(
+            user=request.user,
+            workspace_project_id=data["gcp_project_id"],
+            workbench_resource_id=data["instance_name"],
+        )
+        return JsonResponse({})
+    except RenewEnvironmentCertificateFailed as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+@cloud_identity_required
+def manage_collaborative_environment(
+    request,
+    workspace_project_id,
+    environment_name,
+    workbench_owner_username,
+    service_account_name,
+    project_id,
+):
+    if not services.is_environment_owner(request.user, workbench_owner_username):
+        messages.error(
+            request,
+            f"Failed to access {environment_name} management panel",
+        )
+        return redirect("research_environments")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                try:
+                    services.check_collaborator_project_access(
+                        collaborator_email, project_id
+                    )
+                    services.add_workbench_collaborator(
+                        workspace_project_id=workspace_project_id,
+                        service_account_name=service_account_name,
+                        collaborator_email=collaborator_email,
+                    )
+                    return redirect(request.path)
+                except services.PublishedProjectAccessFailed as e:
+                    messages.error(request, str(e))
+
+        elif action == "remove_collaborator":
+            collaborator_email = request.POST.get("collaborator_email")
+            if collaborator_email:
+                services.remove_workbench_collaborator(
+                    workspace_project_id=workspace_project_id,
+                    service_account_name=service_account_name,
+                    collaborator_email=collaborator_email,
+                )
+                return redirect(request.path)
+
+        elif action == "mark_notification_viewed":
+            notification_id = request.POST.get("notification_id")
+            if notification_id:
+                success = services.mark_notification_as_viewed(notification_id)
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"success": success})
+                return redirect(request.path)
+
+        elif action == "clear_all_notifications":
+            success = services.clear_all_notifications(
+                workspace_project_id=workspace_project_id,
+                service_account_name=service_account_name,
+            )
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": success})
+            return redirect(request.path)
+
+    collaborators = services.get_workbench_collaborators(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    notifications = services.get_workbench_notifications(
+        workspace_project_id=workspace_project_id,
+        service_account_name=service_account_name,
+    )
+
+    context = {
+        "workspace_project_id": workspace_project_id,
+        "environment_name": environment_name,
+        "collaborators": collaborators,
+        "notifications": notifications,
+        "workbench_owner_username": workbench_owner_username,
+    }
+
+    return render(request, "environment/manage_collaborative_environment.html", context)
+
+
 @require_DELETE
 @login_required
 @cloud_identity_required
@@ -635,7 +793,6 @@ def delete_workspace(request):
         user=request.user,
         gcp_project_id=data["gcp_project_id"],
         billing_account_id=data["billing_account_id"],
-        region=data["region"],
     )
     return JsonResponse({})
 
@@ -736,8 +893,8 @@ def delete_shared_bucket_content(request, bucket_name):
 @require_http_methods(["GET"])
 @login_required
 @cloud_identity_required
-def get_quotas(request, workspace_project_id, workspace_region):
-    quotas_data_list = services.list_quotas_data(workspace_region, workspace_project_id)
+def get_quotas(request, workspace_project_id):
+    quotas_data_list = services.list_quotas_data(workspace_project_id)
     context = {"quotas": quotas_data_list, "workspace_project_id": workspace_project_id}
 
     return render(request, "environment/quotas_list.html", context, status=200)
@@ -989,9 +1146,13 @@ def update_workspace_billing_account(
             billing_accounts_list=billing_accounts_list,
         )
 
-    current_billing_account = [
-        acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
-    ][0]
+    current_billing_account = None
+    if current_billing_account_id and current_billing_account_id != 'none':
+        current_billing_account_matches = [
+            acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
+        ]
+        current_billing_account = current_billing_account_matches[0] if current_billing_account_matches else None
+    
     context = {
         "form": form,
         "workspace_project_id": workspace_project_id,
@@ -1003,8 +1164,44 @@ def update_workspace_billing_account(
 @require_GET
 @login_required
 @cloud_identity_required
+def get_available_machine_types_and_gpus_partial(request):
+    region = request.GET.get("region")
+    machine_types = VMInstance.objects.filter(region__region=region)
+    response = {
+        "machine_types": [
+            {"id": machine_type.id, "name": str(machine_type)}
+            for machine_type in machine_types
+        ],
+        "gpu_accelerators_by_machine_type": {
+            str(machine_type.id): [
+                {"name": gpu_accelerator.name, "label": str(gpu_accelerator)}
+                for gpu_accelerator in machine_type.gpu_accelerators.all()
+            ]
+            for machine_type in machine_types
+        },
+    }
+    return JsonResponse(response)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
 def get_available_gpu_accelerators_partial(request):
     vm_instance_id = request.GET.get("vm_instance")
     gpu_accelerators = VMInstance.objects.get(id=vm_instance_id).gpu_accelerators.all()
     context = {"gpu_accelerators": gpu_accelerators}
     return render(request, "environment/gpu_accelerator_partial.html", context=context)
+
+
+@require_GET
+@login_required
+@cloud_identity_required
+def validate_collaborator_project_access(request):
+    collaborator_email = request.GET.get("collaborator_email")
+    project_id = request.GET.get("project_id")
+
+    try:
+        services.check_collaborator_project_access(collaborator_email, project_id)
+        return JsonResponse({"valid": True})
+    except services.PublishedProjectAccessFailed as e:
+        return JsonResponse({"valid": False, "error": str(e)})

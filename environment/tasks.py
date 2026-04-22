@@ -48,6 +48,8 @@ def stop_environments_with_expired_access(user_id: int):
     user = User.objects.select_related("cloud_identity").get(pk=user_id)
 
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
+    if not expired_pairs:
+        return
     environments, projects = zip(*expired_pairs)
     for environment in environments:
         if environment.is_running:

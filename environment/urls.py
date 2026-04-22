@@ -1,6 +1,7 @@
 from django.urls import path
 
 from environment import views
+from environment import react_views
 
 urlpatterns = [
     path("", views.research_environments, name="research_environments"),
@@ -46,6 +47,21 @@ urlpatterns = [
         name="create_research_environment",
     ),
     path(
+        "environment/leave",
+        views.leave_shared_environment,
+        name="leave_shared_environment",
+    ),
+    path(
+        "environment/renew",
+        views.renew_environment_certificate,
+        name="renew_environment_certificate",
+    ),
+    path(
+        "environment/manage/<workspace_project_id>/<environment_name>/<workbench_owner_username>/<service_account_name>/<project_id>",
+        views.manage_collaborative_environment,
+        name="manage_collaborative_environment",
+    ),
+    path(
         "execution/check-status",
         views.check_execution_status,
         name="check_execution_status",
@@ -53,7 +69,7 @@ urlpatterns = [
     path("workspace/create", views.create_workspace, name="create_workspace"),
     path("workspace/delete", views.delete_workspace, name="delete_workspace"),
     path(
-        "workspace/quotas/<workspace_region>/<workspace_project_id>",
+        "workspace/quotas/<workspace_project_id>",
         views.get_quotas,
         name="get_quotas",
     ),
@@ -154,8 +170,229 @@ urlpatterns = [
         name="update_workspace_billing_account",
     ),
     path(
-        "gpu-accelerators/",
-        views.get_available_gpu_accelerators_partial,
-        name="get_available_gpu_accelerators_partial",
+        "machine-types-and-gpus/",
+        views.get_available_machine_types_and_gpus_partial,
+        name="get_available_machine_types_and_gpus_partial",
+    ),
+    path(
+        "validate-collaborator-access/",
+        views.validate_collaborator_project_access,
+        name="validate_collaborator_project_access",
+    ),
+    path(
+        "api/workspaces",
+        react_views.get_workspaces_list,
+        name="react_views.get_workspaces_list",
+    ),
+    path(
+        "api/shared-workspaces",
+        react_views.get_shared_workspaces_list,
+        name="react_views.get_shared_workspaces_list",
+    ),
+    path(
+        "api/billing",
+        react_views.get_billing_accounts_list,
+        name="react_views.get_billing_accounts_list",
+    ),
+    path(
+        "api/user",
+        react_views.get_user,
+        name="react_views.get_user",
+    ),
+    path(
+        "api/sharing/workspace/create",
+        react_views.create_shared_workspace,
+        name="react_views.create_shared_workspace",
+    ),
+    path(
+        "api/sharing/workspace/delete",
+        react_views.delete_shared_workspace,
+        name="react_views.delete_shared_workspace",
+    ),
+    path(
+        "api/workspace/create",
+        react_views.create_workspace,
+        name="react_views.create_workspace",
+    ),
+    path(
+        "api/workspace/delete",
+        react_views.delete_workspace,
+        name="react_views.delete_workspace",
+    ),
+    path(
+        "api/available-projects",
+        react_views.get_available_projects,
+        name="react_views.get_available_projects",
+    ),
+    path(
+        "api/available-resources",
+        react_views.get_environment_resource_options,
+        name="react_views.get_environment_resource_options",
+    ),
+    path(
+        "api/environment/create/<workspace_project_id>",
+        react_views.create_research_environment,
+        name="react_views.create_research_environment",
+    ),
+    path(
+        "api/environment/delete",
+        react_views.delete_research_environment,
+        name="react_views.delete_research_environment",
+    ),
+    path(
+        "api/environment/stop",
+        react_views.stop_running_environment,
+        name="react_views.stop_running_environment",
+    ),
+    path(
+        "api/environment/start",
+        react_views.start_stopped_environment,
+        name="react_views.start_stopped_environment",
+    ),
+    path(
+        "api/environment/update",
+        react_views.change_environment_machine_type,
+        name="react_views.change_environment_machine_type",
+    ),
+    path(
+        "api/sharing/bucket/create/<workspace_id>",
+        react_views.create_shared_bucket,
+        name="react_views.create_shared_bucket",
+    ),
+    path(
+        "api/sharing/bucket/delete",
+        react_views.delete_shared_bucket,
+        name="react_views.delete_shared_bucket",
+    ),
+    path(
+        "api/sharing/share/<shared_workspace_name>/<shared_bucket_name>",
+        react_views.share_bucket,
+        name="react_views.share_bucket",
+    ),
+    path(
+        "api/sharing/confirm",
+        react_views.confirm_bucket_sharing,
+        name="react_views.confirm_bucket_sharing",
+    ),
+    path(
+        "api/sharing/revoke/<shared_bucket_name>",
+        react_views.revoke_shared_bucket_access,
+        name="react_views.revoke_shared_bucket_access",
+    ),
+    path(
+        "api/sharing",
+        react_views.get_bucket_sharing_invitation,
+        name="react_views.get_bucket_sharing_invitation",
+    ),
+    path(
+        "api/sharing/<shared_bucket_name>/shares",
+        react_views.get_bucket_shares,
+        name="react_views.get_bucket_shares",
+    ),
+    path(
+        "api/billing/share/<billing_account_id>",
+        react_views.share_billing_account,
+        name="react_views.share_billing_account",
+    ),
+    path(
+        "api/billing/confirm",
+        react_views.confirm_bucket_sharing,
+        name="react_views.confirm_bucket_sharing",
+    ),
+    path(
+        "api/billing/revoke/<billing_account_id>",
+        react_views.revoke_billing_account_access,
+        name="react_views.revoke_billing_account_access",
+    ),
+    path(
+        "api/billing/<billing_account_id>/shares",
+        react_views.get_billing_shares,
+        name="react_views.get_billing_shares",
+    ),
+    path(
+        "api/sharing/generate_signed_url/<bucket_name>",
+        react_views.generate_signed_url,
+        name="react_views.generate_signed_url",
+    ),
+    path(
+        "api/sharing/<bucket_name>",
+        react_views.get_shared_bucket_content,
+        name="react_views.get_shared_bucket_content",
+    ),
+    path(
+        "api/sharing/<bucket_name>/content/create",
+        react_views.create_shared_bucket_directory,
+        name="react_views.create_shared_bucket_directory",
+    ),
+    path(
+        "api/sharing/<bucket_name>/content/delete",
+        react_views.delete_shared_bucket_content,
+        name="react_views.delete_shared_bucket_content",
+    ),
+    path(
+        "api/workspace/update_billing",
+        react_views.update_workspace_billing_account,
+        name="react_views.update_workspace_billing_account",
+    ),
+    path(
+        "api/workspace/quotas/<workspace_project_id>",
+        react_views.get_quotas,
+        name="react_views.get_quotas",
+    ),
+    path(
+        "api/identity-provisioning/",
+        react_views.identity_provisioning,
+        name="react_views.identity_provisioning",
+    ),
+    path("api/static-pages/", react_views.static_pages, name="react_views.static_pages"),
+    path(
+        "api/front-page-buttons/",
+        react_views.front_page_buttons,
+        name="react_views.front_page_buttons",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<environment_name>/<service_account_name>/",
+        react_views.get_collaborative_environment,
+        name="react_views.get_collaborative_environment",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/add",
+        react_views.add_collaborator,
+        name="react_views.add_collaborator",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/remove",
+        react_views.remove_collaborator,
+        name="react_views.remove_collaborator",
+    ),
+    path(
+        "api/environment/collaborative/notifications/mark-viewed",
+        react_views.mark_notification_viewed,
+        name="react_views.mark_notification_viewed",
+    ),
+    path(
+        "api/environment/collaborative/<workspace_project_id>/<service_account_name>/notifications/clear",
+        react_views.clear_all_notifications,
+        name="react_views.clear_all_notifications",
+    ),
+    path(
+        "api/environment/collaborative/leave/",
+        react_views.leave_shared_environment,
+        name="react_views.leave_shared_environment",
+    ),
+    path(
+        "api/environment/search-users-by-cloud-email/",
+        react_views.search_users_by_cloud_email,
+        name="react_views.search_users_by_cloud_email",
+    ),
+    path(
+        "api/workflows",
+        react_views.get_workflows,
+        name="react_views.get_workflows",
+    ),
+    path(
+        "api/execution/check-status",
+        react_views.check_execution_status,
+        name="react_views.check_execution_status",
     ),
 ]
