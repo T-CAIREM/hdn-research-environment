@@ -1,6 +1,8 @@
 import logging
 from functools import wraps
 from typing import Callable
+from django.contrib import messages
+from django.shortcuts import render
 
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
@@ -47,6 +49,23 @@ def console_permission_required(perm):
 
     return wrapper
 
+
+def try_except_context_wrapper():
+    def decorator(view):
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            try:
+                return view(request, *args, **kwargs)
+            except Exception as error:
+                context = {"error_massage": error, "last_path": request.path}
+                return render(request, "environment/error_template.html", context)
+
+        return wrapper
+
+    return decorator
+
+
+try_except_context_decorator = try_except_context_wrapper()
 
 cloud_identity_required = _redirect_view_if_user(
     lambda u: not user_has_cloud_identity(u), "identity_provisioning"
