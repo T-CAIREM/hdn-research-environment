@@ -171,7 +171,7 @@ A **shared workspace** is a separate GCP project for collaboration. Inside it, *
 A `COLLABORATIVE` environment type lets multiple users work inside the same Jupyter instance. The owner adds collaborators by email — they appear in the environment's user list and can join via the shared URL. A collaborator can also **leave** the environment themselves without the owner having to remove them.
 
 ### Billing Account
-The GCP billing account that pays for a workspace's resources. A workspace is created under one billing account, but the linked billing account can be **changed** later via the admin action (`POST /api/workspace/update-billing`). Billing accounts can also be **shared** with other users so they can create their own workspaces under the same billing account.
+The GCP billing account that pays for a workspace's resources. A workspace is created under one billing account, but the linked billing account can be **changed** later via the admin action (`POST /api/workspace/update_billing`). Billing accounts can also be **shared** with other users so they can create their own workspaces under the same billing account.
 
 ### Cloud Identity
 Before creating any workspace, users must provision a **GCP Cloud Identity account** — a `@hdn.research...` email tied to their institutional login. This is a one-time setup step.
@@ -252,10 +252,8 @@ Key service functions:
 | `consume_bucket_sharing_token()` | Accepts invite, calls IAM API |
 | `add_workbench_collaborator()` | Grants edit access to another user's env |
 | `remove_workbench_collaborator()` | Revokes collaborator access |
-| `leave_collaborative_environment()` | Removes the current user from someone else's env |
 | `update_workspace_billing_account()` | Swaps the billing account linked to a workspace |
 | `get_billing_accounts_list()` | Returns user's available billing accounts |
-| `search_users_by_cloud_email()` | Searches users by GCP Cloud Identity email (used by the collaborator picker) |
 
 Error handling: most service functions use a `@handle_api_error` decorator that catches API failures and raises typed exceptions from `exceptions.py`.
 
@@ -308,52 +306,51 @@ Workspaces & environments:
 - `GET /api/workspaces` — List user's workspaces with their environments
 - `POST /api/workspace/create` — Create workspace (async, returns workflow ID)
 - `DELETE /api/workspace/delete` — Delete workspace
-- `POST /api/workspace/shared/create` — Create shared workspace
-- `DELETE /api/workspace/shared/delete` — Delete shared workspace
-- `POST /api/workspace/update-billing` — Change the billing account linked to a workspace
+- `POST /api/sharing/workspace/create` — Create shared workspace
+- `DELETE /api/sharing/workspace/delete` — Delete shared workspace
+- `POST /api/workspace/update_billing` — Change the billing account linked to a workspace
 - `GET /api/available-projects` — List physionet projects available as dataset identifiers
-- `POST /api/environment/create/<workspace_id>` — Create environment (async)
+- `POST /api/environment/create/<workspace_project_id>` — Create environment (async)
 - `DELETE /api/environment/delete` — Delete environment
 - `PATCH /api/environment/stop` — Stop (pause) environment
 - `PATCH /api/environment/start` — Start (resume) environment
 - `PATCH /api/environment/update` — Resize environment (CPU/memory/GPU)
-- `POST /api/environment/leave` — Leave a collaborative environment you joined as a collaborator
-- `GET /api/quotas/<workspace_id>` — GCP quota usage for a workspace
+- `POST /api/environment/collaborative/leave/` — Leave a collaborative environment you joined as a collaborator
+- `GET /api/workspace/quotas/<workspace_project_id>` — GCP quota usage for a workspace
 - `GET /api/available-resources` — VM types + GPU options + pricing (used to populate creation form)
 
 Shared workspaces & buckets:
 - `GET /api/shared-workspaces` — List accessible shared workspaces
 - `POST /api/sharing/bucket/create/<workspace_id>` — Create a shared bucket
 - `DELETE /api/sharing/bucket/delete` — Delete a shared bucket
-- `POST /api/sharing/share/<workspace>/<bucket>` — Invite a user to a bucket (sends email)
-- `GET /api/sharing/<bucket>/shares` — List current shares for a bucket
-- `POST /api/sharing/<bucket>/revoke` — Revoke a user's bucket access
-- `GET /api/sharing/<bucket>/confirm` — Landing page for bucket share invite token
-- `POST /api/sharing/bucket/<bucket>/signed-url` — Generate a temporary signed download URL
-- `GET /api/sharing/bucket/<bucket>/content` — List files/folders in a bucket
-- `POST /api/sharing/bucket/<bucket>/content/create` — Create a folder in a bucket
-- `DELETE /api/sharing/bucket/<bucket>/content/delete` — Delete a file or folder
+- `POST /api/sharing/share/<shared_workspace_name>/<shared_bucket_name>` — Invite a user to a bucket (sends email)
+- `GET /api/sharing/<shared_bucket_name>/shares` — List current shares for a bucket
+- `POST /api/sharing/revoke/<shared_bucket_name>` — Revoke a user's bucket access
+- `GET /api/sharing/confirm` — Landing page for bucket share invite token (token passed as query param)
+- `POST /api/sharing/generate_signed_url/<bucket_name>` — Generate a temporary signed download URL
+- `GET /api/sharing/<bucket_name>` — List files/folders in a bucket
+- `POST /api/sharing/<bucket_name>/content/create` — Create a folder in a bucket
+- `DELETE /api/sharing/<bucket_name>/content/delete` — Delete a file or folder
 
 Billing sharing:
 - `GET /api/billing` — List user's billing accounts
-- `POST /api/billing/<billing_account_id>/share` — Invite a user to a billing account (sends email)
+- `POST /api/billing/share/<billing_account_id>` — Invite a user to a billing account (sends email)
 - `GET /api/billing/<billing_account_id>/shares` — List current shares for a billing account
-- `POST /api/billing/<billing_account_id>/revoke` — Revoke billing account access
+- `POST /api/billing/revoke/<billing_account_id>` — Revoke billing account access
 - `GET /api/billing/confirm` — Landing page for billing share invite token
 
 Collaborative environments:
-- `GET /api/environment/collaborative/<workspace_id>/<service_account>` — Get shared environment details
-- `POST /api/environment/collaborative/<workspace_id>/<service_account>/collaborators` — Add a collaborator
-- `DELETE /api/environment/collaborative/<workspace_id>/<service_account>/collaborators` — Remove a collaborator
-- `GET /api/users/search` — Search users by cloud email (used in the collaborator picker UI)
-- `GET /api/workbench/notifications/<workspace_id>/<service_account>` — Get collaborator notifications
-- `POST /api/workbench/notifications/viewed` — Mark a notification as read
-- `DELETE /api/workbench/notifications/<workspace_id>/<service_account>` — Clear all notifications
+- `GET /api/environment/collaborative/<workspace_project_id>/<environment_name>/<service_account_name>/` — Get shared environment details
+- `POST /api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/add` — Add a collaborator
+- `DELETE /api/environment/collaborative/<workspace_project_id>/<service_account_name>/collaborators/remove` — Remove a collaborator
+- `GET /api/environment/search-users-by-cloud-email/` — Search users by cloud email (used in the collaborator picker UI; implemented in `react_views.search_users_by_cloud_email`, not a service function)
+- `POST /api/environment/collaborative/notifications/mark-viewed` — Mark a notification as read
+- `DELETE /api/environment/collaborative/<workspace_project_id>/<service_account_name>/notifications/clear` — Clear all notifications
 
 User & auth:
 - `GET /api/user` — Current user info + permissions
 - `GET /api/workflows` — Latest workflow executions for the current user
-- `GET /api/execution-status` — Poll a single workflow execution status
+- `GET /api/execution/check-status` — Poll a single workflow execution status
 
 Misc React helpers:
 - `GET /api/static-pages/` — Serves static React page routes (catch-all)
@@ -509,8 +506,8 @@ Manages **GCP Cloud Identity Groups** (Google Groups) used for IAM role assignme
 | `GET /console/group` | List all groups with their members |
 | `POST /console/group/create` | Create a new Cloud Identity Group |
 | `DELETE /console/group/delete` | Delete a group |
-| `POST /console/group/user/add/<user_id>` | Add a user to a group |
-| `POST /console/group/user/remove/<user_id>` | Remove a user from a group |
+| `POST /console/group/add/<user_id>` | Add a user to a group |
+| `POST /console/group/remove/<user_id>` | Remove a user from a group |
 | `GET /console/group/management` | View groups with their assigned IAM roles |
 | `POST /console/group/<id>/roles/add` | Assign GCP IAM roles to a group |
 | `POST /console/group/<id>/roles/remove` | Remove GCP IAM roles from a group |
