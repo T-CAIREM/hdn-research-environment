@@ -125,9 +125,19 @@
                                                 </div>
                                             {% else %}
                                                 <div class="col-md-3">
-                                                    <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
-                                                        {{ environment.project }}
-                                                    </a>
+                                                    {% if environment.project %}
+                                                        <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
+                                                            {{ environment.project }}
+                                                        </a>
+                                                    {% else %}
+                                                        {{ environment.dataset_identifier }}
+                                                    {% endif %}
+                                                    {% if not environment.has_dataset_access %}
+                                                        <br>
+                                                        <small class="text-danger">
+                                                            You no longer have access to this dataset.
+                                                        </small>
+                                                    {% endif %}
                                                 </div>
                                                 <div class="col-md-3">
                                                     <small>
@@ -150,7 +160,12 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="d-flex flex-wrap">
-                                                        {% if environment|has_errors %}
+                                                        {% if not environment.has_dataset_access %}
+                                                            {# Dataset access revoked - workbench is stopped and pending automatic removal #}
+                                                            <small class="text-muted align-self-center">
+                                                                Stopped &mdash; dataset access revoked. This workbench will be removed automatically.
+                                                            </small>
+                                                        {% elif environment|has_errors %}
                                                             {# Workbench has errors - show disabled state #}
                                                             <span class="badge badge-danger">Unavailable</span>
                                                         {% elif environment.is_in_progress %}

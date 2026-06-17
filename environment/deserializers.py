@@ -117,9 +117,15 @@ def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> Lis
 def deserialize_workspace_details(
     data: WorkspaceResponse, projects: Iterable[Any]
 ) -> ResearchWorkspace:
+    service_errors = deserialize_service_errors(data.get("service_errors", []))
+
     # Handle missing or invalid billing_info gracefully
     billing_info = data.get("billing_info")
-    service_errors = deserialize_service_errors(data.get("service_errors", []))
+    if not billing_info or not isinstance(billing_info, dict):
+        billing_info = {
+            "billing_account_id": None,
+            "billing_enabled": False,
+        }
 
     # Safely extract billing account ID
     billing_account_id = billing_info.get("billing_account_id")
