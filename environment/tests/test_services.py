@@ -29,6 +29,7 @@ from environment.services import (
     create_research_environment,
     delete_environment,
     get_environments_with_projects,
+    get_workspaces_list,
     start_stopped_environment,
     stop_running_environment,
     get_billing_accounts_list,
@@ -974,3 +975,94 @@ class RemoveWorkbenchCollaboratorTestCase(TestCase):
         )
 
         self.assertIs(result, mock_response)
+
+
+def _workspace_payload(dataset_identifier, *, billing_info, is_accessible):
+    """Build a minimal raw workspaces API response containing a single stopped
+    Jupyter workbench tied to `dataset_identifier`."""
+    return [
+        {
+            "type": "Workspace",
+            "gcp_project_id": "proj-123",
+            "status": "created",
+            "is_owner": True,
+            "billing_info": billing_info,
+            "is_accessible": is_accessible,
+            "access_denial_reason": None if is_accessible else "Access revoked",
+            "service_errors": [],
+            "workbenches": [
+                {
+                    "type": "Workbench",
+                    "gcp_identifier": "wb-1",
+                    "dataset_identifier": dataset_identifier,
+                    "url": None,
+                    "status": "stopped",
+                    "cpu": 2,
+                    "memory": 8,
+                    "region": "us-central1",
+                    "workbench_type": "jupyter",
+                    "machine_type": "n1-standard-2",
+                    "disk_size": 100,
+                    "gpu_accelerator_type": None,
+                    "service_account_name": None,
+                    "workbench_owner_username": None,
+                    "rstudio_ssl_certificate_expiration_date": None,
+                    "service_errors": [],
+                }
+            ],
+        }
+    ]
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetWorkspacesListTestCase(TestCase):
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.project = Mock()
+        self.project.id = 42
+        self.project.slug = "demo-project"
+        self.project.version = "1.0.0"
+        # Matches deserializers._project_data_group(self.project)
+        self.dataset_identifier = "demoproject100"
+
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_revoked_dataset_workbench_still_resolves_and_is_flagged(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        # User no longer has access (accessible_by is empty), but the project still
+        # exists in the database (all()) so the stopped workbench can still be rendered.
+        mock_objects.accessible_by.return_value = []
+        mock_objects.all.return_value = [self.project]
+        mock_get_workspace_list.return_value.json.return_value = _workspace_payload(
+            self.dataset_identifier, billing_info=None, is_accessible=False
+        )
+
+        workspaces = get_workspaces_list(self.user)
+        workbench = workspaces[0].workbenches[0]
+
+        # The page must not 500: the project is resolved despite lost access...
+        self.assertIs(workbench.project, self.project)
+        # ...and is flagged so the UI can show an access-revoked notice.
+        self.assertFalse(workbench.has_dataset_access)
+
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_accessible_dataset_workbench_keeps_access(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        mock_objects.accessible_by.return_value = [self.project]
+        # all() must not be consulted when nothing is revoked.
+        mock_objects.all.side_effect = AssertionError("all() should not be called")
+        mock_get_workspace_list.return_value.json.return_value = _workspace_payload(
+            self.dataset_identifier, billing_info=None, is_accessible=True
+        )
+
+        workspaces = get_workspaces_list(self.user)
+        workbench = workspaces[0].workbenches[0]
+
+        self.assertIs(workbench.project, self.project)
+        self.assertTrue(workbench.has_dataset_access)

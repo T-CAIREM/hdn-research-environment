@@ -109,6 +109,8 @@ class ResearchEnvironment:
     workbench_owner_username: Optional[str]
     rstudio_ssl_certificate_expiration_date: Optional[str]
     service_errors: Optional[List["ServiceError"]] = None
+    # False when the user has lost access to the dataset (workbench stopped, pending deletion).
+    has_dataset_access: bool = True
 
     @property
     def is_running(self):

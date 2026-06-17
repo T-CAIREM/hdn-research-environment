@@ -639,6 +639,30 @@ def match_workspace_with_billing_id(
     return billing_id_mapping
 
 
+def _dataset_groups_in_response(workspaces_data: Iterable[dict]) -> set:
+    """Dataset identifiers referenced by the workbenches in a raw workspaces response."""
+    return {
+        workbench["dataset_identifier"]
+        for workspace in workspaces_data
+        for workbench in (workspace.get("workbenches") or [])
+        if workbench.get("dataset_identifier")
+    }
+
+
+def _annotate_dataset_access(
+    workspaces: Iterable[Any], accessible_project_ids: set
+) -> None:
+    """Set has_dataset_access on each workbench from the user's accessible projects."""
+    for workspace in workspaces:
+        for environment in getattr(workspace, "workbenches", None) or []:
+            if not isinstance(environment, ResearchEnvironment):
+                continue
+            environment.has_dataset_access = (
+                environment.project is not None
+                and environment.project.id in accessible_project_ids
+            )
+
+
 @handle_api_error(
     "Workspaces List Retrieval",
     GetAvailableEnvironmentsFailed,
@@ -646,10 +670,29 @@ def match_workspace_with_billing_id(
 )
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
-    projects = PublishedProject.objects.accessible_by(user)
     response = api.get_workspace_list(email)
     data = response.json()
-    return deserialize_workspaces(data, projects)
+
+    accessible_projects = list(PublishedProject.objects.accessible_by(user))
+    accessible_project_ids = {project.id for project in accessible_projects}
+    projects = accessible_projects
+
+    # Revoked datasets drop out of accessible_by; resolve their still-listed workbenches
+    # against all projects so they render with a notice instead of 500-ing on a None project.
+    accessible_groups = {
+        _project_data_group(project) for project in accessible_projects
+    }
+    revoked_groups = _dataset_groups_in_response(data) - accessible_groups
+    if revoked_groups:
+        projects = accessible_projects + [
+            project
+            for project in PublishedProject.objects.all()
+            if _project_data_group(project) in revoked_groups
+        ]
+
+    workspaces = deserialize_workspaces(data, projects)
+    _annotate_dataset_access(workspaces, accessible_project_ids)
+    return workspaces
 
 
 @handle_api_error(
