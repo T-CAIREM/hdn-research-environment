@@ -3,20 +3,7 @@
 {% block local_js_top %}
   {{ block.super }}
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js" integrity="sha512-luMnTJZ7oEchNDZAtQhgjomP1eZefnl82ruTH/3Oj/Yu5qYtwL7+dVRccACS/Snp1lFXq188XFipHKYE75IaQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
-    if (!window.socket){
-      window.socket = io("{{ websocket_url }}", {
-        transports: ["websocket"],
-        pingInterval: 25000,
-        pingTimeout: 60000,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
-      });
-    }
-
     let isModalOpen = false;
     let cardToRefresh = "";
 
@@ -47,18 +34,20 @@
 
     function pollExecutionStatus(executionId) {
         const pollUrl = `{% url "check_execution_status" %}?execution_resource_name=${executionId}`;
-        fetch(pollUrl)
+        return fetch(pollUrl)
         .then(response => response.json())
         .then(({ finished }) => {
             if (finished) {
-                refreshCards(executionId);
+                // Defer the swap if a modal is open; it runs on modal close.
+                if (isModalOpen) {
+                    cardToRefresh = executionId;
+                } else {
+                    refreshCards(executionId);
+                }
             }
+            return finished;
         });
     }
-
-    {% for workflow in workflows %}
-      pollExecutionStatus("{{ workflow.execution_resource_name }}");
-    {% endfor %}
   </script>
   {% include "environment/_environment_tabs.html" %}
 {% endblock %}

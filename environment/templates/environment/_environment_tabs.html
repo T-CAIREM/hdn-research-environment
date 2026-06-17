@@ -86,40 +86,28 @@
       isModalOpen = false;
     });
 
-    function joinSocket(room) {
-      socket.emit("join", room);
-    };
-
-    // remove existing listeners
-    window.socket.off("workflow_update");
-    window.socket.on('workflow_update', function(data) {
-        if (isModalOpen) {
-           cardToRefresh = data.workbench_activity_id;
-           return;
-        }
-
-        pollExecutionStatus(data.workbench_activity_id);
-    });
-
-    window.socket.on("disconnect", (reason) => {
-      if (reason === "transport close") {
-        // the disconnection was initiated by the server, you need to reconnect manually
-        socket.connect();
-        {% for workflow in workflows %}
-          joinSocket("{{ workflow.execution_resource_name }}");
-        {% endfor %}
+    // Live updates via polling (no websockets). While any workflow is in
+    // progress, poll its status and refresh the cards when it finishes. This
+    // partial is re-rendered (and this script re-run) on each refresh, so the
+    // logic is wrapped in an IIFE to stay re-runnable, clears any previous
+    // poller, and only (re)starts one while work is in flight — when nothing is
+    // in progress we stop polling entirely (no load on the API/GCP).
+    (function () {
+      if (window.environmentStatusPoll) {
+        clearInterval(window.environmentStatusPoll);
+        window.environmentStatusPoll = null;
       }
-    });
 
-    function disconnectSocket() {
-      window.socket.disconnect();
-    };
+      const inProgressExecutions = [
+        {% for workflow in workflows %}"{{ workflow.execution_resource_name }}",{% endfor %}
+      ];
 
-    window.onbeforeunload = function() {
-      disconnectSocket()
-    };
+      if (inProgressExecutions.length === 0) return;
 
-    {% for workflow in workflows %}
-      joinSocket("{{ workflow.execution_resource_name }}");
-    {% endfor %}
+      inProgressExecutions.forEach(pollExecutionStatus);
+      window.environmentStatusPoll = setInterval(function () {
+        if (isModalOpen) return;
+        inProgressExecutions.forEach(pollExecutionStatus);
+      }, 10000);
+    })();
 </script>
