@@ -122,6 +122,9 @@ def research_environments(request):
         "workflows": running_workflows,
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "should_display_google_link": should_display_google_link,
+        "environment_poll_interval_ms": getattr(
+            settings, "RESEARCH_ENVIRONMENTS_POLL_INTERVAL_MS", 30000
+        ),
     }
 
     return render(
@@ -165,6 +168,9 @@ def research_environments_partial(request):
         "websocket_url": settings.CLOUD_RESEARCH_ENVIRONMENTS_API_URL,
         "billing_account_id_to_name_map": billing_account_id_to_name_map,
         "should_display_google_link": should_display_google_link,
+        "environment_poll_interval_ms": getattr(
+            settings, "RESEARCH_ENVIRONMENTS_POLL_INTERVAL_MS", 30000
+        ),
     }
 
     execution_resource_name = request.GET.get("execution_resource_name")

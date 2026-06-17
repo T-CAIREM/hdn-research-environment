@@ -108,6 +108,6 @@
       window.environmentStatusPoll = setInterval(function () {
         if (isModalOpen) return;
         inProgressExecutions.forEach(pollExecutionStatus);
-      }, 10000);
+      }, {{ environment_poll_interval_ms|default:30000 }});
     })();
 </script>
