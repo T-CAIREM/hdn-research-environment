@@ -1,12 +1,14 @@
 from unittest import skipIf
 from unittest.mock import Mock
 
+import requests
 from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
 from environment.decorators import (
     cloud_identity_required,
+    handle_api_error,
     require_DELETE,
     require_PATCH,
 )
@@ -92,3 +94,31 @@ class RequireDeleteTestCase(TestCase):
         decorated_view = require_DELETE(view)
         decorated_view(request)
         view.assert_called()
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class HandleApiErrorTestCase(TestCase):
+    class OperationFailed(Exception):
+        pass
+
+    def test_returns_response_from_decorated_function_on_success(self):
+        response = Mock(ok=True)
+        decorated = handle_api_error("Test Operation", self.OperationFailed)(
+            lambda: response
+        )
+        self.assertIs(decorated(), response)
+
+    def test_raises_domain_exception_when_function_parses_non_json_response(self):
+        def parse_load_balancer_error_page():
+            raise requests.exceptions.JSONDecodeError(
+                "Expecting value", "\n<html></html>", 1
+            )
+
+        decorated = handle_api_error("Test Operation", self.OperationFailed)(
+            parse_load_balancer_error_page
+        )
+        with self.assertRaises(self.OperationFailed):
+            decorated()
