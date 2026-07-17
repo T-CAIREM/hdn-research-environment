@@ -1,6 +1,8 @@
 import logging
 from functools import wraps
 from typing import Callable
+
+import requests
 from django.contrib import messages
 from django.shortcuts import render
 
@@ -120,7 +122,18 @@ def handle_api_error(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            response = func(*args, **kwargs)
+            try:
+                response = func(*args, **kwargs)
+            except requests.exceptions.JSONDecodeError as e:
+                # A non-JSON body means the response didn't come from the API itself
+                # (e.g. the load balancer's HTML error page while the API restarts).
+                logger.exception(
+                    f"{operation_name} received a non-JSON response from the API"
+                )
+                raise exception_class(
+                    f"{operation_name} failed because the service was temporarily "
+                    "unavailable. Please try again."
+                ) from e
 
             # Check if response indicates an error
             if hasattr(response, "ok") and not response.ok:
