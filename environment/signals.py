@@ -69,17 +69,30 @@ def consume_billing_account_sharing_invites(sender, created, instance, **kwargs)
 
 @receiver(post_init, sender=User)
 def memoize_original_credentialing_status(instance: User, **kwargs):
+    # Instances loaded with deferred fields (.only()/.defer() querysets, in
+    # particular the deletion collector's cascade fetch during a cascade
+    # delete) must not be memoized: reading a deferred field runs a refresh
+    # query that instantiates another instance of this model, re-firing this
+    # receiver in an infinite recursion. Such instances are never saved by
+    # the environment workflows, so skipping them is safe; the post_save
+    # receivers fall back to a no-op default when the memo is absent.
+    if instance.get_deferred_fields():
+        return
     instance._original_is_credentialed = instance.is_credentialed
 
 
 @receiver(post_save, sender=User)
 def schedule_stop_environments_if_credentialing_revoked(instance: User, **kwargs):
-    if not instance.is_credentialed and instance._original_is_credentialed:
+    if not instance.is_credentialed and getattr(
+        instance, "_original_is_credentialed", False
+    ):
         stop_environments_with_expired_access(instance.id)
 
 
 @receiver(post_init, sender=Event)
 def memoize_original_event_end_time(instance: Event, **kwargs):
+    if instance.get_deferred_fields():  # see memoize_original_credentialing_status
+        return
     instance._original_end_date = instance.end_date
 
 
@@ -87,7 +100,8 @@ def memoize_original_event_end_time(instance: Event, **kwargs):
 def schedule_stop_environments_if_event_finished(
     instance: Event, created: bool, **kwargs
 ):
-    if instance._original_end_date != instance.end_date or created:
+    original_end_date = getattr(instance, "_original_end_date", instance.end_date)
+    if original_end_date != instance.end_date or created:
         schedule = datetime.combine(instance.end_date, datetime.min.time())
         stop_event_participants_environments_with_expired_access(
             instance.id, schedule=schedule
@@ -96,6 +110,8 @@ def schedule_stop_environments_if_event_finished(
 
 @receiver(post_init, sender=Training)
 def memoize_original_validity(instance: Training, **kwargs):
+    if instance.get_deferred_fields():  # see memoize_original_credentialing_status
+        return
     instance._original_is_valid = instance.is_valid()
 
 
@@ -103,13 +119,15 @@ def memoize_original_validity(instance: Training, **kwargs):
 def schedule_stop_environment_if_training_accepted(instance: Training, **kwargs):
     user = instance.user
 
-    if instance.is_valid() and not instance._original_is_valid:
+    if instance.is_valid() and not getattr(instance, "_original_is_valid", False):
         schedule = instance.process_datetime + instance.training_type.valid_duration
         stop_environments_with_expired_access(user.id, schedule=schedule)
 
 
 @receiver(post_init, sender=DataAccessRequest)
 def memoize_original_acceptation_status(instance: DataAccessRequest, **kwargs):
+    if instance.get_deferred_fields():  # see memoize_original_credentialing_status
+        return
     instance._original_is_accepted = instance.is_accepted()
     instance._original_is_revoked = instance.is_revoked()
 
@@ -120,8 +138,12 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
 ):
     user = instance.requester
 
-    request_was_accepted = instance.is_accepted() and not instance._original_is_accepted
-    access_was_revoked = instance.is_revoked() and not instance._original_is_revoked
+    request_was_accepted = instance.is_accepted() and not getattr(
+        instance, "_original_is_accepted", False
+    )
+    access_was_revoked = instance.is_revoked() and not getattr(
+        instance, "_original_is_revoked", False
+    )
     if request_was_accepted:
         if request_was_accepted and not instance.duration:  # Indefinite access
             return
@@ -134,6 +156,8 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
 @receiver(post_init, sender=EventApplication)
 def memoize_original_application_status(instance, **kwargs):
     """Store the original status to detect changes"""
+    if instance.get_deferred_fields():  # see memoize_original_credentialing_status
+        return
     instance._original_status = getattr(instance, "status", None)
 
 
@@ -143,7 +167,8 @@ def handle_event_billing_account_on_approval(instance, **kwargs):
     # Early return if conditions aren't met
     if not (
         instance.status == instance.EventApplicationStatus.APPROVED
-        and instance._original_status != instance.EventApplicationStatus.APPROVED
+        and getattr(instance, "_original_status", None)
+        != instance.EventApplicationStatus.APPROVED
         and instance.event.gcp_billing_id
     ):
         return
