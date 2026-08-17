@@ -29,13 +29,19 @@ MACHINE_TYPE_CHOICES = (
 )
 
 # GCP  GPU memory types
-GPU_MEMORY_TYPES = {
-    ("GDDR5", "GDDR5"),
+# NOTE: must be an ordered sequence, not a set. Django serializes `choices` into
+# migrations as an ordered list, and set iteration order varies between processes
+# (string hash randomization), so a set makes `makemigrations` detect a phantom
+# AlterField on every run. The order below matches the state already recorded by
+# migration 0018, so no further migration is required -- keep it, and append new
+# entries at the end.
+GPU_MEMORY_TYPES = (
     ("GDDR6", "GDDR6"),
-    ("HBM2", "HBM2"),
     ("HBM2e", "HBM2e"),
+    ("HBM2", "HBM2"),
+    ("GDDR5", "GDDR5"),
     ("HBM3", "HBM3"),
-}
+)
 
 
 class CloudGroup(models.Model):

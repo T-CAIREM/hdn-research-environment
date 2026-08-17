@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 
-from environment.models import BillingSetup, CloudIdentity
+from environment.models import CloudIdentity
 
 User = get_user_model()
 
