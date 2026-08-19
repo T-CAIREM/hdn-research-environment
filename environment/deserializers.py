@@ -49,39 +49,60 @@ def _project_data_group(project: PublishedProject) -> str:
     return "".join(c for c in project.slug + project.version if c.isalnum())
 
 
+logger = logging.getLogger(__name__)
+
+
+def _deserialize_research_environment(
+    workbench: dict,
+    gcp_project_id: str,
+    projects: Iterable[PublishedProject],
+) -> ResearchEnvironment:
+    return ResearchEnvironment(
+        gcp_identifier=workbench["gcp_identifier"],
+        dataset_identifier=workbench["dataset_identifier"],
+        url=workbench.get("url"),
+        workspace_name=gcp_project_id,
+        status=EnvironmentStatus(workbench["status"]),
+        cpu=workbench["cpu"],
+        memory=workbench["memory"],
+        region=Region(workbench["region"]),
+        type=EnvironmentType(workbench["workbench_type"]),
+        machine_type=workbench["machine_type"],
+        disk_size=workbench.get("disk_size"),
+        project=_get_project_for_environment(workbench["dataset_identifier"], projects),
+        gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
+        service_account_name=workbench.get("service_account_name"),
+        workbench_owner_username=workbench.get("workbench_owner_username"),
+        rstudio_ssl_certificate_expiration_date=workbench.get(
+            "rstudio_ssl_certificate_expiration_date"
+        ),
+        service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
+    )
+
+
 def deserialize_research_environments(
     workbenches: RawWorkbenchesData,
     gcp_project_id: str,
     projects: Iterable[PublishedProject],
 ) -> Iterable[ResearchEnvironment]:
-    return [
-        ResearchEnvironment(
-            gcp_identifier=workbench["gcp_identifier"],
-            dataset_identifier=workbench["dataset_identifier"],
-            url=workbench.get("url"),
-            workspace_name=gcp_project_id,
-            status=EnvironmentStatus(workbench["status"]),
-            cpu=workbench["cpu"],
-            memory=workbench["memory"],
-            region=Region(workbench["region"]),
-            type=EnvironmentType(workbench["workbench_type"]),
-            machine_type=workbench["machine_type"],
-            disk_size=workbench.get("disk_size"),
-            project=_get_project_for_environment(
-                workbench["dataset_identifier"], projects
-            ),
-            gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
-            service_account_name=workbench.get("service_account_name"),
-            workbench_owner_username=workbench.get("workbench_owner_username"),
-            rstudio_ssl_certificate_expiration_date=workbench.get(
-                "rstudio_ssl_certificate_expiration_date"
-            ),
-            service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
-        )
-        if workbench.get("type") == "Workbench"
-        else deserialize_entity_scaffolding(workbench)
-        for workbench in workbenches
-    ]
+    # One malformed workbench entry must degrade only its own card, never the
+    # workspace (or the whole /environments/ page) around it.
+    environments = []
+    for workbench in workbenches:
+        try:
+            environments.append(
+                _deserialize_research_environment(workbench, gcp_project_id, projects)
+                if workbench.get("type") == "Workbench"
+                else deserialize_entity_scaffolding(workbench)
+            )
+        except Exception:
+            logger.exception(
+                "Skipping a workbench entry of workspace %s that could not be "
+                "parsed: %.500r",
+                gcp_project_id,
+                workbench,
+            )
+    return environments
 
 
 def deserialize_workflow_details(workflow_data: dict) -> Workflow:
@@ -94,12 +115,14 @@ def deserialize_workflow_details(workflow_data: dict) -> Workflow:
     )
 
 
-def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> List[ServiceError]:
+def deserialize_service_errors(
+    service_errors_data: RawServiceErrorsData,
+) -> List[ServiceError]:
     service_errors = []
     # Handle case where service_errors_data might be None
     if not service_errors_data:
         return service_errors
-        
+
     for error in service_errors_data:
         error_obj = ServiceError(
             error_type=error.get("error_type", "unknown"),
@@ -110,7 +133,7 @@ def deserialize_service_errors(service_errors_data: RawServiceErrorsData) -> Lis
             can_retry=error.get("can_retry", False),
         )
         service_errors.append(error_obj)
-    
+
     return service_errors
 
 
@@ -140,8 +163,8 @@ def deserialize_workspace_details(
             data["gcp_project_id"],
             projects,
         ),
-    is_accessible=data.get("is_accessible", True),
-    access_denial_reason=data.get("access_denial_reason"),
+        is_accessible=data.get("is_accessible", True),
+        access_denial_reason=data.get("access_denial_reason"),
         service_errors=service_errors,
     )
 
@@ -155,41 +178,49 @@ def deserialize_simplified_workspace_details(data: dict) -> SimplifiedResearchWo
     )
 
 
-def deserialize_shared_bucket_details(buckets_data: List[dict]) -> Iterable[SharedBucket]:
-    return [
-        SharedBucket(
-            name=bucket["bucket_name"],
-            is_owner=bucket.get("is_owner", False),
-            is_admin=bucket.get("is_admin", False),
-        )
-        for bucket in buckets_data
-    ]
+def deserialize_shared_bucket_details(
+    buckets_data: List[dict],
+) -> Iterable[SharedBucket]:
+    # One malformed bucket entry must degrade only itself, not its workspace.
+    buckets = []
+    for bucket in buckets_data:
+        try:
+            buckets.append(
+                SharedBucket(
+                    name=bucket["bucket_name"],
+                    is_owner=bucket.get("is_owner", False),
+                    is_admin=bucket.get("is_admin", False),
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Skipping a shared bucket entry that could not be parsed: %.500r",
+                bucket,
+            )
+    return buckets
 
 
-
-
-def deserialize_shared_workspace_details(data: SharedWorkspaceResponse) -> SharedWorkspace:
+def deserialize_shared_workspace_details(
+    data: SharedWorkspaceResponse,
+) -> SharedWorkspace:
     service_errors = deserialize_service_errors(data.get("service_errors", []))
-    
+
     # Handle missing or invalid billing_info gracefully
     billing_info = data.get("billing_info")
     if not billing_info or not isinstance(billing_info, dict):
-        billing_info = {
-            "billing_account_id": None,
-            "billing_enabled": False
-        }
-    
+        billing_info = {"billing_account_id": None, "billing_enabled": False}
+
     # Safely extract billing account ID
     billing_account_id = billing_info.get("billing_account_id")
-    
+
     return SharedWorkspace(
         gcp_project_id=data["gcp_project_id"],
         gcp_billing_id=billing_account_id,
         status=WorkspaceStatus(data["status"]),
         buckets=deserialize_shared_bucket_details(data["buckets"]),
         is_owner=data["is_owner"],
-    is_accessible=data.get("is_accessible", True),
-    access_denial_reason=data.get("access_denial_reason"),
+        is_accessible=data.get("is_accessible", True),
+        access_denial_reason=data.get("access_denial_reason"),
         service_errors=service_errors,
     )
 
@@ -203,24 +234,47 @@ def deserialize_entity_scaffolding(data: dict) -> EntityScaffolding:
 def deserialize_workspaces(
     data: RawWorkspacesData, projects: Iterable[Any]
 ) -> Iterable[ResearchWorkspace]:
-    return [
-        deserialize_workspace_details(workspace_data, projects)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
-        for workspace_data in data
-    ]
+    # One malformed workspace entry must degrade only its own card, never the
+    # whole /environments/ page.
+    workspaces = []
+    for workspace_data in data:
+        try:
+            workspaces.append(
+                deserialize_workspace_details(workspace_data, projects)
+                if WorkspaceType(workspace_data.get("type")) == WorkspaceType.WORKSPACE
+                else deserialize_entity_scaffolding(workspace_data)
+            )
+        except Exception:
+            logger.exception(
+                "Skipping a workspace entry that could not be parsed: %.500r",
+                workspace_data,
+            )
+    return workspaces
+
 
 def deserialize_simplified_workspace(data: dict):
     return deserialize_simplified_workspace_details(data)
 
 
-def deserialize_shared_workspaces(data: RawSharedWorkspacesData) -> Iterable[SharedWorkspace]:
-    return [
-        deserialize_shared_workspace_details(workspace_data)
-        if WorkspaceType(workspace_data.get("type")) == WorkspaceType.SHARED_WORKSPACE
-        else deserialize_entity_scaffolding(workspace_data)
-        for workspace_data in data
-    ]
+def deserialize_shared_workspaces(
+    data: RawSharedWorkspacesData,
+) -> Iterable[SharedWorkspace]:
+    # Mirrors deserialize_workspaces: salvage every entry that parses.
+    workspaces = []
+    for workspace_data in data:
+        try:
+            workspaces.append(
+                deserialize_shared_workspace_details(workspace_data)
+                if WorkspaceType(workspace_data.get("type"))
+                == WorkspaceType.SHARED_WORKSPACE
+                else deserialize_entity_scaffolding(workspace_data)
+            )
+        except Exception:
+            logger.exception(
+                "Skipping a shared workspace entry that could not be parsed: %.500r",
+                workspace_data,
+            )
+    return workspaces
 
 
 def _get_project_for_environment(

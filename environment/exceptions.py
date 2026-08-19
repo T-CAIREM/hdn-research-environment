@@ -168,3 +168,17 @@ class GetSimplifiedWorkspaceFailed(Exception):
 
 class GetSharedBucketFailed(Exception):
     pass
+
+
+class InvalidApiResponse(Exception):
+    """An API response that cannot be used as the expected success payload.
+
+    Raised by ``environment.utilities.validated_json`` when a response has an
+    error status or a body of the wrong shape; converted into the operation's
+    domain exception by ``environment.decorators.handle_api_error``.
+    """
+
+    def __init__(self, response, reason: str):
+        self.response = response
+        self.reason = reason
+        super().__init__(reason)

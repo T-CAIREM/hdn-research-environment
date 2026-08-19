@@ -2,7 +2,11 @@ import concurrent
 from collections import namedtuple
 
 from environment.entities import WorkspaceStatus, WorkflowStatus
-from environment.exceptions import ChangeEnvironmentInstanceTypeFailed
+from environment.exceptions import (
+    ChangeEnvironmentInstanceTypeFailed,
+    GetAvailableEnvironmentsFailed,
+    GetBillingAccountsListFailed,
+)
 from environment.models import VMInstance, GPUAccelerator, BucketSharingInvite
 from rest_framework.response import Response
 import json
@@ -47,7 +51,11 @@ ProjectedWorkbenchCost = namedtuple("ProjectedWorkbenchCost", "resource cost")
 @cloud_identity_required
 def get_workspaces_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
-    workspaces = services.get_workspaces_list(user)
+    try:
+        workspaces = services.get_workspaces_list(user)
+    except GetAvailableEnvironmentsFailed as e:
+        # Contain an API failure to this request instead of an HTML 500.
+        return JsonResponse({"error": str(e)}, status=503)
     return JsonResponse(
         {"code": 200, "workspaces": serializers.serialize_workspaces(workspaces)}
     )
@@ -58,7 +66,10 @@ def get_workspaces_list(request):
 @cloud_identity_required
 def get_shared_workspaces_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
-    shared_workspaces = services.get_shared_workspaces_list(user)
+    try:
+        shared_workspaces = services.get_shared_workspaces_list(user)
+    except GetAvailableEnvironmentsFailed as e:
+        return JsonResponse({"error": str(e)}, status=503)
     return JsonResponse(
         {
             "code": 200,
@@ -74,7 +85,10 @@ def get_shared_workspaces_list(request):
 @cloud_identity_required
 def get_billing_accounts_list(request):
     user = User.objects.get(id=request.GET.get("user_id"))
-    billing_accounts = services.get_billing_accounts_list(user)
+    try:
+        billing_accounts = services.get_billing_accounts_list(user)
+    except GetBillingAccountsListFailed as e:
+        return JsonResponse({"error": str(e)}, status=503)
     return JsonResponse({"code": 200, "billing_accounts": billing_accounts})
 
 
@@ -331,7 +345,6 @@ def start_stopped_environment(request):
                         f"CPU limit exceeded. You are currently using {running_cpu} vCPUs "
                         f"out of the {constants.MAX_CPU_USAGE} vCPU limit. "
                         f"Starting this environment requires {target_workbench.cpu + running_cpu - constants.MAX_CPU_USAGE} additional vCPUs."
-
                     )
                 },
                 status=400,

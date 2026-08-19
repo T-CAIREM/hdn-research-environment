@@ -21,7 +21,7 @@ from environment.utilities import (
 def service_error_display(entity, error_prefix=None, group_by_severity=False):
     """
     Display service errors for any entity (workspace, workbench, etc.)
-    
+
     Args:
         entity: The entity with potential service_errors attribute
         error_prefix: Optional prefix text for error messages (e.g., "Workbench Error")
@@ -49,6 +49,7 @@ def has_errors(workspace):
 def has_billing_issues(workspace):
     """Check if workspace has comprehensive billing issues."""
     from environment.utilities import has_billing_issues as billing_check
+
     return billing_check(workspace)
 
 
@@ -70,7 +71,7 @@ def has_permission_issues(workspace):
     return has_permission_error(workspace)
 
 
-@register.filter  
+@register.filter
 def billing_link(workspace_id):
     """Generate billing enable link for a workspace."""
     return get_billing_link(workspace_id)
@@ -134,4 +135,5 @@ def critical_errors(entity):
 def group_errors(errors):
     """Group errors by severity."""
     from environment.utilities import group_errors_by_severity
+
     return group_errors_by_severity(errors)

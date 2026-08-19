@@ -344,7 +344,9 @@ urlpatterns = [
         react_views.identity_provisioning,
         name="react_views.identity_provisioning",
     ),
-    path("api/static-pages/", react_views.static_pages, name="react_views.static_pages"),
+    path(
+        "api/static-pages/", react_views.static_pages, name="react_views.static_pages"
+    ),
     path(
         "api/front-page-buttons/",
         react_views.front_page_buttons,
