@@ -345,7 +345,6 @@ def start_stopped_environment(request):
                         f"CPU limit exceeded. You are currently using {running_cpu} vCPUs "
                         f"out of the {constants.MAX_CPU_USAGE} vCPU limit. "
                         f"Starting this environment requires {target_workbench.cpu + running_cpu - constants.MAX_CPU_USAGE} additional vCPUs."
-
                     )
                 },
                 status=400,

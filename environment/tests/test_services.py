@@ -276,7 +276,9 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
         self, mock_change_workbench_machine_type, mock_persist_workflow
     ):
         mock_change_workbench_machine_type.return_value.ok = True
-        mock_change_workbench_machine_type.return_value.json.return_value = {"workflow_id": "wf-1"}
+        mock_change_workbench_machine_type.return_value.json.return_value = {
+            "workflow_id": "wf-1"
+        }
         result = change_environment_machine_type(
             self.user,
             "workspace-id",
@@ -794,7 +796,6 @@ class DeleteSharedBucketTestCase(TestCase):
 
 
 class CheckCollaboratorProjectAccessTestCase(TestCase):
-
     @patch("environment.services.get_collaborator_user_by_email")
     @patch("environment.services.get_project")
     @patch("environment.services.can_access_project")
@@ -859,7 +860,6 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
 
 
 class GetWorkbenchCollaboratorsTestCase(TestCase):
-
     @patch("environment.api.get_workbench_collaborators")
     def test_returns_collaborators_when_ok(self, mock_get_workbench_collaborators):
         mock_response = Mock()
@@ -924,7 +924,6 @@ class GetWorkbenchCollaboratorsTestCase(TestCase):
 
 
 class AddWorkbenchCollaboratorTestCase(TestCase):
-
     @patch("environment.api.add_workbench_collaborators")
     def test_calls_api_with_correct_parameters(self, mock_add_workbench_collaborators):
         mock_response = Mock()
@@ -946,7 +945,6 @@ class AddWorkbenchCollaboratorTestCase(TestCase):
 
 
 class RemoveWorkbenchCollaboratorTestCase(TestCase):
-
     @patch("environment.api.remove_workbench_collaborators")
     def test_calls_api_with_correct_parameters(self, mock_api):
         mock_response = Mock()

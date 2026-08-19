@@ -20,7 +20,8 @@ from environment.deserializers import (
     deserialize_shared_workspaces,
     deserialize_simplified_workspace,
     deserialize_workflow_details,
-    deserialize_workspaces, deserialize_shared_bucket_details,
+    deserialize_workspaces,
+    deserialize_shared_bucket_details,
 )
 from environment.entities import (
     DatasetsMonitoringEntry,
@@ -307,7 +308,6 @@ def invite_user_to_shared_bucket(
         "user_email": user.cloud_identity.email,
         "billing_account_id": billing_account_id,
     },
-  
 )
 def create_workspace(user: User, billing_account_id: str):
     response = api.create_workspace(
@@ -349,9 +349,7 @@ def create_shared_workspace(user: User, billing_account_id: str):
         "billing_account_id": billing_account_id,
     },
 )
-def delete_workspace(
-    user: User, billing_account_id: str, gcp_project_id: str
-):
+def delete_workspace(user: User, billing_account_id: str, gcp_project_id: str):
     response = api.delete_workspace(
         email=user.cloud_identity.email,
         gcp_project_id=gcp_project_id,
@@ -479,7 +477,11 @@ def check_collaborator_project_access(collaborator_email: str, project_id: str) 
     if not collaborator_user:
         return
 
-    if not PublishedProject.objects.accessible_by(collaborator_user).filter(id=project_id).exists():
+    if (
+        not PublishedProject.objects.accessible_by(collaborator_user)
+        .filter(id=project_id)
+        .exists()
+    ):
         raise PublishedProjectAccessFailed(
             f"User '{collaborator_email}' cannoft be added as a collaborator because the user does not have access to the chosen project."
         )
@@ -546,8 +548,7 @@ def get_environments_with_projects(
         _environment_data_group, active_environments, _project_data_group, projects
     )
     return [
-        (environment, project)
-        for environment, project in environment_project_pairs
+        (environment, project) for environment, project in environment_project_pairs
     ]
 
 
@@ -562,8 +563,7 @@ def get_available_projects_with_environments(
         environments,
     )
     return [
-        (project, environment)
-        for project, environment in project_environment_pairs
+        (project, environment) for project, environment in project_environment_pairs
     ]
 
 
@@ -597,16 +597,13 @@ def get_environment_project_pairs_with_expired_access(
     ]
 
 
-#todo: it is not used anymore - check
+# todo: it is not used anymore - check
 def sort_environments_per_workspace(
     environment_project_workflow_triplets: Iterable[
         Tuple[ResearchEnvironment, Any, Iterable[Workflow]]
     ],
     workspaces: Iterable[ResearchWorkspace],
-) -> Dict[
-    ResearchWorkspace,
-    Tuple[ResearchEnvironment, Any, Iterable[Workflow]],
-]:
+) -> Dict[ResearchWorkspace, Tuple[ResearchEnvironment, Any, Iterable[Workflow]],]:
     sorted_environments_project_workflow_triplets = defaultdict(
         list,
         {workspace.gcp_project_id: [] for workspace in workspaces},
@@ -630,7 +627,7 @@ def sort_environments_per_workspace(
     return sorted_environments_project_workflow_triplets_with_billing_info
 
 
-#todo: it is not used anymore - check
+# todo: it is not used anymore - check
 def match_workspace_with_billing_id(
     workspaces: Iterable[ResearchWorkspace], billing_accounts_list: Iterable
 ):

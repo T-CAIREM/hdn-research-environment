@@ -170,7 +170,10 @@ def handle_api_error(
             if hasattr(response, "ok") and not response.ok:
                 # Use existing error handler
                 _handle_api_error(
-                    response, operation_name, exception_class, build_additional_context()
+                    response,
+                    operation_name,
+                    exception_class,
+                    build_additional_context(),
                 )
 
             # Always return the raw response - function handles JSON parsing

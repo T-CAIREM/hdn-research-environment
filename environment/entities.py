@@ -185,7 +185,7 @@ class EntityScaffolding:
     access_denial_reason: Optional[str] = None
     workbenches: Iterable[ResearchEnvironment] = None
     service_errors: Optional[List["ServiceError"]] = None
-    
+
     def __post_init__(self):
         if self.workbenches is None:
             self.workbenches = []

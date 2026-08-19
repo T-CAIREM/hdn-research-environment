@@ -439,7 +439,9 @@ def create_shared_bucket(request, workspace_id):
                 services.create_shared_bucket(
                     user=request.user,
                     region=form.cleaned_data["region"],
-                    user_defined_bucket_name=form.cleaned_data["user_defined_bucket_name"],
+                    user_defined_bucket_name=form.cleaned_data[
+                        "user_defined_bucket_name"
+                    ],
                     workspace_project_id=form.cleaned_data["workspace_project_id"],
                 )
                 return redirect("research_environments")
@@ -447,7 +449,7 @@ def create_shared_bucket(request, workspace_id):
                 # Capture bucket creation failure and add as message
                 messages.error(
                     request,
-                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}"
+                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}",
                 )
     else:
         form = CreateSharedBucketForm(
@@ -612,8 +614,17 @@ def manage_shared_bucket_files(request, shared_workspace_name, shared_bucket_nam
     )
 
     # Check if the workspace has service errors
-    workspace = next((ws for ws in shared_workspaces_list if ws.gcp_project_id == shared_workspace_name), None)
-    workspace_has_errors = workspace and not workspace.is_accessible if workspace else False
+    workspace = next(
+        (
+            ws
+            for ws in shared_workspaces_list
+            if ws.gcp_project_id == shared_workspace_name
+        ),
+        None,
+    )
+    workspace_has_errors = (
+        workspace and not workspace.is_accessible if workspace else False
+    )
 
     context = {
         "shared_bucket_name": shared_bucket_name,
@@ -1189,12 +1200,18 @@ def update_workspace_billing_account(
         )
 
     current_billing_account = None
-    if current_billing_account_id and current_billing_account_id != 'none':
+    if current_billing_account_id and current_billing_account_id != "none":
         current_billing_account_matches = [
-            acc for acc in billing_accounts_list if acc["id"] == current_billing_account_id
+            acc
+            for acc in billing_accounts_list
+            if acc["id"] == current_billing_account_id
         ]
-        current_billing_account = current_billing_account_matches[0] if current_billing_account_matches else None
-    
+        current_billing_account = (
+            current_billing_account_matches[0]
+            if current_billing_account_matches
+            else None
+        )
+
     context = {
         "form": form,
         "workspace_project_id": workspace_project_id,

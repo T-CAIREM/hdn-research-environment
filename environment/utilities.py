@@ -117,9 +117,12 @@ def has_billing_issues(workspace) -> bool:
     Returns True if the workspace has any billing problems that should zone it out.
     """
     # Don't show billing issues during workspace creation
-    if hasattr(workspace, 'status') and workspace.status.value in ['creating', 'pending']:
+    if hasattr(workspace, "status") and workspace.status.value in [
+        "creating",
+        "pending",
+    ]:
         return False
-        
+
     # Check service errors first
     if has_billing_error(workspace):
         return True

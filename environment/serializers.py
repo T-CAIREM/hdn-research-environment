@@ -198,7 +198,8 @@ def serialize_quotas(objects: Iterable[QuotaInfo]) -> list[Dict]:
             "usage": obj.usage,
             "usage_percentage": obj.usage_percentage,
         }
-        for regionobj in objects for obj in regionobj.quotas
+        for regionobj in objects
+        for obj in regionobj.quotas
     ]
 
 

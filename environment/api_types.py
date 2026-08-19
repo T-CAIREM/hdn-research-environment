@@ -11,12 +11,14 @@ from typing_extensions import NotRequired
 
 class BillingInfo(TypedDict):
     """Billing information for a workspace."""
+
     billing_enabled: bool
     billing_account_id: Optional[str]
 
 
 class ServiceErrorResponse(TypedDict):
     """Service error information from API responses."""
+
     error_type: str  # billing_disabled, api_not_enabled, permission_denied, quota_exceeded, not_found, unknown
     message: str
     resource_id: str
@@ -27,6 +29,7 @@ class ServiceErrorResponse(TypedDict):
 
 class WorkbenchResponse(TypedDict):
     """Individual workbench from API response."""
+
     gcp_identifier: str
     status: str  # running, stopped, creating, destroying, etc.
     dataset_identifier: str
@@ -46,6 +49,7 @@ class WorkbenchResponse(TypedDict):
 
 class WorkspaceResponse(TypedDict):
     """Individual workspace from API response."""
+
     gcp_project_id: str
     billing_info: BillingInfo
     region: str
@@ -57,15 +61,15 @@ class WorkspaceResponse(TypedDict):
 
 class ScaffoldingResponse(TypedDict):
     """Scaffolding/workflow entity from API response."""
+
     id: str
     gcp_project_id: str
     status: str
 
 
-
-
 class SharedBucketResponse(TypedDict):
     """Individual shared bucket from API response."""
+
     bucket_name: str
     is_owner: NotRequired[bool]  # Added for compatibility with existing code
     is_admin: NotRequired[bool]  # Added for compatibility with existing code
@@ -73,15 +77,13 @@ class SharedBucketResponse(TypedDict):
 
 class SharedWorkspaceResponse(TypedDict):
     """Individual shared workspace from API response."""
+
     gcp_project_id: str
     is_owner: bool
     billing_info: BillingInfo
     status: str  # created, creating, destroying
     buckets: List[SharedBucketResponse]
     service_errors: List[ServiceErrorResponse]
-
-
-
 
 
 # Type aliases for commonly used response data
