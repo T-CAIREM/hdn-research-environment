@@ -6,6 +6,7 @@ from typing import Callable, Iterator, Optional, Tuple, TypeVar
 from django.db.models import Model
 
 from environment.entities import ServiceError
+from environment.exceptions import InvalidApiResponse
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +254,49 @@ def workbench_is_accessible(workbench) -> bool:
 
 
 # API Utilities
+def validated_json(response, expect=None, elements=None):
+    """Parse an API success response, refusing error statuses and wrong shapes.
+
+    Use this instead of calling ``response.json()`` directly inside functions
+    decorated with ``handle_api_error``. Those functions parse the body before
+    returning, so the decorator's ``response.ok`` check on the return value
+    never sees the raw response, and an error body would otherwise be parsed as
+    if it were the success payload. That is exactly how an API 500 became an
+    ``AttributeError`` 500 on /environments/ on 2026-08-19: the ``{"error":
+    ...}`` body was iterated as if it were the workspaces list.
+
+    Args:
+        response: The requests Response to parse
+        expect: Optional type (``list`` or ``dict``) the body must be.
+        elements: Optional type every element of a list body must be. Use it
+            for flat lists that are indexed directly; leave it off when the
+            caller salvages entries individually (a serializer bug upstream can
+            inject non-dict elements into a 200 response, and the workspaces
+            pipeline degrades per entry instead of rejecting the batch).
+
+    Raises:
+        InvalidApiResponse: On an error status or unexpected body shape;
+            ``handle_api_error`` converts it into the operation's domain
+            exception.
+    """
+    if not response.ok:
+        raise InvalidApiResponse(
+            response, f"HTTP {response.status_code} error response"
+        )
+    # A non-JSON body raises JSONDecodeError, which handle_api_error handles.
+    data = response.json()
+    if expect is not None and not isinstance(data, expect):
+        raise InvalidApiResponse(
+            response,
+            f"expected a {expect.__name__} body, got {type(data).__name__}",
+        )
+    if elements is not None and not all(isinstance(item, elements) for item in data):
+        raise InvalidApiResponse(
+            response, "expected a list of objects, got mixed element types"
+        )
+    return data
+
+
 def _handle_api_error(
     response, operation_name: str, exception_class, additional_context: dict = None
 ):

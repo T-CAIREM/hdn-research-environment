@@ -154,9 +154,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
         self, mock_create_workbench, mock_persist_workflow
     ):
         mock_create_workbench.return_value.ok = True
-        mock_create_workbench.return_value.json.return_value = (
-            mock_create_workbench.return_value
-        )
+        mock_create_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
         mock_machine_type = Mock()
         mock_machine_type.get_instance_value.return_value = "n1-standard-2"
         result = create_research_environment(
@@ -168,7 +166,7 @@ class CreateResearchEnvironmentTestCase(TestCase):
             100,
             "us-central1",
         )
-        self.assertEqual(result, mock_create_workbench.return_value)
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(
@@ -201,13 +199,11 @@ class StopRunningEnvironmentTestCase(TestCase):
         self, mock_stop_workbench, mock_persist_workflow
     ):
         mock_stop_workbench.return_value.ok = True
-        mock_stop_workbench.return_value.json.return_value = (
-            mock_stop_workbench.return_value
-        )
+        mock_stop_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
         result = stop_running_environment(
             "jupyter", "workbench_id", self.user, "workspace-id"
         )
-        self.assertEqual(result, mock_stop_workbench.return_value)
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(
@@ -240,13 +236,11 @@ class StartStoppedEnvironmentTestCase(TestCase):
         self, mock_start_workbench, mock_persist_workflow
     ):
         mock_start_workbench.return_value.ok = True
-        mock_start_workbench.return_value.json.return_value = (
-            mock_start_workbench.return_value
-        )
+        mock_start_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
         result = start_stopped_environment(
             "jupyter", "workbench_id", self.user, "workspace-id"
         )
-        self.assertEqual(result, mock_start_workbench.return_value)
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(
@@ -282,9 +276,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
         self, mock_change_workbench_machine_type, mock_persist_workflow
     ):
         mock_change_workbench_machine_type.return_value.ok = True
-        mock_change_workbench_machine_type.return_value.json.return_value = (
-            mock_change_workbench_machine_type.return_value
-        )
+        mock_change_workbench_machine_type.return_value.json.return_value = {"workflow_id": "wf-1"}
         result = change_environment_machine_type(
             self.user,
             "workspace-id",
@@ -292,7 +284,7 @@ class ChangeEnvironmentInstanceTypeTestCase(TestCase):
             "jupyter",
             "workbench_id",
         )
-        self.assertEqual(result, mock_change_workbench_machine_type.return_value)
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(
@@ -327,16 +319,14 @@ class DeleteEnvironmentTestCase(TestCase):
         self, mock_delete_workbench, mock_persist_workflow
     ):
         mock_delete_workbench.return_value.ok = True
-        mock_delete_workbench.return_value.json.return_value = (
-            mock_delete_workbench.return_value
-        )
+        mock_delete_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
         result = delete_environment(
             self.user,
             "workspace-id",
             "jupyter",
             "workbench_id",
         )
-        self.assertEqual(result, mock_delete_workbench.return_value)
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(
@@ -1066,3 +1056,98 @@ class GetWorkspacesListTestCase(TestCase):
 
         self.assertIs(workbench.project, self.project)
         self.assertTrue(workbench.has_dataset_access)
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetWorkspacesListApiFailureTestCase(TestCase):
+    """Regression tests for the 2026-08-19 /environments/ 500.
+
+    The API returned `{"error": ...}` with a 500 (a stale DB connection
+    upstream); the error body was parsed as if it were the workspaces list and
+    iterating it raised `AttributeError: 'str' object has no attribute 'get'`.
+    Any response that is not a list of objects must instead raise the
+    operation's domain exception.
+    """
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+
+    def _api_response(self, ok=True, status_code=200, body=None):
+        response = Mock()
+        response.ok = ok
+        response.status_code = status_code
+        response.content = b"x"
+        response.json.return_value = body
+        response.headers = {}
+        return response
+
+    @patch("environment.services.api.get_workspace_list")
+    def test_error_status_raises_domain_exception(self, mock_get_workspace_list):
+        mock_get_workspace_list.return_value = self._api_response(
+            ok=False, status_code=500, body={"error": "InterfaceError, network error"}
+        )
+        with self.assertRaises(GetAvailableEnvironmentsFailed):
+            get_workspaces_list(self.user)
+
+    @patch("environment.services.api.get_workspace_list")
+    def test_success_status_with_error_shaped_body_raises_domain_exception(
+        self, mock_get_workspace_list
+    ):
+        mock_get_workspace_list.return_value = self._api_response(
+            body={"error": "not a list"}
+        )
+        with self.assertRaises(GetAvailableEnvironmentsFailed):
+            get_workspaces_list(self.user)
+
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_malformed_entries_degrade_only_themselves(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        # The upstream OneOfSchema serializer can inject non-dict elements into
+        # a 200 response for entity types missing from its type map. Only the
+        # malformed entry may drop; the parseable workspace must still render.
+        project = Mock()
+        project.id = 42
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        mock_objects.accessible_by.return_value = [project]
+        payload = _workspace_payload(
+            "demoproject100", billing_info=None, is_accessible=True
+        )
+        payload.append([None, {"_schema": "Unsupported object type: Mystery"}])
+        mock_get_workspace_list.return_value = self._api_response(body=payload)
+
+        workspaces = get_workspaces_list(self.user)
+
+        self.assertEqual(len(workspaces), 1)
+        self.assertEqual(workspaces[0].gcp_project_id, "proj-123")
+
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_malformed_workbench_degrades_only_its_own_card(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        project = Mock()
+        project.id = 42
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        mock_objects.accessible_by.return_value = [project]
+        payload = _workspace_payload(
+            "demoproject100", billing_info=None, is_accessible=True
+        )
+        # A workbench the API claims is a Workbench but that cannot be parsed
+        # (e.g. an unknown status enum) must not take down its workspace.
+        payload[0]["workbenches"].append(
+            {"type": "Workbench", "status": "not-a-real-status"}
+        )
+        mock_get_workspace_list.return_value = self._api_response(body=payload)
+
+        workspaces = get_workspaces_list(self.user)
+
+        self.assertEqual(len(workspaces), 1)
+        self.assertEqual(len(workspaces[0].workbenches), 1)
+        self.assertEqual(workspaces[0].workbenches[0].gcp_identifier, "wb-1")

@@ -5,7 +5,10 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
-from environment.exceptions import BillingVerificationFailed
+from environment.exceptions import (
+    BillingVerificationFailed,
+    GetAvailableEnvironmentsFailed,
+)
 from environment.tests.helpers import (
     create_user_with_cloud_identity,
     create_user_without_cloud_identity,
@@ -110,3 +113,51 @@ class CreateResearchEnvironmentTestCase(TestCase):
 
         response = self.client.get(self.url)
         self.assertRedirects(response, reverse("identity_provisioning"))
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ResearchEnvironmentsApiFailureTestCase(TestCase):
+    """An API failure must degrade the environments page, not 500 it
+    (regression for the 2026-08-19 incident)."""
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.client.force_login(user=self.user)
+
+    def _patch_services(self):
+        billing_accounts = [{"id": "b-1", "name": "Billing One"}]
+        return (
+            patch(
+                "environment.services.get_workspaces_list",
+                side_effect=GetAvailableEnvironmentsFailed("API unavailable"),
+            ),
+            patch(
+                "environment.services.get_billing_accounts_list",
+                return_value=billing_accounts,
+            ),
+            patch("environment.services.get_shared_workspaces_list", return_value=[]),
+            billing_accounts,
+        )
+
+    def test_failed_section_degrades_only_itself(self):
+        p1, p2, p3, billing_accounts = self._patch_services()
+        with p1, p2, p3:
+            response = self.client.get(reverse("research_environments"))
+
+        # The page renders; only the workspaces section is empty and flagged.
+        self.assertEqual(response.status_code, 200)
+        messages = [str(m) for m in response.context["messages"]]
+        self.assertTrue(any("API unavailable" in m for m in messages))
+        self.assertEqual(response.context["workspaces_with_workbenches"], [])
+        self.assertEqual(response.context["billing_accounts_list"], billing_accounts)
+
+    def test_partial_returns_503_when_api_fails(self):
+        p1, p2, p3, _ = self._patch_services()
+        with p1, p2, p3:
+            response = self.client.get(reverse("research_environments_partial"))
+
+        # The polling JS keeps the current cards when the refresh is not ok.
+        self.assertEqual(response.status_code, 503)

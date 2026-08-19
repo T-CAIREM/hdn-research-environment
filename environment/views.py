@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth import get_user_model
@@ -28,6 +28,8 @@ from environment.exceptions import (
     CreateCloudGroupFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
+    GetAvailableEnvironmentsFailed,
+    GetBillingAccountsListFailed,
     RenewEnvironmentCertificateFailed,
 )
 
@@ -88,6 +90,19 @@ def identity_provisioning(request):
     )
 
 
+def _section_or_default(future, default):
+    """Resolve one section's future, containing an API failure to that section.
+
+    Returns (result, None) on success and (default, error) when the fetch
+    failed -- so one section's API failure degrades that section only, never
+    the whole page.
+    """
+    try:
+        return future.result(), None
+    except (GetAvailableEnvironmentsFailed, GetBillingAccountsListFailed) as error:
+        return default, error
+
+
 @require_GET
 @login_required
 @cloud_identity_required
@@ -103,9 +118,21 @@ def research_environments(request):
             services.get_shared_workspaces_list, request.user
         )
 
-    workspaces = workspaces_list_future.result()
-    billing_accounts_list = billing_accounts_list_future.result()
-    shared_workspaces = shared_workspaces_list_feature.result()
+    workspaces, workspaces_error = _section_or_default(workspaces_list_future, [])
+    billing_accounts_list, billing_error = _section_or_default(
+        billing_accounts_list_future, []
+    )
+    shared_workspaces, shared_error = _section_or_default(
+        shared_workspaces_list_feature, []
+    )
+    for section, error in (
+        ("workspaces", workspaces_error),
+        ("billing accounts", billing_error),
+        ("shared workspaces", shared_error),
+    ):
+        if error:
+            # An API failure degrades this section only; the page still renders.
+            messages.error(request, f"Could not load your {section}: {error}")
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list
@@ -149,9 +176,18 @@ def research_environments_partial(request):
             services.get_shared_workspaces_list, request.user
         )
 
-    workspaces = workspaces_list_future.result()
-    billing_accounts_list = billing_accounts_list_future.result()
-    shared_workspaces = shared_workspaces_list_feature.result()
+    workspaces, workspaces_error = _section_or_default(workspaces_list_future, [])
+    billing_accounts_list, billing_error = _section_or_default(
+        billing_accounts_list_future, []
+    )
+    shared_workspaces, shared_error = _section_or_default(
+        shared_workspaces_list_feature, []
+    )
+    if workspaces_error or billing_error or shared_error:
+        # The polling JS only swaps the cards when the refresh is ok, so a 503
+        # keeps the last good state on screen instead of blanking a section.
+        error = workspaces_error or billing_error or shared_error
+        return HttpResponse(str(error), status=503)
     running_workflows = services.get_running_workflows(request.user)
     billing_account_id_to_name_map = {
         acc["id"]: acc["name"] for acc in billing_accounts_list

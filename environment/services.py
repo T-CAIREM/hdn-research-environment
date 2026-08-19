@@ -83,7 +83,11 @@ from environment.models import (
     VMInstance,
     Workflow,
 )
-from environment.utilities import inner_join_iterators, left_join_iterators
+from environment.utilities import (
+    inner_join_iterators,
+    left_join_iterators,
+    validated_json,
+)
 from project.authorization.access import can_access_project
 
 PublishedProject = apps.get_model("project", "PublishedProject")
@@ -122,7 +126,7 @@ def create_cloud_identity(
         password,
         recovery_email,
     )
-    body = response.json()
+    body = validated_json(response, expect=dict)
     identity = CloudIdentity.objects.create(
         user=user,
         gcp_user_id=gcp_user_id,
@@ -138,7 +142,7 @@ def create_cloud_identity(
 )
 def get_billing_accounts_list(user: User) -> list[dict]:
     response = api.list_billing_accounts(user.cloud_identity.email)
-    return response.json()
+    return validated_json(response, expect=list, elements=dict)
 
 
 def is_billing_account_owner(user: User, billing_account_id: str):
@@ -313,7 +317,7 @@ def create_workspace(user: User, billing_account_id: str):
             user.cloud_identity.user_groups.all().values_list("name", flat=True)
         ),
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
@@ -331,7 +335,7 @@ def create_shared_workspace(user: User, billing_account_id: str):
         user_email=user.cloud_identity.email,
         billing_account_id=billing_account_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
@@ -353,7 +357,7 @@ def delete_workspace(
         gcp_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
@@ -373,7 +377,7 @@ def delete_shared_workspace(user: User, billing_account_id: str, gcp_project_id:
         workspace_project_id=gcp_project_id,
         billing_account_id=billing_account_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return response
 
@@ -449,7 +453,7 @@ def create_research_environment(
         collaborators,
     )
     response = api.create_workbench(**kwargs)
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
 
@@ -520,7 +524,7 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
     response = api.get_workspace_list(email)
-    data = response.json()
+    data = validated_json(response, expect=list)
     # Process through full workspace deserialization to capture all service errors
     workspaces = deserialize_workspaces(data, projects)
 
@@ -640,12 +644,17 @@ def match_workspace_with_billing_id(
 
 
 def _dataset_groups_in_response(workspaces_data: Iterable[dict]) -> set:
-    """Dataset identifiers referenced by the workbenches in a raw workspaces response."""
+    """Dataset identifiers referenced by the workbenches in a raw workspaces response.
+
+    Tolerates malformed entries: the deserializers salvage the response per
+    entry, so this helper must not fail on the entries they would skip.
+    """
     return {
         workbench["dataset_identifier"]
         for workspace in workspaces_data
+        if isinstance(workspace, dict)
         for workbench in (workspace.get("workbenches") or [])
-        if workbench.get("dataset_identifier")
+        if isinstance(workbench, dict) and workbench.get("dataset_identifier")
     }
 
 
@@ -671,7 +680,7 @@ def _annotate_dataset_access(
 def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     email = user.cloud_identity.email
     response = api.get_workspace_list(email)
-    data = response.json()
+    data = validated_json(response, expect=list)
 
     accessible_projects = list(PublishedProject.objects.accessible_by(user))
     accessible_project_ids = {project.id for project in accessible_projects}
@@ -704,7 +713,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
 )
 def list_quotas_data(workspace_project_id: str) -> Iterable[QuotaInfo]:
     response = api.list_quotas_data(workspace_project_id)
-    data = response.json()
+    data = validated_json(response, expect=dict)
     return deserialize_quotas(data)
 
 
@@ -715,7 +724,7 @@ def list_quotas_data(workspace_project_id: str) -> Iterable[QuotaInfo]:
 )
 def get_shared_workspaces_list(user: User) -> Iterable[SharedWorkspace]:
     response = api.get_shared_workspaces(user.cloud_identity.email)
-    data = response.json()
+    data = validated_json(response, expect=list)
     return deserialize_shared_workspaces(data)
 
 
@@ -749,7 +758,7 @@ def stop_running_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
 
@@ -776,7 +785,7 @@ def start_stopped_environment(
         user_email=user.cloud_identity.email,
         workspace_project_id=workspace_project_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
 
@@ -806,7 +815,7 @@ def change_environment_machine_type(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
 
@@ -833,7 +842,7 @@ def delete_environment(
         workspace_project_id=workspace_project_id,
         workbench_resource_id=workbench_resource_id,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     persist_workflow(user=user, workflow_id=data["workflow_id"])
     return data
 
@@ -967,7 +976,7 @@ def get_owned_shares_of_bucket(owner: User, shared_bucket_name: str):
 )
 def get_execution(execution_resource_name) -> ApiWorkflow:
     response = api.get_workflow(execution_resource_name)
-    data = response.json()
+    data = validated_json(response)
     if data:
         return deserialize_workflow_details(data)
 
@@ -1038,7 +1047,7 @@ def generate_signed_url(bucket_name: str, size: int, filename: str, user: User) 
         filename=filename,
         user_email=user_email,
     )
-    data = response.json()
+    data = validated_json(response, expect=dict)
     return data["signed_url"]
 
 
@@ -1058,7 +1067,7 @@ def get_shared_bucket_content(
     response = api.get_shared_bucket_content(
         bucket_name=bucket_name, subdir=subdir, user_email=user_email
     )
-    data = response.json()
+    data = validated_json(response, expect=list, elements=dict)
     return deserialize_shared_bucket_objects(data)
 
 
@@ -1140,7 +1149,7 @@ def delete_cloud_group(group_name: str):
 @handle_api_error("Cloud Group Roles List", ListGroupRolesFailed, lambda: {})
 def list_cloud_group_roles():
     response = api.list_cloud_group_roles()
-    data = response.json()
+    data = validated_json(response, expect=list, elements=dict)
     return deserialize_cloud_roles(data)
 
 
@@ -1151,7 +1160,7 @@ def list_cloud_group_roles():
 )
 def get_cloud_group_iam_roles(group_name: str):
     response = api.get_cloud_group_iam_roles(group_name)
-    data = response.json()
+    data = validated_json(response, expect=list, elements=dict)
     return deserialize_cloud_roles(data)
 
 
@@ -1160,7 +1169,7 @@ def get_cloud_group_iam_roles(group_name: str):
 )
 def get_cloud_groups_iam_roles():
     response = api.get_cloud_groups_iam_roles()
-    return response.json()
+    return validated_json(response)
 
 
 @handle_api_error(
@@ -1196,7 +1205,7 @@ def match_groups_with_roles(cloud_groups: list[CloudGroup]):
 )
 def get_datasets_monitoring_data() -> Iterable[DatasetsMonitoringEntry]:
     response = api.get_datasets_monitoring_data()
-    data = response.json()
+    data = validated_json(response, expect=list, elements=dict)
     return deserialize_datasets_monitoring_data(data)
 
 

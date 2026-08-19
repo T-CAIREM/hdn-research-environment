@@ -13,6 +13,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 
+from environment.exceptions import InvalidApiResponse
 from environment.utilities import (
     _handle_api_error,
     user_has_access_billing_account,
@@ -122,6 +123,17 @@ def handle_api_error(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
+            def build_additional_context():
+                additional_context = {}
+                if additional_context_func:
+                    try:
+                        additional_context = additional_context_func(*args, **kwargs)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to generate additional context for {operation_name}: {e}"
+                        )
+                return additional_context
+
             try:
                 response = func(*args, **kwargs)
             except requests.exceptions.JSONDecodeError as e:
@@ -134,22 +146,31 @@ def handle_api_error(
                     f"{operation_name} failed because the service was temporarily "
                     "unavailable. Please try again."
                 ) from e
+            except InvalidApiResponse as e:
+                # Raised by validated_json inside the function, before it parses
+                # the body: either an error status (route through the standard
+                # error handler, which raises exception_class with the API's own
+                # message) or a success status whose body has the wrong shape.
+                if e.response is not None and not e.response.ok:
+                    _handle_api_error(
+                        e.response,
+                        operation_name,
+                        exception_class,
+                        build_additional_context(),
+                    )
+                logger.error(
+                    f"{operation_name} received an unexpected response shape: {e.reason}"
+                )
+                raise exception_class(
+                    f"{operation_name} failed because the service returned an "
+                    "unexpected response. Please try again."
+                ) from e
 
             # Check if response indicates an error
             if hasattr(response, "ok") and not response.ok:
-                # Prepare additional context
-                additional_context = {}
-                if additional_context_func:
-                    try:
-                        additional_context = additional_context_func(*args, **kwargs)
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to generate additional context for {operation_name}: {e}"
-                        )
-
                 # Use existing error handler
                 _handle_api_error(
-                    response, operation_name, exception_class, additional_context
+                    response, operation_name, exception_class, build_additional_context()
                 )
 
             # Always return the raw response - function handles JSON parsing
