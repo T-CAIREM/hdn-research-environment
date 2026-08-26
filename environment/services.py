@@ -485,6 +485,13 @@ def get_active_project(project_id: str) -> Any:
     return ActiveProject.objects.get(id=project_id)
 
 
+def resolve_selectable_project(value: str) -> Any:
+    kind, _, project_id = value.partition(":")
+    if kind == "active":
+        return get_active_project(project_id)
+    return get_project(project_id)
+
+
 def get_collaborator_user_by_email(email: str):
     return (
         UserModel.objects.only("id", "is_credentialed")

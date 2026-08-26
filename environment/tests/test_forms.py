@@ -20,7 +20,7 @@ class CreateResearchEnvironmentFormTestCase(TestCase):
         self.active_project = Mock()
         self.active_project.id = 7
 
-    def _build_form(self, **overrides):
+    def _build_form(self, active_projects_list=None, **overrides):
         data = {
             "region": "us-central1",
             "machine_type": "1",
@@ -33,35 +33,63 @@ class CreateResearchEnvironmentFormTestCase(TestCase):
             selected_workspace=self.workspace,
             projects_list=[self.project],
             buckets_list=[],
-            active_projects_list=[self.active_project],
+            active_projects_list=(
+                [self.active_project]
+                if active_projects_list is None
+                else active_projects_list
+            ),
         )
 
     def test_requires_a_project(self):
         form = self._build_form()
         form.is_valid()
 
-        self.assertTrue(form.errors.get("__all__"))
+        self.assertTrue(form.errors.get("project_id"))
 
-    def test_rejects_both_a_published_and_an_active_project(self):
-        form = self._build_form(project_id="1", active_project_id="7")
-        form.is_valid()
-
-        self.assertTrue(form.errors.get("__all__"))
-
-    def test_accepts_a_published_project_alone(self):
-        form = self._build_form(project_id="1")
+    def test_accepts_a_published_project(self):
+        form = self._build_form(project_id="published:1")
         form.is_valid()
 
         self.assertIsNone(form.errors.get("__all__"))
+        self.assertIsNone(form.errors.get("project_id"))
 
-    def test_accepts_an_active_project_alone(self):
-        form = self._build_form(active_project_id="7")
+    def test_accepts_an_active_project_on_jupyter(self):
+        form = self._build_form(project_id="active:7")
         form.is_valid()
 
         self.assertIsNone(form.errors.get("__all__"))
+        self.assertIsNone(form.errors.get("project_id"))
 
     def test_rejects_an_active_project_outside_jupyter(self):
-        form = self._build_form(active_project_id="7", environment_type="rstudio")
+        form = self._build_form(project_id="active:7", environment_type="rstudio")
         form.is_valid()
 
         self.assertTrue(form.errors.get("__all__"))
+
+    def test_rejects_an_unlisted_project(self):
+        form = self._build_form(project_id="active:1")
+        form.is_valid()
+
+        self.assertTrue(form.errors.get("project_id"))
+
+    def test_groups_published_and_draft_choices(self):
+        form = self._build_form()
+
+        self.assertEqual(
+            [
+                (group, [value for value, _ in entries])
+                for group, entries in form.fields["project_id"].choices
+            ],
+            [
+                ("Published datasets", ["published:1"]),
+                ("My draft projects", ["active:7"]),
+            ],
+        )
+
+    def test_omits_the_draft_group_without_draft_projects(self):
+        form = self._build_form(active_projects_list=[])
+
+        self.assertEqual(
+            [group for group, _ in form.fields["project_id"].choices],
+            ["Published datasets"],
+        )

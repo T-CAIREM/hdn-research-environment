@@ -47,6 +47,7 @@ from environment.services import (
     delete_shared_bucket,
     check_collaborator_project_access,
     get_available_active_projects,
+    resolve_selectable_project,
     get_workbench_collaborators,
     add_workbench_collaborator,
     remove_workbench_collaborator,
@@ -1296,3 +1297,23 @@ class CreateWorkbenchKwargsTestCase(TestCase):
         self.assertEqual(
             kwargs["dataset_identifier"], "a2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e"
         )
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ResolveSelectableProjectTestCase(TestCase):
+    @patch("environment.services.get_project")
+    def test_published_prefix_resolves_a_published_project(self, mock_get_project):
+        project = resolve_selectable_project("published:12")
+
+        mock_get_project.assert_called_once_with("12")
+        self.assertEqual(project, mock_get_project.return_value)
+
+    @patch("environment.services.get_active_project")
+    def test_active_prefix_resolves_an_active_project(self, mock_get_active_project):
+        project = resolve_selectable_project("active:7")
+
+        mock_get_active_project.assert_called_once_with("7")
+        self.assertEqual(project, mock_get_active_project.return_value)

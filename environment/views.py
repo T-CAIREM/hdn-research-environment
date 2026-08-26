@@ -350,11 +350,8 @@ def create_research_environment(request, workspace_id):
             )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 try:
-                    active_project_id = form.cleaned_data.get("active_project_id")
-                    project = (
-                        services.get_active_project(active_project_id)
-                        if active_project_id
-                        else services.get_project(form.cleaned_data["project_id"])
+                    project = services.resolve_selectable_project(
+                        form.cleaned_data["project_id"]
                     )
                     services.create_research_environment(
                         user=request.user,

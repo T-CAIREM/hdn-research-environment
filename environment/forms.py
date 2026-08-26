@@ -105,8 +105,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         choices=AVAILABLE_REGIONS,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
-    project_id = forms.ChoiceField(label="Project", required=False)
-    active_project_id = forms.ChoiceField(label="My draft project", required=False)
+    project_id = forms.ChoiceField(label="Project")
     machine_type = MachineTypeField(
         label="Instance type",
         queryset=VMInstance.objects.none(),
@@ -153,13 +152,16 @@ class CreateResearchEnvironmentForm(forms.Form):
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
 
-        self.fields["project_id"].choices = [("", "---------")] + [
-            (project.id, project) for project in projects_list
+        published_choices = [
+            (f"published:{project.id}", str(project)) for project in projects_list
         ]
-
-        self.fields["active_project_id"].choices = [("", "---------")] + [
-            (project.id, str(project)) for project in active_projects_list
+        active_choices = [
+            (f"active:{project.id}", str(project)) for project in active_projects_list
         ]
+        choices = [("Published datasets", published_choices)]
+        if active_choices:
+            choices.append(("My draft projects", active_choices))
+        self.fields["project_id"].choices = choices
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
@@ -168,13 +170,12 @@ class CreateResearchEnvironmentForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         project_id = cleaned_data.get("project_id")
-        active_project_id = cleaned_data.get("active_project_id")
 
-        if bool(project_id) == bool(active_project_id):
-            raise ValidationError(
-                "Select either a published project or one of your draft projects."
-            )
-        if active_project_id and cleaned_data.get("environment_type") != "jupyter":
+        if (
+            project_id
+            and project_id.startswith("active:")
+            and cleaned_data.get("environment_type") != "jupyter"
+        ):
             raise ValidationError(
                 "Draft projects can only be attached to a Jupyter environment."
             )
