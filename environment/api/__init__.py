@@ -111,6 +111,7 @@ def create_workbench(
     gpu_accelerator_type: Optional[str] = None,
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
+    object_prefix: str = "",
 ):
     json = {
         "workbench_type": workbench_type,
@@ -121,6 +122,7 @@ def create_workbench(
         "dataset_identifier": dataset_identifier,
         "user_email": user_email,
         "bucket_name": bucket_name,
+        "object_prefix": object_prefix,
         "disk_size": disk_size,
         "region": region,
         "user_groups": user_groups,

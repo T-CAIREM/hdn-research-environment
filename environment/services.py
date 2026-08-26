@@ -12,6 +12,7 @@ import environment.mailers as mailers
 from environment import api
 from environment.decorators import handle_api_error
 from environment.deserializers import (
+    _group_for,
     _project_data_group,
     deserialize_cloud_roles,
     deserialize_datasets_monitoring_data,
@@ -90,8 +91,10 @@ from environment.utilities import (
     validated_json,
 )
 from project.authorization.access import can_access_project
+from project.models import SubmissionStatus
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+ActiveProject = apps.get_model("project", "ActiveProject")
 UserModel = apps.get_model("user", "User")
 
 
@@ -394,6 +397,13 @@ def _create_workbench_kwargs(
 ) -> dict:
     user_email = user.cloud_identity.email
 
+    if project._meta.model_name == "activeproject":
+        bucket_name = project.files.file_root
+        object_prefix = f"{project.FILE_STORAGE_SUBDIR}/{project.slug}"
+    else:
+        bucket_name = project.project_file_root()
+        object_prefix = ""
+
     return {
         "user_email": user_email,
         "workspace_project_id": workspace_project_id,
@@ -401,10 +411,11 @@ def _create_workbench_kwargs(
         "machine_type": machine_type.get_instance_value(),
         "memory": machine_type.memory,
         "cpu": machine_type.cpu,
-        "dataset_identifier": _project_data_group(project),
+        "dataset_identifier": _group_for(project),
         "disk_size": disk_size,
         "region": region,
-        "bucket_name": project.project_file_root(),
+        "bucket_name": bucket_name,
+        "object_prefix": object_prefix,
         "gpu_accelerator_type": gpu_accelerator_type,
         "sharing_bucket_identifiers": (
             sharing_bucket_identifiers if sharing_bucket_identifiers else []
@@ -462,6 +473,16 @@ def get_available_projects(user: User) -> Iterable[Any]:
 
 def get_project(project_id: str) -> Any:
     return PublishedProject.objects.get(id=project_id)
+
+
+def get_available_active_projects(user: User) -> Iterable[Any]:
+    return ActiveProject.objects.filter(
+        authors__user=user, authors__is_submitting=True
+    ).exclude(submission_status=SubmissionStatus.ARCHIVED)
+
+
+def get_active_project(project_id: str) -> Any:
+    return ActiveProject.objects.get(id=project_id)
 
 
 def get_collaborator_user_by_email(email: str):
@@ -655,8 +676,12 @@ def _dataset_groups_in_response(workspaces_data: Iterable[dict]) -> set:
     }
 
 
+def _project_access_key(project: Any) -> Tuple[str, Any]:
+    return (project._meta.model_name, project.id)
+
+
 def _annotate_dataset_access(
-    workspaces: Iterable[Any], accessible_project_ids: set
+    workspaces: Iterable[Any], accessible_project_keys: set
 ) -> None:
     """Set has_dataset_access on each workbench from the user's accessible projects."""
     for workspace in workspaces:
@@ -665,7 +690,7 @@ def _annotate_dataset_access(
                 continue
             environment.has_dataset_access = (
                 environment.project is not None
-                and environment.project.id in accessible_project_ids
+                and _project_access_key(environment.project) in accessible_project_keys
             )
 
 
@@ -679,15 +704,17 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     response = api.get_workspace_list(email)
     data = validated_json(response, expect=list)
 
-    accessible_projects = list(PublishedProject.objects.accessible_by(user))
-    accessible_project_ids = {project.id for project in accessible_projects}
+    accessible_projects = list(PublishedProject.objects.accessible_by(user)) + list(
+        get_available_active_projects(user)
+    )
+    accessible_project_keys = {
+        _project_access_key(project) for project in accessible_projects
+    }
     projects = accessible_projects
 
     # Revoked datasets drop out of accessible_by; resolve their still-listed workbenches
     # against all projects so they render with a notice instead of 500-ing on a None project.
-    accessible_groups = {
-        _project_data_group(project) for project in accessible_projects
-    }
+    accessible_groups = {_group_for(project) for project in accessible_projects}
     revoked_groups = _dataset_groups_in_response(data) - accessible_groups
     if revoked_groups:
         projects = accessible_projects + [
@@ -697,7 +724,7 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
         ]
 
     workspaces = deserialize_workspaces(data, projects)
-    _annotate_dataset_access(workspaces, accessible_project_ids)
+    _annotate_dataset_access(workspaces, accessible_project_keys)
     return workspaces
 
 

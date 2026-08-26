@@ -1,3 +1,4 @@
+import uuid
 from unittest import skipIf
 from unittest.mock import MagicMock, patch, Mock
 
@@ -6,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from environment.deserializers import _active_project_data_group
 from environment.entities import (
     EnvironmentStatus,
     ResearchEnvironment,
@@ -24,6 +26,7 @@ from environment.exceptions import (
 )
 from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 from environment.services import (
+    _create_workbench_kwargs,
     change_environment_machine_type,
     create_cloud_identity,
     create_research_environment,
@@ -43,6 +46,7 @@ from environment.services import (
     create_shared_bucket,
     delete_shared_bucket,
     check_collaborator_project_access,
+    get_available_active_projects,
     get_workbench_collaborators,
     add_workbench_collaborator,
     remove_workbench_collaborator,
@@ -57,6 +61,10 @@ from environment.tests.mocks import (
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+ActiveProject = apps.get_model("project", "ActiveProject")
+Author = apps.get_model("project", "Author")
+CoreProject = apps.get_model("project", "CoreProject")
+ProjectType = apps.get_model("project", "ProjectType")
 
 
 User = get_user_model()
@@ -1055,6 +1063,37 @@ class GetWorkspacesListTestCase(TestCase):
         self.assertIs(workbench.project, self.project)
         self.assertTrue(workbench.has_dataset_access)
 
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_active_project_workbench_resolves_and_keeps_access(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        mock_objects.accessible_by.return_value = []
+        mock_objects.all.side_effect = AssertionError("all() should not be called")
+        active_project = ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=ProjectType.objects.create(
+                id=99, name="Test type", description="Test type"
+            ),
+            title="Owned draft",
+            slug="owned-draft",
+        )
+        Author.objects.create(
+            project=active_project, user=self.user, display_order=1, is_submitting=True
+        )
+        mock_get_workspace_list.return_value.json.return_value = _workspace_payload(
+            _active_project_data_group(active_project),
+            billing_info=None,
+            is_accessible=True,
+        )
+
+        workspaces = get_workspaces_list(self.user)
+        workbench = workspaces[0].workbenches[0]
+
+        self.assertEqual(workbench.project, active_project)
+        self.assertTrue(workbench.has_dataset_access)
+        self.assertTrue(workbench.is_draft)
+
 
 @skipIf(
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
@@ -1149,3 +1188,111 @@ class GetWorkspacesListApiFailureTestCase(TestCase):
         self.assertEqual(len(workspaces), 1)
         self.assertEqual(len(workspaces[0].workbenches), 1)
         self.assertEqual(workspaces[0].workbenches[0].gcp_identifier, "wb-1")
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetAvailableActiveProjectsTestCase(TestCase):
+    ARCHIVED = 5
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+        self.other_user = User.objects.create_user(
+            email="other@example.com", password="other-password", username="other"
+        )
+        self.resource_type = ProjectType.objects.create(
+            id=99, name="Test type", description="Test type"
+        )
+
+    def _create_active_project(self, slug, submission_status=0):
+        return ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self.resource_type,
+            title=slug,
+            slug=slug,
+            submission_status=submission_status,
+        )
+
+    def test_returns_projects_the_user_is_submitting_author_of(self):
+        project = self._create_active_project("owned-draft")
+        Author.objects.create(
+            project=project, user=self.user, display_order=1, is_submitting=True
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [project])
+
+    def test_excludes_archived_projects(self):
+        project = self._create_active_project(
+            "archived-draft", submission_status=self.ARCHIVED
+        )
+        Author.objects.create(
+            project=project, user=self.user, display_order=1, is_submitting=True
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [])
+
+    def test_excludes_projects_the_user_does_not_submit(self):
+        project = self._create_active_project("coauthored-draft")
+        Author.objects.create(
+            project=project, user=self.other_user, display_order=1, is_submitting=True
+        )
+        Author.objects.create(
+            project=project, user=self.user, display_order=2, is_submitting=False
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [])
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class CreateWorkbenchKwargsTestCase(TestCase):
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.machine_type = Mock()
+        self.machine_type.get_instance_value.return_value = "n1-standard-2"
+        self.machine_type.memory = 8
+        self.machine_type.cpu = 2
+
+    def _build_kwargs(self, project):
+        return _create_workbench_kwargs(
+            self.user,
+            project,
+            "proj-123",
+            self.machine_type,
+            "jupyter",
+            100,
+            "us-central1",
+        )
+
+    def test_published_project_mounts_the_whole_bucket(self):
+        project = Mock()
+        project._meta.model_name = "publishedproject"
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        project.project_file_root.return_value = "demo-project-1.0.0"
+
+        kwargs = self._build_kwargs(project)
+
+        self.assertEqual(kwargs["bucket_name"], "demo-project-1.0.0")
+        self.assertEqual(kwargs["object_prefix"], "")
+        self.assertEqual(kwargs["dataset_identifier"], "demoproject100")
+
+    def test_active_project_mounts_only_its_prefix(self):
+        project = Mock()
+        project._meta.model_name = "activeproject"
+        project.slug = "owned-draft"
+        project.core_project_id = uuid.UUID("2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e")
+        project.files.file_root = "hdn-media"
+        project.FILE_STORAGE_SUBDIR = "active-projects"
+
+        kwargs = self._build_kwargs(project)
+
+        self.assertEqual(kwargs["bucket_name"], "hdn-media")
+        self.assertEqual(kwargs["object_prefix"], "active-projects/owned-draft")
+        self.assertEqual(
+            kwargs["dataset_identifier"], "a2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e"
+        )

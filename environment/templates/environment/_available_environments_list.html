@@ -126,9 +126,13 @@
                                             {% else %}
                                                 <div class="col-md-3">
                                                     {% if environment.project %}
-                                                        <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
+                                                        {% if environment.is_draft %}
                                                             {{ environment.project }}
-                                                        </a>
+                                                        {% else %}
+                                                            <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
+                                                                {{ environment.project }}
+                                                            </a>
+                                                        {% endif %}
                                                     {% else %}
                                                         {{ environment.dataset_identifier }}
                                                     {% endif %}

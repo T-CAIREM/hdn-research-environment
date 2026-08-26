@@ -111,6 +111,7 @@ class ResearchEnvironment:
     service_errors: Optional[List["ServiceError"]] = None
     # False when the user has lost access to the dataset (workbench stopped, pending deletion).
     has_dataset_access: bool = True
+    is_draft: bool = False
 
     @property
     def is_running(self):

@@ -105,7 +105,8 @@ class CreateResearchEnvironmentForm(forms.Form):
         choices=AVAILABLE_REGIONS,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
-    project_id = forms.ChoiceField(label="Project")
+    project_id = forms.ChoiceField(label="Project", required=False)
+    active_project_id = forms.ChoiceField(label="My draft project", required=False)
     machine_type = MachineTypeField(
         label="Instance type",
         queryset=VMInstance.objects.none(),
@@ -145,19 +146,40 @@ class CreateResearchEnvironmentForm(forms.Form):
         selected_workspace: ResearchWorkspace,
         projects_list: Iterable[PublishedProject],
         buckets_list: Iterable[SharedBucket],
+        active_projects_list: Iterable = (),
         **kwargs,
     ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
 
-        self.fields["project_id"].choices = [
+        self.fields["project_id"].choices = [("", "---------")] + [
             (project.id, project) for project in projects_list
+        ]
+
+        self.fields["active_project_id"].choices = [("", "---------")] + [
+            (project.id, str(project)) for project in active_projects_list
         ]
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        project_id = cleaned_data.get("project_id")
+        active_project_id = cleaned_data.get("active_project_id")
+
+        if bool(project_id) == bool(active_project_id):
+            raise ValidationError(
+                "Select either a published project or one of your draft projects."
+            )
+        if active_project_id and cleaned_data.get("environment_type") != "jupyter":
+            raise ValidationError(
+                "Draft projects can only be attached to a Jupyter environment."
+            )
+
+        return cleaned_data
 
     def clean_machine_type(self):
         machine_type_id = self.cleaned_data.get("machine_type")
