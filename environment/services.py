@@ -12,6 +12,7 @@ import environment.mailers as mailers
 from environment import api
 from environment.decorators import handle_api_error
 from environment.deserializers import (
+    _active_project_data_group,
     _group_for,
     _project_data_group,
     deserialize_cloud_roles,
@@ -23,6 +24,7 @@ from environment.deserializers import (
     deserialize_workflow_details,
     deserialize_workspaces,
     deserialize_shared_bucket_details,
+    is_draft_identifier,
 )
 from environment.entities import (
     DatasetsMonitoringEntry,
@@ -102,6 +104,14 @@ User = Model
 
 
 DEFAULT_REGION = "us-central1"
+
+
+# A draft's mount mode is fixed when the workbench is created, so a draft that
+# has left the author-editable set must not be brought back up read-write.
+DRAFT_NOT_EDITABLE_MESSAGE = (
+    "This draft is not editable right now (submitted, published or archived), "
+    "so its workbench cannot be started."
+)
 
 
 logger = logging.getLogger(__name__)
@@ -400,11 +410,15 @@ def _create_workbench_kwargs(
     if project._meta.model_name == "activeproject":
         bucket_name = project.files.file_root
         object_prefix = f"{project.FILE_STORAGE_SUBDIR}/{project.slug}"
+        # Drafts are only offered while author-editable, so every draft mount is
+        # read-write on its own prefix.
+        writable = True
     else:
         bucket_name = project.project_file_root()
         object_prefix = ""
+        writable = False
 
-    return {
+    kwargs = {
         "user_email": user_email,
         "workspace_project_id": workspace_project_id,
         "workbench_type": workbench_type,
@@ -425,6 +439,11 @@ def _create_workbench_kwargs(
         ),
         "collaborators": collaborators,
     }
+    # The key is added only on the draft branch: published kwargs (and therefore
+    # published request bodies) are unchanged.
+    if writable:
+        kwargs["writable"] = True
+    return kwargs
 
 
 @handle_api_error(
@@ -476,9 +495,49 @@ def get_project(project_id: str) -> Any:
 
 
 def get_available_active_projects(user: User) -> Iterable[Any]:
+    """Drafts the user may attach to a new workbench.
+
+    The mount is read-write, so a draft only qualifies while its authors can
+    still edit it. The two states below are the author-editable set; they mirror
+    `ActiveProject.author_editable()`.
+    """
     return ActiveProject.objects.filter(
-        authors__user=user, authors__is_submitting=True
-    ).exclude(submission_status=SubmissionStatus.ARCHIVED)
+        authors__user=user,
+        authors__is_submitting=True,
+        submission_status__in=[
+            SubmissionStatus.UNSUBMITTED,
+            SubmissionStatus.NEEDS_RESUBMISSION,
+        ],
+    )
+
+
+def _user_active_projects(user: User) -> Iterable[Any]:
+    """Every draft the user authors, in any submission state.
+
+    Used to *resolve* draft-backed workbenches rather than to offer drafts: a
+    workbench on a submitted or archived draft must still render (flagged) and
+    must still be visible to the reaper.
+    """
+    return ActiveProject.objects.filter(authors__user=user)
+
+
+def _is_submitting_author(project: Any, user: User) -> bool:
+    return project.authors.filter(user=user, is_submitting=True).exists()
+
+
+def _draft_access_expired(project: Any, user: User) -> bool:
+    return not (project.author_editable() and _is_submitting_author(project, user))
+
+
+def _find_active_project_for_identifier(user: User, dataset_identifier: str) -> Any:
+    return next(
+        (
+            project
+            for project in _user_active_projects(user)
+            if _group_for(project) == dataset_identifier
+        ),
+        None,
+    )
 
 
 def get_active_project(project_id: str) -> Any:
@@ -518,16 +577,25 @@ def check_collaborator_project_access(collaborator_email: str, project_id: str) 
 
 def _get_projects_for_environments(
     environments: Iterable[ResearchEnvironment],
+    user: User,
 ) -> Iterable[Any]:
-    dataset_identifiers = list(map(_environment_data_group, environments))
+    dataset_identifiers = set(map(_environment_data_group, environments))
     # FIXME: Given the fact that the groups are generated automatically in a non-reversible way,
     # the only way to match the projects to their environments is to fetch all the records and
     # calculate the group name for each of them.
-    return [
+    projects = [
         project
         for project in PublishedProject.objects.all()
         if _project_data_group(project) in dataset_identifiers
     ]
+    # Draft-backed workbenches resolve against the user's own drafts, in every
+    # submission state: the reaper has to see the ones that left the editable set.
+    projects += [
+        project
+        for project in _user_active_projects(user)
+        if _active_project_data_group(project) in dataset_identifiers
+    ]
+    return projects
 
 
 def _get_project_for_environment(
@@ -550,7 +618,12 @@ def _get_project_for_environment(
 )
 def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
     email = user.cloud_identity.email
-    projects = PublishedProject.objects.accessible_by(user)
+    # Own drafts are resolved in every submission state (no author-editable
+    # filter): a submitted draft's workbench must still deserialize with its
+    # project so it renders, and so the reaper can see it.
+    projects = list(PublishedProject.objects.accessible_by(user)) + list(
+        _user_active_projects(user)
+    )
     # user_billing_accounts = get_billing_accounts_list(user)  # No longer needed for deserialization
 
     response = api.get_workspace_list(email)
@@ -571,9 +644,9 @@ def get_environments_with_projects(
     user: User,
 ) -> Iterable[Tuple[ResearchEnvironment, Any]]:
     active_environments = get_active_environments(user)
-    projects = _get_projects_for_environments(active_environments)
+    projects = _get_projects_for_environments(active_environments, user)
     environment_project_pairs = inner_join_iterators(
-        _environment_data_group, active_environments, _project_data_group, projects
+        _environment_data_group, active_environments, _group_for, projects
     )
     return [
         (environment, project) for environment, project in environment_project_pairs
@@ -617,12 +690,27 @@ def get_workspace_workflows(user: User) -> Iterable[Workflow]:
 def get_environment_project_pairs_with_expired_access(
     user: User,
 ) -> Iterable[Tuple[ResearchEnvironment, Any]]:
-    all_environment_project_pairs = get_environments_with_projects(user)
-    return [
-        (environment, project)
-        for environment, project in all_environment_project_pairs
-        if not project.has_access(user)
-    ]
+    active_environments = get_active_environments(user)
+    projects = _get_projects_for_environments(active_environments, user)
+    all_environment_project_pairs = left_join_iterators(
+        _environment_data_group, active_environments, _group_for, projects
+    )
+
+    expired_pairs = []
+    for environment, project in all_environment_project_pairs:
+        if project is None:
+            # A draft-backed workbench whose draft no longer exists (deleted, or
+            # published, which deletes the ActiveProject row) has lost the prefix
+            # it mounts read-write, so it is expired. Unmatched published
+            # identifiers are skipped, exactly as the previous inner join did.
+            if is_draft_identifier(environment.dataset_identifier):
+                expired_pairs.append((environment, None))
+        elif project._meta.model_name == "activeproject":
+            if _draft_access_expired(project, user):
+                expired_pairs.append((environment, project))
+        elif not project.has_access(user):
+            expired_pairs.append((environment, project))
+    return expired_pairs
 
 
 # todo: it is not used anymore - check
@@ -711,20 +799,30 @@ def get_workspaces_list(user: User) -> Iterable[ResearchWorkspace]:
     response = api.get_workspace_list(email)
     data = validated_json(response, expect=list)
 
+    editable_drafts = list(get_available_active_projects(user))
     accessible_projects = list(PublishedProject.objects.accessible_by(user)) + list(
-        get_available_active_projects(user)
+        editable_drafts
     )
     accessible_project_keys = {
         _project_access_key(project) for project in accessible_projects
     }
-    projects = accessible_projects
+
+    # A draft that left the author-editable set keeps its (stopped) workbench
+    # listed until the reaper removes it: resolve it so the card still renders
+    # with its project, while accessible_project_keys leaves has_dataset_access
+    # False so the UI flags it.
+    projects = accessible_projects + [
+        project
+        for project in _user_active_projects(user)
+        if _project_access_key(project) not in accessible_project_keys
+    ]
 
     # Revoked datasets drop out of accessible_by; resolve their still-listed workbenches
     # against all projects so they render with a notice instead of 500-ing on a None project.
-    accessible_groups = {_group_for(project) for project in accessible_projects}
+    accessible_groups = {_group_for(project) for project in projects}
     revoked_groups = _dataset_groups_in_response(data) - accessible_groups
     if revoked_groups:
-        projects = accessible_projects + [
+        projects = projects + [
             project
             for project in PublishedProject.objects.all()
             if _project_data_group(project) in revoked_groups
@@ -794,10 +892,28 @@ def stop_running_environment(
     return data
 
 
+def _assert_draft_workbench_startable(
+    user: User, dataset_identifier: Optional[str]
+) -> None:
+    """Refuse to restart a draft-backed workbench that is no longer editable.
+
+    Mount mode is fixed when a workbench is created and no API carries the
+    bucket or prefix afterwards, so a read-write draft mount cannot be demoted
+    in place. The portal therefore refuses the start instead. Published
+    workbenches never reach the body of this check.
+    """
+    if not is_draft_identifier(dataset_identifier):
+        return
+
+    project = _find_active_project_for_identifier(user, dataset_identifier)
+    if project is None or _draft_access_expired(project, user):
+        raise StartEnvironmentFailed(DRAFT_NOT_EDITABLE_MESSAGE)
+
+
 @handle_api_error(
     "Environment Start",
     StartEnvironmentFailed,
-    lambda workbench_type, workbench_resource_id, user, workspace_project_id: {
+    lambda workbench_type, workbench_resource_id, user, workspace_project_id, dataset_identifier=None: {
         "workbench_type": workbench_type,
         "workbench_resource_id": workbench_resource_id,
         "user_email": user.cloud_identity.email,
@@ -809,7 +925,9 @@ def start_stopped_environment(
     workbench_resource_id: str,
     user: User,
     workspace_project_id: str,
+    dataset_identifier: Optional[str] = None,
 ) -> str:
+    _assert_draft_workbench_startable(user, dataset_identifier)
     response = api.start_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,

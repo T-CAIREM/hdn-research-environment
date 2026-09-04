@@ -128,6 +128,10 @@
                                                     {% if environment.project %}
                                                         {% if environment.is_draft %}
                                                             {{ environment.project }}
+                                                            {% if environment.writable %}
+                                                                <br>
+                                                                <small class="text-muted">Draft mounted read/write</small>
+                                                            {% endif %}
                                                         {% else %}
                                                             <a href="{% url 'published_project' environment.project.slug environment.project.version %}" target="_blank">
                                                                 {{ environment.project }}

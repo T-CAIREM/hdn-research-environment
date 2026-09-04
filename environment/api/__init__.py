@@ -112,6 +112,7 @@ def create_workbench(
     sharing_bucket_identifiers: Optional[list[str]] = None,
     collaborators: Optional[list[str]] = None,
     object_prefix: str = "",
+    writable: bool = False,
 ):
     json = {
         "workbench_type": workbench_type,
@@ -130,6 +131,10 @@ def create_workbench(
         "sharing_bucket_identifiers": sharing_bucket_identifiers,
         "collaborators": collaborators,
     }
+    # Only the draft (active project) path is writable. The key is omitted
+    # entirely otherwise, so published request bodies are unchanged.
+    if writable:
+        json["writable"] = True
 
     return Request("POST", url="/workbench/create", json=json)
 

@@ -2,11 +2,22 @@ from datetime import datetime, timedelta
 from unittest import skipIf
 from unittest.mock import patch
 
+from django.apps import apps
 from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
 
-from environment.signals import DataAccessRequest, Event, Training, User
+from environment.signals import (
+    ActiveProject,
+    DataAccessRequest,
+    Event,
+    Training,
+    User,
+)
+
+Author = apps.get_model("project", "Author")
+CoreProject = apps.get_model("project", "CoreProject")
+ProjectType = apps.get_model("project", "ProjectType")
 
 
 @skipIf(
@@ -134,3 +145,78 @@ class EventSignalsTestCase(TestCase):
         mock_stop_event_participants_environments_with_expired_access.assert_called_with(
             event.id, schedule=event.end_date
         )
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ActiveProjectSignalsTestCase(TestCase):
+    """A draft leaving the author-editable set must stop its writable workbenches."""
+
+    UNSUBMITTED = 0
+    NEEDS_ASSIGNMENT = 10
+
+    def setUp(self):
+        self.user = User.objects.create_user("draft-author", "author@example.com", "pw")
+        self.resource_type, _created = ProjectType.objects.get_or_create(
+            id=99, defaults={"name": "Test type", "description": "Test type"}
+        )
+
+    def _create_draft(self, is_submitting=True):
+        project = ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self.resource_type,
+            title="owned-draft",
+            slug="owned-draft",
+            submission_status=self.UNSUBMITTED,
+        )
+        Author.objects.create(
+            project=project,
+            user=self.user,
+            display_order=1,
+            is_submitting=is_submitting,
+        )
+        return project
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_schedules_task_when_draft_is_submitted(self, mock_stop):
+        project = self._create_draft()
+        mock_stop.reset_mock()
+
+        project.submission_status = self.NEEDS_ASSIGNMENT
+        project.save()
+
+        mock_stop.assert_called_once_with(self.user.id)
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_does_not_schedule_while_the_draft_stays_editable(self, mock_stop):
+        project = self._create_draft()
+        mock_stop.reset_mock()
+
+        project.title = "renamed draft"
+        project.save()
+
+        mock_stop.assert_not_called()
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_schedules_task_when_draft_is_deleted(self, mock_stop):
+        project = self._create_draft()
+        mock_stop.reset_mock()
+
+        # Publication deletes the ActiveProject row; the Author rows cascade,
+        # so the submitting authors are read in pre_delete.
+        project.delete()
+
+        mock_stop.assert_called_once_with(self.user.id)
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_only_submitting_authors_are_scheduled(self, mock_stop):
+        project = self._create_draft(is_submitting=False)
+        mock_stop.reset_mock()
+
+        project.submission_status = self.NEEDS_ASSIGNMENT
+        project.save()
+        project.delete()
+
+        mock_stop.assert_not_called()

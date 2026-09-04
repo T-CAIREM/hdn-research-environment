@@ -706,6 +706,7 @@ def start_stopped_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
         workspace_project_id=data["gcp_project_id"],
+        dataset_identifier=data.get("dataset_identifier"),
     )
     return JsonResponse({})
 

@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Iterable, Optional, List, Any
 
 from django.apps import apps  # type: ignore
@@ -61,6 +62,20 @@ def _group_for(project: Any) -> str:
     return _project_data_group(project)
 
 
+# The active-project scheme minted by `_active_project_data_group`: the literal
+# "a" followed by a core project UUID in hex. Published groups are built from a
+# slug and a version, so they never take this shape.
+# `\Z`, not `$`: `$` would also match an identifier with a trailing newline.
+_DRAFT_IDENTIFIER_PATTERN = re.compile(r"a[0-9a-f]{32}\Z")
+
+
+def is_draft_identifier(dataset_identifier: str) -> bool:
+    """Whether a workbench's dataset identifier points at a draft (ActiveProject)."""
+    if not dataset_identifier:
+        return False
+    return bool(_DRAFT_IDENTIFIER_PATTERN.fullmatch(dataset_identifier))
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -91,6 +106,7 @@ def _deserialize_research_environment(
         ),
         service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
         is_draft=project is not None and project._meta.model_name == "activeproject",
+        writable=bool(workbench.get("writable", False)),
     )
 
 

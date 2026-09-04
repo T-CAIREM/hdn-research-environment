@@ -82,7 +82,7 @@ class CreateResearchEnvironmentFormTestCase(TestCase):
             ],
             [
                 ("Published datasets", ["published:1"]),
-                ("My draft projects", ["active:7"]),
+                ("My draft projects (read/write)", ["active:7"]),
             ],
         )
 

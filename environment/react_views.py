@@ -355,6 +355,13 @@ def start_stopped_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_id"],
         workspace_project_id=data["gcp_project_id"],
+        # Taken from the workspaces list already fetched above, so the draft
+        # state gate reads an identifier the API reported, not a request field.
+        dataset_identifier=(
+            target_workbench.dataset_identifier
+            if target_workbench is not None
+            else None
+        ),
     )
     return HttpResponse(status=200)
 

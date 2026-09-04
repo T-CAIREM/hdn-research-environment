@@ -14,6 +14,7 @@ from environment.entities import (
     SharedBucket,
 )
 
+from environment.deserializers import is_draft_identifier
 from environment.models import VMInstance
 from environment.utilities import has_billing_issues
 
@@ -148,6 +149,11 @@ def environment_action_button(
 
     if button_type == "leave":
         request_data["service_account_name"] = environment.service_account_name
+
+    # Draft-backed workbenches carry their identifier so the start view can
+    # apply the editable-state gate. Published payloads are unchanged.
+    if is_draft_identifier(environment.dataset_identifier):
+        request_data["dataset_identifier"] = environment.dataset_identifier
 
     result_data = {
         "button_class": data["button_class"],

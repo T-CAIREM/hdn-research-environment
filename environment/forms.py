@@ -160,7 +160,7 @@ class CreateResearchEnvironmentForm(forms.Form):
         ]
         choices = [("Published datasets", published_choices)]
         if active_choices:
-            choices.append(("My draft projects", active_choices))
+            choices.append(("My draft projects (read/write)", active_choices))
         self.fields["project_id"].choices = choices
 
         self.fields["shared_bucket"].choices = [
