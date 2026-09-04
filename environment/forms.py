@@ -174,10 +174,10 @@ class CreateResearchEnvironmentForm(forms.Form):
         if (
             project_id
             and project_id.startswith("active:")
-            and cleaned_data.get("environment_type") != "jupyter"
+            and cleaned_data.get("environment_type") not in ("jupyter", "rstudio")
         ):
             raise ValidationError(
-                "Draft projects can only be attached to a Jupyter environment."
+                "Draft projects can only be attached to a Jupyter or RStudio environment."
             )
 
         return cleaned_data

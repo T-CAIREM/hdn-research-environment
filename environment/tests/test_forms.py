@@ -60,11 +60,23 @@ class CreateResearchEnvironmentFormTestCase(TestCase):
         self.assertIsNone(form.errors.get("__all__"))
         self.assertIsNone(form.errors.get("project_id"))
 
-    def test_rejects_an_active_project_outside_jupyter(self):
+    def test_accepts_an_active_project_on_rstudio(self):
         form = self._build_form(project_id="active:7", environment_type="rstudio")
         form.is_valid()
 
-        self.assertTrue(form.errors.get("__all__"))
+        self.assertIsNone(form.errors.get("__all__"))
+        self.assertIsNone(form.errors.get("project_id"))
+
+    def test_rejects_an_active_project_outside_jupyter_or_rstudio(self):
+        form = self._build_form(project_id="active:7", environment_type="collaborative")
+        form.is_valid()
+
+        self.assertEqual(
+            form.errors.get("__all__"),
+            [
+                "Draft projects can only be attached to a Jupyter or RStudio environment."
+            ],
+        )
 
     def test_rejects_an_unlisted_project(self):
         form = self._build_form(project_id="active:1")
