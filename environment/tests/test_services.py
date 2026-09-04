@@ -226,6 +226,11 @@ class StopRunningEnvironmentTestCase(TestCase):
 class StartStoppedEnvironmentTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()
+        # These callers omit the dataset identifier, so the draft gate falls
+        # back to the workspaces list; the workbench is not in it.
+        patcher = patch("environment.services.get_workspaces_list", return_value=[])
+        self.mock_get_workspaces_list = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch("environment.services.persist_workflow")
     @patch("environment.api.start_workbench")
@@ -1608,6 +1613,12 @@ class StartDraftWorkbenchGateTestCase(ActiveProjectFixtureMixin, TestCase):
             dataset_identifier=dataset_identifier,
         )
 
+    def _workspace_containing(self, dataset_identifier):
+        workspace = Mock()
+        workspace.gcp_project_id = "proj-123"
+        workspace.workbenches = [_draft_workbench_entity(dataset_identifier)]
+        return workspace
+
     @patch("environment.services.persist_workflow")
     @patch("environment.api.start_workbench")
     def test_editable_draft_starts(self, mock_start_workbench, _mock_persist):
@@ -1657,17 +1668,67 @@ class StartDraftWorkbenchGateTestCase(ActiveProjectFixtureMixin, TestCase):
 
     @patch("environment.services.persist_workflow")
     @patch("environment.api.start_workbench")
-    def test_published_start_is_unchanged(self, mock_start_workbench, _mock_persist):
-        # Neither a published identifier nor a caller that passes none reaches
-        # the gate, and neither runs a query for it.
-        for dataset_identifier in ("demoproject100", None):
-            with self.subTest(dataset_identifier=dataset_identifier):
-                with patch(
-                    "environment.services._user_active_projects",
-                    side_effect=AssertionError("drafts must not be queried"),
-                ):
-                    result = self._start(dataset_identifier, mock_start_workbench)
-                self.assertEqual(result, {"workflow_id": "wf-1"})
+    def test_published_start_is_a_single_api_call(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # A supplied published identifier neither queries drafts nor fetches the
+        # workspaces list: the published start stays one API call.
+        with patch(
+            "environment.services._user_active_projects",
+            side_effect=AssertionError("drafts must not be queried"),
+        ), patch(
+            "environment.services.get_workspaces_list",
+            side_effect=AssertionError("no extra list fetch"),
+        ):
+            result = self._start("demoproject100", mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+        mock_start_workbench.assert_called_once()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_falls_back_to_the_workspaces_list(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # The gate must not be skippable by omitting the request field.
+        project = self._create_draft_for(
+            self.user, submission_status=self.NEEDS_ASSIGNMENT
+        )
+        workspaces = [self._workspace_containing(_active_project_data_group(project))]
+
+        with patch(
+            "environment.services.get_workspaces_list", return_value=workspaces
+        ) as mock_list:
+            with self.assertRaises(StartEnvironmentFailed) as caught:
+                self._start(None, mock_start_workbench)
+
+        self.assertEqual(str(caught.exception), DRAFT_NOT_EDITABLE_MESSAGE)
+        mock_list.assert_called_once_with(self.user)
+        mock_start_workbench.assert_not_called()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_lets_an_editable_draft_through(
+        self, mock_start_workbench, _mock_persist
+    ):
+        project = self._create_draft_for(self.user)
+        workspaces = [self._workspace_containing(_active_project_data_group(project))]
+
+        with patch("environment.services.get_workspaces_list", return_value=workspaces):
+            result = self._start(None, mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_and_unknown_workbench_starts(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # Nothing to gate on: behave exactly as before the gate existed.
+        with patch("environment.services.get_workspaces_list", return_value=[]):
+            result = self._start(None, mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
 
 
 @skipIf(

@@ -54,38 +54,33 @@ def stop_environments_with_expired_access(user_id: int):
     for environment in environments:
         if environment.is_running:
             stop_running_environment(
-                workbench_type=environment.type,
-                workbench_resource_id=environment.instance_name,
-                user_email=user.cloud_identity.email,
+                workbench_type=environment.type.value,
+                workbench_resource_id=environment.gcp_identifier,
+                user=user,
                 workspace_project_id=environment.workspace_name,
             )
+    # `projects` may contain None for a draft that no longer exists (deleted, or
+    # published); the template renders a generic line for those.
     send_environment_access_expired(user, projects)
-    if len(environments) > 0:
-        environment_ids = [environment.id for environment in environments]
-        terminate_environments_if_access_still_expired(
-            user_id,
-            environment_ids,
-            schedule=_expired_environment_termination_schedule(),
-        )
+    environment_ids = [environment.gcp_identifier for environment in environments]
+    terminate_environments_if_access_still_expired(
+        user_id,
+        environment_ids,
+        schedule=_expired_environment_termination_schedule(),
+    )
 
 
 @background
 def terminate_environments_if_access_still_expired(
     user_id: int, previously_stopped_environment_ids: Iterable[str]
 ):
-    user = User.objects.get(pk=user_id)
+    user = User.objects.select_related("cloud_identity").get(pk=user_id)
     expired_pairs = get_environment_project_pairs_with_expired_access(user)
-    for environment, project in expired_pairs:
-        if environment.id in previously_stopped_environment_ids:
+    for environment, _project in expired_pairs:
+        if environment.gcp_identifier in previously_stopped_environment_ids:
             delete_environment(
-                user_email=user.cloud_identity.email,
-                dataset_identifier=environment.dataset_identifier,
+                user=user,
                 workspace_project_id=environment.workspace_name,
-                region=environment.region.value,
-                bucket_name=project.project_file_root(),
-                machine_type=environment.machine_type,
                 workbench_type=environment.type.value,
-                disk_size=environment.disk_size,
-                gpu_accelerator_type=environment.gpu_accelerator_type,
                 workbench_resource_id=environment.gcp_identifier,
             )

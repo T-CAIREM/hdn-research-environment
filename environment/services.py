@@ -892,16 +892,43 @@ def stop_running_environment(
     return data
 
 
+def _resolve_dataset_identifier(
+    user: User, workbench_resource_id: str, workspace_project_id: str
+) -> Optional[str]:
+    """The dataset a workbench is attached to, read from the user's workspaces.
+
+    Only consulted when the caller did not supply the identifier, so that the
+    draft gate cannot be skipped by omitting a request field.
+    """
+    for workspace in get_workspaces_list(user):
+        if getattr(workspace, "gcp_project_id", None) != workspace_project_id:
+            continue
+        for environment in getattr(workspace, "workbenches", None) or []:
+            if getattr(environment, "gcp_identifier", None) == workbench_resource_id:
+                return environment.dataset_identifier
+    return None
+
+
 def _assert_draft_workbench_startable(
-    user: User, dataset_identifier: Optional[str]
+    user: User,
+    workbench_resource_id: str,
+    workspace_project_id: str,
+    dataset_identifier: Optional[str] = None,
 ) -> None:
     """Refuse to restart a draft-backed workbench that is no longer editable.
 
     Mount mode is fixed when a workbench is created and no API carries the
     bucket or prefix afterwards, so a read-write draft mount cannot be demoted
-    in place. The portal therefore refuses the start instead. Published
-    workbenches never reach the body of this check.
+    in place. The portal therefore refuses the start instead.
+
+    A caller that supplies the identifier (both start views do) costs nothing
+    here; one that does not falls back to the workspaces list rather than
+    letting the workbench through unchecked.
     """
+    if dataset_identifier is None:
+        dataset_identifier = _resolve_dataset_identifier(
+            user, workbench_resource_id, workspace_project_id
+        )
     if not is_draft_identifier(dataset_identifier):
         return
 
@@ -927,7 +954,9 @@ def start_stopped_environment(
     workspace_project_id: str,
     dataset_identifier: Optional[str] = None,
 ) -> str:
-    _assert_draft_workbench_startable(user, dataset_identifier)
+    _assert_draft_workbench_startable(
+        user, workbench_resource_id, workspace_project_id, dataset_identifier
+    )
     response = api.start_workbench(
         workbench_type=workbench_type,
         workbench_resource_id=workbench_resource_id,
