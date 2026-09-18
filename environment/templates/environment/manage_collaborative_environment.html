@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% load static %}
+{% load static environment_config %}
 
 {% block title %}Manage Collaborators{% endblock %}
 
@@ -16,6 +16,7 @@
 {% endblock %}
 
 {% block content %}
+{% research_environment_config user as environment_config %}
 <div class="container">
   {% include "message_snippet.html" %}
   <h3 class="mb-4 jumbotron">
@@ -76,14 +77,14 @@
             Add Collaborator
           </h5>
 
-          <form id="add-collaborator-form" method="post" style="width: 24rem;">
+          <form id="add-collaborator-form" method="post" style="width: 24rem;" data-organization-domain="{{ environment_config.organization_domain }}">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_collaborator">
             <div class="form-group">
               <label for="collaborator_email">Collaborator Email</label>
               <input type="email" id="collaborator_email" name="collaborator_email" class="form-control" placeholder="Enter user email" required>
-              <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
-              <div class="validation-error" id="email-validation-error">Please enter a valid email ending with @healthdatanexus.ai</div>
+              <small class="form-text text-muted">{% if environment_config.organization_domain %}Email must end with @{{ environment_config.organization_domain }}{% else %}Enter the collaborator's cloud identity email.{% endif %}</small>
+              <div class="validation-error" id="email-validation-error">Please enter a valid email{% if environment_config.organization_domain %} ending with @{{ environment_config.organization_domain }}{% endif %}.</div>
             </div>
             <button type="submit" class="btn btn-sm btn-primary mt-3">Add Collaborator</button>
           </form>
@@ -109,7 +110,7 @@
               </div>
             </li>
               {% for collaborator in collaborators %}
-                {% if collaborator|cut:"@healthdatanexus.ai" != workbench_owner_username %}
+                {% if collaborator|lower != user.cloud_identity.email|lower %}
                   {% with has_collaborators=True %}
                     <li class="list-group-item">
                       <div class="row">
@@ -139,6 +140,7 @@
     const spinnerIcon = "<i class='fas fa-spinner fa-pulse'></i>";
 
     const addCollaboratorForm = document.getElementById('add-collaborator-form');
+    const organizationDomain = addCollaboratorForm.dataset.organizationDomain;
     const emailInput = document.getElementById('collaborator_email');
     const emailValidationError = document.getElementById('email-validation-error');
     const notificationBadge = document.getElementById('notification-badge');
@@ -238,7 +240,7 @@
     addCollaboratorForm.addEventListener('submit', function(event) {
       const email = emailInput.value.trim();
 
-      if (!email.endsWith('@healthdatanexus.ai')) {
+      if (organizationDomain && !email.toLowerCase().endsWith('@' + organizationDomain)) {
         event.preventDefault();
         emailValidationError.style.display = 'block';
         return false;

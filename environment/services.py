@@ -119,11 +119,21 @@ def _environment_data_group(environment: ResearchEnvironment) -> str:
 def create_cloud_identity(
     user: User, password: str, recovery_email: str
 ) -> CloudIdentity:
+    """Provision an identity even when the host user's profile needs repair."""
     gcp_user_id = user.username
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        logger.warning(
+            "User %s has no profile; using the username for cloud identity names",
+            user.pk,
+        )
+        first_names = last_name = user.username
+    else:
+        first_names, last_name = profile.first_names, profile.last_name
     response = api.create_cloud_identity(
         gcp_user_id,
-        user.profile.first_names,
-        user.profile.last_name,
+        first_names,
+        last_name,
         password,
         recovery_email,
     )

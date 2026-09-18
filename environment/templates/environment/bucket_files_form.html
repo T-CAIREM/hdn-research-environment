@@ -1,3 +1,6 @@
+{% load environment_config %}
+{% research_environment_config as environment_config %}
+
   <!-- Content manipulation buttons to trigger modals -->
   <div class="big-toolbar">
     <span class="big-toolbar-left">
@@ -19,7 +22,7 @@
   {% if workspace_has_errors %}
   <div class="alert alert-warning" role="alert">
     <strong>Service Issues Detected:</strong> Some functionality may be limited due to workspace service issues.
-    <br><small>For assistance, please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a></small>
+    <br><small>For assistance, please contact <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a></small>
   </div>
   {% endif %}
 
@@ -40,7 +43,7 @@
           <div class="modal-footer">
               {% if workspace_has_errors %}
                 <div class="text-muted small">
-                  Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                  Service issues detected. Please contact <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a> for assistance.
                 </div>
               {% else %}
                 <button id="upload-files-finish" type="button" data-dismiss="modal" class="btn btn-secondary" onclick="return navigateSharedBucketDir('{{ subdir }}')">Finish</button>
@@ -66,7 +69,7 @@
           <div class="modal-footer">
             {% if workspace_has_errors %}
               <div class="text-muted small">
-                Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                Service issues detected. Please contact <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a> for assistance.
               </div>
             {% else %}
               <button id="create-folder-button-submit" class="btn btn-success" name="create_folder" onclick="createSharedBucketDir('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-folder-open"></i> Create Folder</button>
@@ -93,7 +96,7 @@
           <div class="modal-footer">
             {% if workspace_has_errors %}
               <div class="text-muted small">
-                Service issues detected. Please contact <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                Service issues detected. Please contact <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a> for assistance.
               </div>
             {% else %}
               <button id="delete-items-button-submit" class="btn btn-danger" name="delete_items" onclick="deleteSharedBucketItems('{{ current_dir_path }}')" data-dismiss="modal"><i class="fa fa-trash-alt"></i> Delete Items</button>
@@ -103,4 +106,3 @@
       </div>
     </div>
   </div>
-
