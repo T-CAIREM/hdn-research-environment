@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% load static %}
+{% load static environment_config %}
 
 {% load project_templatetags %}
 
@@ -21,6 +21,7 @@
 {% endblock %}
 
 {% block content %}
+{% research_environment_config user as environment_config %}
 <div class="container">
   {% include "message_snippet.html" %}
     <h1 class="mb-4">
@@ -42,11 +43,11 @@
       <div class="card billing-information">
         <div class="container mt-4 collaborative-panel hidden">
           <h5 class="mb-3">Add Collaborators</h5>
-          <form id="add-user-form" class="mb-3">
+          <form id="add-user-form" class="mb-3" data-organization-domain="{{ environment_config.organization_domain }}">
             <div class="form-group">
               <label for="user-email">Add User Email</label>
               <input type="email" id="user-email" class="form-control" placeholder="Enter user email" required>
-              <small class="form-text text-muted">Email must end with @healthdatanexus.ai</small>
+              <small class="form-text text-muted">{% if environment_config.organization_domain %}Email must end with @{{ environment_config.organization_domain }}{% else %}Enter the collaborator's cloud identity email.{% endif %}</small>
             </div>
             <button type="submit" class="btn btn-primary btn-sm mt-2">Add User</button>
           </form>
@@ -186,4 +187,3 @@
 </script>
 
 {% endblock %}
-

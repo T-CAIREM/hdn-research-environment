@@ -1,3 +1,6 @@
+{% load environment_config %}
+{% research_environment_config as environment_config %}
+
 {% if billing_accounts_list|length %}
     <div class="d-flex flex-column align-items-end px-4 mb-3">
         <a class="btn btn-primary btn-sm" href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
@@ -63,10 +66,10 @@
         </h6>
         <ol>
             <li>
-                <span class="font-italic">The owner of a billing account can send out invitations to use a shared account via e-mail. The specific address you use doesn't have to be connected with Health Data Nexus.</span>
+                <span class="font-italic">The owner of a billing account can send out invitations to use a shared account via e-mail. The specific address you use doesn't have to be connected with {{ environment_config.site_name }}.</span>
             </li>
             <li>
-                <span class="font-italic">Clicking the link in the e-mail message will prompt you to log in to Health Data Nexus and consume the invitation.</span>
+                <span class="font-italic">Clicking the link in the e-mail message will prompt you to log in to {{ environment_config.site_name }} and consume the invitation.</span>
             </li>
             <li>
                 <span class="font-italic">You can use shared billing accounts to create resources in the platform the same way you would use one that was created by you.</span>

@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   const addUserForm = document.querySelector("#add-user-form");
+  const organizationDomain = addUserForm.dataset.organizationDomain;
   const userList = document.querySelector("#user-list");
   const emailInput = document.querySelector("#user-email");
   const usersListInput = document.querySelector("#users-list");
@@ -44,8 +45,8 @@ document.addEventListener("DOMContentLoaded", function () {
     event.preventDefault();
     const email = emailInput.value.trim();
 
-    if (!email.endsWith("@healthdatanexus.ai")) {
-      alert("Please enter a valid email ending with @healthdatanexus.ai.");
+    if (organizationDomain && !email.toLowerCase().endsWith("@" + organizationDomain)) {
+      alert("Please enter a valid email ending with @" + organizationDomain + ".");
       return;
     } else if (users.includes(email)) {
       alert("This user is already added.");

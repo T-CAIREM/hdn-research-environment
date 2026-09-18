@@ -93,6 +93,8 @@ class CreateCloudIdentityTestCase(TestCase):
     def test_creates_cloud_identity_if_request_succeeds(
         self, mock_create_cloud_identity, mock_create_identity
     ):
+        self.user.profile.first_names = "Ada"
+        self.user.profile.last_name = "Lovelace"
         mock_email = "user@example.com"
         mock_create_cloud_identity.return_value.ok = True
         mock_create_cloud_identity.return_value.json.return_value = {
@@ -105,6 +107,9 @@ class CreateCloudIdentityTestCase(TestCase):
 
         identity = create_cloud_identity(self.user, "password", "recovery@example.com")
 
+        mock_create_cloud_identity.assert_called_once_with(
+            self.user.username, "Ada", "Lovelace", "password", "recovery@example.com"
+        )
         mock_create_identity.assert_called_once_with(
             user=self.user,
             gcp_user_id=self.user.username,
@@ -112,6 +117,32 @@ class CreateCloudIdentityTestCase(TestCase):
         )
         self.assertEqual(identity.gcp_user_id, self.user.username)
         self.assertEqual(identity.email, mock_email)
+
+    @patch("environment.api.create_cloud_identity")
+    def test_missing_profile_uses_username_and_logs_warning(self, mock_create_identity):
+        self.user.profile.delete()
+        self.user = User.objects.get(pk=self.user.pk)
+        mock_create_identity.return_value.ok = True
+        mock_create_identity.return_value.json.return_value = {
+            "primary_email": "foo@physionet.org"
+        }
+
+        with self.assertLogs("environment.services", level="WARNING") as logs:
+            identity = create_cloud_identity(
+                self.user, "password", "recovery@example.com"
+            )
+
+        mock_create_identity.assert_called_once_with(
+            self.user.username,
+            self.user.username,
+            self.user.username,
+            "password",
+            "recovery@example.com",
+        )
+        self.assertEqual(identity.user_id, self.user.pk)
+        self.assertEqual(identity.email, "foo@physionet.org")
+        self.assertIn("profile", logs.output[0])
+        self.assertFalse(hasattr(self.user, "profile"))
 
 
 @skipIf(

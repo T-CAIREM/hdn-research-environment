@@ -1,5 +1,7 @@
 {% load action_buttons %}
 {% load environment_templatetags %}
+{% load environment_config %}
+{% research_environment_config as environment_config %}
 
 {% if recent_workflow %}
     {% if recent_workflow_failed %}
@@ -216,7 +218,7 @@
                                     <div class="m-auto text-muted">
                                         <small>
                                             Workspace inaccessible{% if workspace.access_denial_reason %}: {{ workspace.access_denial_reason }}{% endif %}.<br>
-                                            Reach out to <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for assistance.
+                                            Reach out to <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a> for assistance.
                                         </small>
                                     </div>
                                 </div>
@@ -239,7 +241,7 @@
                                     <div class="m-auto text-muted">
                                         <small>
                                             Shared workspace inaccessible{% if workspace.access_denial_reason %}: {{ workspace.access_denial_reason }}{% endif %}.<br>
-                                            Reach out to <a href="mailto:support@healthdatanexus.ai">support@healthdatanexus.ai</a> for help.
+                                            Reach out to <a href="mailto:{{ environment_config.support_email }}">{{ environment_config.support_email }}</a> for help.
                                         </small>
                                     </div>
                                 </div>

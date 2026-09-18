@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 
 import environment.constants as constants
 import environment.services as services
+from environment.config import get_support_email
 from environment.decorators import (
     cloud_identity_required,
     require_DELETE,
@@ -26,6 +27,7 @@ from environment.decorators import (
 from environment.entities import WorkflowStatus, WorkspaceStatus, Region, WorkflowType
 from environment.exceptions import (
     CreateCloudGroupFailed,
+    CreateSharedBucketFailed,
     ChangeEnvironmentInstanceTypeFailed,
     EnvironmentCreationFailed,
     GetAvailableEnvironmentsFailed,
@@ -445,11 +447,11 @@ def create_shared_bucket(request, workspace_id):
                     workspace_project_id=form.cleaned_data["workspace_project_id"],
                 )
                 return redirect("research_environments")
-            except (f, ValueError, ConnectionError) as e:
+            except (CreateSharedBucketFailed, ValueError, ConnectionError) as e:
                 # Capture bucket creation failure and add as message
                 messages.error(
                     request,
-                    f"Failed to create shared bucket. Please contact support@healthdatanexus.ai for assistance. Error: {str(e)}",
+                    f"Failed to create shared bucket. Please contact {get_support_email()} for assistance. Error: {str(e)}",
                 )
     else:
         form = CreateSharedBucketForm(
