@@ -145,19 +145,42 @@ class CreateResearchEnvironmentForm(forms.Form):
         selected_workspace: ResearchWorkspace,
         projects_list: Iterable[PublishedProject],
         buckets_list: Iterable[SharedBucket],
+        active_projects_list: Iterable = (),
         **kwargs,
     ):
         super(CreateResearchEnvironmentForm, self).__init__(*args, **kwargs)
         self.fields["workspace_project_id"].initial = selected_workspace.gcp_project_id
         self.fields["workspace_project_id"].disabled = True
 
-        self.fields["project_id"].choices = [
-            (project.id, project) for project in projects_list
+        published_choices = [
+            (f"published:{project.id}", str(project)) for project in projects_list
         ]
+        active_choices = [
+            (f"active:{project.id}", str(project)) for project in active_projects_list
+        ]
+        choices = [("Published datasets", published_choices)]
+        if active_choices:
+            choices.append(("My draft projects (read/write)", active_choices))
+        self.fields["project_id"].choices = choices
 
         self.fields["shared_bucket"].choices = [
             ("", "Machine without shared bucket attached")
         ] + [(bucket.name, bucket.name) for bucket in buckets_list]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        project_id = cleaned_data.get("project_id")
+
+        if (
+            project_id
+            and project_id.startswith("active:")
+            and cleaned_data.get("environment_type") not in ("jupyter", "rstudio")
+        ):
+            raise ValidationError(
+                "Draft projects can only be attached to a Jupyter or RStudio environment."
+            )
+
+        return cleaned_data
 
     def clean_machine_type(self):
         machine_type_id = self.cleaned_data.get("machine_type")

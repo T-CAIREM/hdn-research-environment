@@ -1,3 +1,4 @@
+import uuid
 from unittest import skipIf
 from unittest.mock import MagicMock, patch, Mock
 
@@ -6,8 +7,11 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from environment.deserializers import _active_project_data_group
 from environment.entities import (
     EnvironmentStatus,
+    EnvironmentType,
+    Region,
     ResearchEnvironment,
 )
 from environment.exceptions import (
@@ -24,6 +28,8 @@ from environment.exceptions import (
 )
 from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 from environment.services import (
+    DRAFT_NOT_EDITABLE_MESSAGE,
+    _create_workbench_kwargs,
     change_environment_machine_type,
     create_cloud_identity,
     create_research_environment,
@@ -43,6 +49,9 @@ from environment.services import (
     create_shared_bucket,
     delete_shared_bucket,
     check_collaborator_project_access,
+    get_available_active_projects,
+    get_environment_project_pairs_with_expired_access,
+    resolve_selectable_project,
     get_workbench_collaborators,
     add_workbench_collaborator,
     remove_workbench_collaborator,
@@ -57,6 +66,10 @@ from environment.tests.mocks import (
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+ActiveProject = apps.get_model("project", "ActiveProject")
+Author = apps.get_model("project", "Author")
+CoreProject = apps.get_model("project", "CoreProject")
+ProjectType = apps.get_model("project", "ProjectType")
 
 
 User = get_user_model()
@@ -244,6 +257,11 @@ class StopRunningEnvironmentTestCase(TestCase):
 class StartStoppedEnvironmentTestCase(TestCase):
     def setUp(self):
         self.user = create_user_with_cloud_identity()
+        # These callers omit the dataset identifier, so the draft gate falls
+        # back to the workspaces list; the workbench is not in it.
+        patcher = patch("environment.services.get_workspaces_list", return_value=[])
+        self.mock_get_workspaces_list = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch("environment.services.persist_workflow")
     @patch("environment.api.start_workbench")
@@ -828,20 +846,16 @@ class DeleteSharedBucketTestCase(TestCase):
 
 class CheckCollaboratorProjectAccessTestCase(TestCase):
     @patch("environment.services.get_collaborator_user_by_email")
-    @patch("environment.services.get_project")
-    @patch("environment.services.can_access_project")
+    @patch("environment.services.PublishedProject.objects.accessible_by")
     def test_returns_true_when_user_can_access(
         self,
-        mock_can_access_project,
-        mock_get_project,
+        mock_accessible_by,
         mock_get_collaborator_user,
     ):
         mock_user = Mock()
-        mock_project = Mock()
 
         mock_get_collaborator_user.return_value = mock_user
-        mock_get_project.return_value = mock_project
-        mock_can_access_project.return_value = True
+        mock_accessible_by.return_value.filter.return_value.exists.return_value = True
 
         result = check_collaborator_project_access(
             collaborator_email="user@healthdatanexus.ai",
@@ -849,8 +863,8 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
         )
 
         mock_get_collaborator_user.assert_called_once_with("user@healthdatanexus.ai")
-        mock_get_project.assert_called_once_with("proj-abc")
-        mock_can_access_project.assert_called_once_with(mock_project, mock_user)
+        mock_accessible_by.assert_called_once_with(mock_user)
+        mock_accessible_by.return_value.filter.assert_called_once_with(id="proj-abc")
 
         self.assertTrue(result)
 
@@ -866,20 +880,16 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
         self.assertIsNone(result)
 
     @patch("environment.services.get_collaborator_user_by_email")
-    @patch("environment.services.get_project")
-    @patch("environment.services.can_access_project")
+    @patch("environment.services.PublishedProject.objects.accessible_by")
     def test_raises_error_when_user_cannot_access(
         self,
-        mock_can_access_project,
-        mock_get_project,
+        mock_accessible_by,
         mock_get_collaborator_user,
     ):
         mock_user = Mock()
-        mock_project = Mock()
 
         mock_get_collaborator_user.return_value = mock_user
-        mock_get_project.return_value = mock_project
-        mock_can_access_project.return_value = False
+        mock_accessible_by.return_value.filter.return_value.exists.return_value = False
 
         with self.assertRaises(PublishedProjectAccessFailed):
             check_collaborator_project_access(
@@ -887,7 +897,8 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
                 project_id="proj-abc",
             )
 
-        mock_can_access_project.assert_called_once()
+        mock_accessible_by.assert_called_once_with(mock_user)
+        mock_accessible_by.return_value.filter.assert_called_once_with(id="proj-abc")
 
 
 class GetWorkbenchCollaboratorsTestCase(TestCase):
@@ -1086,6 +1097,37 @@ class GetWorkspacesListTestCase(TestCase):
         self.assertIs(workbench.project, self.project)
         self.assertTrue(workbench.has_dataset_access)
 
+    @patch("environment.services.api.get_workspace_list")
+    @patch("environment.services.PublishedProject.objects")
+    def test_active_project_workbench_resolves_and_keeps_access(
+        self, mock_objects, mock_get_workspace_list
+    ):
+        mock_objects.accessible_by.return_value = []
+        mock_objects.all.side_effect = AssertionError("all() should not be called")
+        active_project = ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=ProjectType.objects.create(
+                id=99, name="Test type", description="Test type"
+            ),
+            title="Owned draft",
+            slug="owned-draft",
+        )
+        Author.objects.create(
+            project=active_project, user=self.user, display_order=1, is_submitting=True
+        )
+        mock_get_workspace_list.return_value.json.return_value = _workspace_payload(
+            _active_project_data_group(active_project),
+            billing_info=None,
+            is_accessible=True,
+        )
+
+        workspaces = get_workspaces_list(self.user)
+        workbench = workspaces[0].workbenches[0]
+
+        self.assertEqual(workbench.project, active_project)
+        self.assertTrue(workbench.has_dataset_access)
+        self.assertTrue(workbench.is_draft)
+
 
 @skipIf(
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
@@ -1180,3 +1222,584 @@ class GetWorkspacesListApiFailureTestCase(TestCase):
         self.assertEqual(len(workspaces), 1)
         self.assertEqual(len(workspaces[0].workbenches), 1)
         self.assertEqual(workspaces[0].workbenches[0].gcp_identifier, "wb-1")
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetAvailableActiveProjectsTestCase(TestCase):
+    ARCHIVED = 5
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+        self.other_user = User.objects.create_user(
+            email="other@example.com", password="other-password", username="other"
+        )
+        self.resource_type = ProjectType.objects.create(
+            id=99, name="Test type", description="Test type"
+        )
+
+    def _create_active_project(self, slug, submission_status=0):
+        return ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self.resource_type,
+            title=slug,
+            slug=slug,
+            submission_status=submission_status,
+        )
+
+    def test_returns_projects_the_user_is_submitting_author_of(self):
+        project = self._create_active_project("owned-draft")
+        Author.objects.create(
+            project=project, user=self.user, display_order=1, is_submitting=True
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [project])
+
+    def test_excludes_archived_projects(self):
+        project = self._create_active_project(
+            "archived-draft", submission_status=self.ARCHIVED
+        )
+        Author.objects.create(
+            project=project, user=self.user, display_order=1, is_submitting=True
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [])
+
+    def test_excludes_projects_the_user_does_not_submit(self):
+        project = self._create_active_project("coauthored-draft")
+        Author.objects.create(
+            project=project, user=self.other_user, display_order=1, is_submitting=True
+        )
+        Author.objects.create(
+            project=project, user=self.user, display_order=2, is_submitting=False
+        )
+
+        self.assertEqual(list(get_available_active_projects(self.user)), [])
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class CreateWorkbenchKwargsTestCase(TestCase):
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.machine_type = Mock()
+        self.machine_type.get_instance_value.return_value = "n1-standard-2"
+        self.machine_type.memory = 8
+        self.machine_type.cpu = 2
+
+    def _build_kwargs(self, project):
+        return _create_workbench_kwargs(
+            self.user,
+            project,
+            "proj-123",
+            self.machine_type,
+            "jupyter",
+            100,
+            "us-central1",
+        )
+
+    def test_published_project_mounts_the_whole_bucket(self):
+        project = Mock()
+        project._meta.model_name = "publishedproject"
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        project.project_file_root.return_value = "demo-project-1.0.0"
+
+        kwargs = self._build_kwargs(project)
+
+        self.assertEqual(kwargs["bucket_name"], "demo-project-1.0.0")
+        self.assertEqual(kwargs["object_prefix"], "")
+        self.assertEqual(kwargs["dataset_identifier"], "demoproject100")
+
+    def test_active_project_mounts_only_its_prefix(self):
+        project = Mock()
+        project._meta.model_name = "activeproject"
+        project.slug = "owned-draft"
+        project.core_project_id = uuid.UUID("2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e")
+        project.files.file_root = "hdn-media"
+        project.FILE_STORAGE_SUBDIR = "active-projects"
+
+        kwargs = self._build_kwargs(project)
+
+        self.assertEqual(kwargs["bucket_name"], "hdn-media")
+        self.assertEqual(kwargs["object_prefix"], "active-projects/owned-draft")
+        self.assertEqual(
+            kwargs["dataset_identifier"], "a2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e"
+        )
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ResolveSelectableProjectTestCase(TestCase):
+    @patch("environment.services.get_project")
+    def test_published_prefix_resolves_a_published_project(self, mock_get_project):
+        project = resolve_selectable_project("published:12")
+
+        mock_get_project.assert_called_once_with("12")
+        self.assertEqual(project, mock_get_project.return_value)
+
+    @patch("environment.services.get_active_project")
+    def test_active_prefix_resolves_an_active_project(self, mock_get_active_project):
+        project = resolve_selectable_project("active:7")
+
+        mock_get_active_project.assert_called_once_with("7")
+        self.assertEqual(project, mock_get_active_project.return_value)
+
+
+def _draft_workbench_entity(dataset_identifier: str) -> ResearchEnvironment:
+    return ResearchEnvironment(
+        gcp_identifier="wb-draft",
+        dataset_identifier=dataset_identifier,
+        url=None,
+        workspace_name="proj-123",
+        status=EnvironmentStatus.RUNNING,
+        cpu=2,
+        memory=8,
+        region=Region.US_CENTRAL,
+        type=EnvironmentType.JUPYTER,
+        project=None,
+        machine_type="n1-standard-2",
+        disk_size=100,
+        gpu_accelerator_type=None,
+        service_account_name=None,
+        workbench_owner_username=None,
+        rstudio_ssl_certificate_expiration_date=None,
+    )
+
+
+class ActiveProjectFixtureMixin:
+    """Real ActiveProject rows: the draft rules read submission_status and authors."""
+
+    UNSUBMITTED = 0
+    ARCHIVED = 5
+    NEEDS_ASSIGNMENT = 10
+    NEEDS_RESUBMISSION = 30
+    NEEDS_COPYEDIT = 40
+
+    def _resource_type(self):
+        resource_type, _created = ProjectType.objects.get_or_create(
+            id=99, defaults={"name": "Test type", "description": "Test type"}
+        )
+        return resource_type
+
+    def _create_active_project(self, slug, submission_status=UNSUBMITTED):
+        return ActiveProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self._resource_type(),
+            title=slug,
+            slug=slug,
+            submission_status=submission_status,
+        )
+
+    def _create_draft_for(
+        self,
+        user,
+        slug="owned-draft",
+        submission_status=UNSUBMITTED,
+        is_submitting=True,
+    ):
+        project = self._create_active_project(slug, submission_status)
+        Author.objects.create(
+            project=project, user=user, display_order=1, is_submitting=is_submitting
+        )
+        return project
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetAvailableActiveProjectsStateFilterTestCase(
+    ActiveProjectFixtureMixin, TestCase
+):
+    """Only author-editable drafts may be attached: every draft mount is writable."""
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+
+    def test_includes_unsubmitted_and_needs_resubmission(self):
+        unsubmitted = self._create_draft_for(self.user, "unsubmitted-draft")
+        resubmission = self._create_draft_for(
+            self.user, "resubmission-draft", submission_status=self.NEEDS_RESUBMISSION
+        )
+
+        self.assertCountEqual(
+            list(get_available_active_projects(self.user)),
+            [unsubmitted, resubmission],
+        )
+
+    def test_excludes_states_the_authors_cannot_edit(self):
+        for slug, status in (
+            ("submitted-draft", self.NEEDS_ASSIGNMENT),
+            ("copyedit-draft", self.NEEDS_COPYEDIT),
+            ("archived-draft", self.ARCHIVED),
+        ):
+            with self.subTest(status=status):
+                project = self._create_draft_for(
+                    self.user, slug, submission_status=status
+                )
+                self.assertNotIn(
+                    project, list(get_available_active_projects(self.user))
+                )
+                # The states excluded here are exactly the non-author-editable ones.
+                self.assertFalse(project.author_editable())
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class WritableWorkbenchKwargsTestCase(TestCase):
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.machine_type = Mock()
+        self.machine_type.get_instance_value.return_value = "n1-standard-2"
+        self.machine_type.memory = 8
+        self.machine_type.cpu = 2
+
+    def _build_kwargs(self, project):
+        return _create_workbench_kwargs(
+            self.user,
+            project,
+            "proj-123",
+            self.machine_type,
+            "jupyter",
+            100,
+            "us-central1",
+        )
+
+    def _active_project(self):
+        project = Mock()
+        project._meta.model_name = "activeproject"
+        project.slug = "owned-draft"
+        project.core_project_id = uuid.UUID("2b0e0b1e6b3f4a5c8d9e0f1a2b3c4d5e")
+        project.files.file_root = "hdn-media"
+        project.FILE_STORAGE_SUBDIR = "active-projects"
+        return project
+
+    def _published_project(self):
+        project = Mock()
+        project._meta.model_name = "publishedproject"
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        project.project_file_root.return_value = "demo-project-1.0.0"
+        return project
+
+    def test_active_project_kwargs_are_writable(self):
+        kwargs = self._build_kwargs(self._active_project())
+
+        self.assertIs(kwargs["writable"], True)
+
+    def test_published_project_kwargs_omit_the_key(self):
+        kwargs = self._build_kwargs(self._published_project())
+
+        self.assertNotIn("writable", kwargs)
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.create_workbench")
+    def test_only_the_active_request_body_carries_writable(
+        self, mock_create_workbench, mock_persist_workflow
+    ):
+        mock_create_workbench.return_value.ok = True
+        mock_create_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
+
+        for project, expected in (
+            (self._active_project(), True),
+            (self._published_project(), None),
+        ):
+            with self.subTest(model=project._meta.model_name):
+                create_research_environment(
+                    self.user,
+                    project,
+                    "proj-123",
+                    self.machine_type,
+                    "jupyter",
+                    100,
+                    "us-central1",
+                )
+                body = mock_create_workbench.call_args.kwargs
+                if expected is None:
+                    self.assertNotIn("writable", body)
+                else:
+                    self.assertIs(body["writable"], expected)
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ExpiredDraftAccessTestCase(ActiveProjectFixtureMixin, TestCase):
+    """The reaper must see draft-backed workbenches, not just published ones."""
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.other_user = User.objects.create_user(
+            email="other@example.com", password="other-password", username="other"
+        )
+
+    def _pairs_for(self, environment):
+        with patch(
+            "environment.services.get_active_environments", return_value=[environment]
+        ):
+            return get_environment_project_pairs_with_expired_access(self.user)
+
+    def _environment_for(self, project):
+        return _draft_workbench_entity(_active_project_data_group(project))
+
+    def test_editable_draft_is_not_expired(self):
+        project = self._create_draft_for(self.user)
+
+        self.assertEqual(self._pairs_for(self._environment_for(project)), [])
+
+    def test_needs_resubmission_draft_is_not_expired(self):
+        project = self._create_draft_for(
+            self.user, submission_status=self.NEEDS_RESUBMISSION
+        )
+
+        self.assertEqual(self._pairs_for(self._environment_for(project)), [])
+
+    def test_submitted_draft_is_expired(self):
+        project = self._create_draft_for(
+            self.user, submission_status=self.NEEDS_ASSIGNMENT
+        )
+        environment = self._environment_for(project)
+
+        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+
+    def test_archived_draft_is_expired(self):
+        project = self._create_draft_for(self.user, submission_status=self.ARCHIVED)
+        environment = self._environment_for(project)
+
+        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+
+    def test_draft_the_user_no_longer_submits_is_expired(self):
+        project = self._create_draft_for(self.user, is_submitting=False)
+        environment = self._environment_for(project)
+
+        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+
+    def test_missing_draft_is_expired_with_no_project(self):
+        # The draft was deleted or published: the prefix the workbench mounts
+        # read-write is gone, so the workbench has to go too.
+        project = self._create_draft_for(self.user)
+        environment = self._environment_for(project)
+        project.delete()
+
+        self.assertEqual(self._pairs_for(environment), [(environment, None)])
+
+    def test_unmatched_published_identifier_is_left_alone(self):
+        # Unchanged from the previous inner join: a published identifier that
+        # resolves to nothing is not reaped.
+        environment = _draft_workbench_entity("demoproject100")
+
+        self.assertEqual(self._pairs_for(environment), [])
+
+    @patch("environment.services.PublishedProject.objects")
+    def test_published_predicate_is_unchanged(self, mock_objects):
+        project = Mock()
+        project._meta.model_name = "publishedproject"
+        project.slug = "demo-project"
+        project.version = "1.0.0"
+        mock_objects.all.return_value = [project]
+        environment = _draft_workbench_entity("demoproject100")
+
+        project.has_access.return_value = True
+        self.assertEqual(self._pairs_for(environment), [])
+
+        project.has_access.return_value = False
+        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class StartDraftWorkbenchGateTestCase(ActiveProjectFixtureMixin, TestCase):
+    """A draft mount cannot be demoted in place, so a stale draft refuses to start."""
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+
+    def _start(self, dataset_identifier, mock_start_workbench):
+        mock_start_workbench.return_value.ok = True
+        mock_start_workbench.return_value.json.return_value = {"workflow_id": "wf-1"}
+        return start_stopped_environment(
+            "jupyter",
+            "wb-draft",
+            self.user,
+            "proj-123",
+            dataset_identifier=dataset_identifier,
+        )
+
+    def _workspace_containing(self, dataset_identifier):
+        workspace = Mock()
+        workspace.gcp_project_id = "proj-123"
+        workspace.workbenches = [_draft_workbench_entity(dataset_identifier)]
+        return workspace
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_editable_draft_starts(self, mock_start_workbench, _mock_persist):
+        project = self._create_draft_for(self.user)
+
+        result = self._start(_active_project_data_group(project), mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+        mock_start_workbench.assert_called_once()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_non_editable_draft_is_refused(self, mock_start_workbench, _mock_persist):
+        for status in (self.NEEDS_ASSIGNMENT, self.NEEDS_COPYEDIT, self.ARCHIVED):
+            with self.subTest(status=status):
+                project = self._create_draft_for(
+                    self.user, slug=f"draft-{status}", submission_status=status
+                )
+                with self.assertRaises(StartEnvironmentFailed) as caught:
+                    self._start(
+                        _active_project_data_group(project), mock_start_workbench
+                    )
+                self.assertEqual(str(caught.exception), DRAFT_NOT_EDITABLE_MESSAGE)
+        mock_start_workbench.assert_not_called()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_draft_the_user_no_longer_submits_is_refused(
+        self, mock_start_workbench, _mock_persist
+    ):
+        project = self._create_draft_for(self.user, is_submitting=False)
+
+        with self.assertRaises(StartEnvironmentFailed):
+            self._start(_active_project_data_group(project), mock_start_workbench)
+        mock_start_workbench.assert_not_called()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_draft_is_refused(self, mock_start_workbench, _mock_persist):
+        project = self._create_draft_for(self.user)
+        dataset_identifier = _active_project_data_group(project)
+        project.delete()
+
+        with self.assertRaises(StartEnvironmentFailed):
+            self._start(dataset_identifier, mock_start_workbench)
+        mock_start_workbench.assert_not_called()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_published_start_is_a_single_api_call(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # A supplied published identifier neither queries drafts nor fetches the
+        # workspaces list: the published start stays one API call.
+        with patch(
+            "environment.services._user_active_projects",
+            side_effect=AssertionError("drafts must not be queried"),
+        ), patch(
+            "environment.services.get_workspaces_list",
+            side_effect=AssertionError("no extra list fetch"),
+        ):
+            result = self._start("demoproject100", mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+        mock_start_workbench.assert_called_once()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_falls_back_to_the_workspaces_list(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # The gate must not be skippable by omitting the request field.
+        project = self._create_draft_for(
+            self.user, submission_status=self.NEEDS_ASSIGNMENT
+        )
+        workspaces = [self._workspace_containing(_active_project_data_group(project))]
+
+        with patch(
+            "environment.services.get_workspaces_list", return_value=workspaces
+        ) as mock_list:
+            with self.assertRaises(StartEnvironmentFailed) as caught:
+                self._start(None, mock_start_workbench)
+
+        self.assertEqual(str(caught.exception), DRAFT_NOT_EDITABLE_MESSAGE)
+        mock_list.assert_called_once_with(self.user)
+        mock_start_workbench.assert_not_called()
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_lets_an_editable_draft_through(
+        self, mock_start_workbench, _mock_persist
+    ):
+        project = self._create_draft_for(self.user)
+        workspaces = [self._workspace_containing(_active_project_data_group(project))]
+
+        with patch("environment.services.get_workspaces_list", return_value=workspaces):
+            result = self._start(None, mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+
+    @patch("environment.services.persist_workflow")
+    @patch("environment.api.start_workbench")
+    def test_missing_identifier_and_unknown_workbench_starts(
+        self, mock_start_workbench, _mock_persist
+    ):
+        # Nothing to gate on: behave exactly as before the gate existed.
+        with patch("environment.services.get_workspaces_list", return_value=[]):
+            result = self._start(None, mock_start_workbench)
+
+        self.assertEqual(result, {"workflow_id": "wf-1"})
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class DraftWorkbenchRenderingTestCase(ActiveProjectFixtureMixin, TestCase):
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+
+    def _workspaces(self, project, writable=None):
+        payload = _workspace_payload(
+            _active_project_data_group(project), billing_info=None, is_accessible=True
+        )
+        if writable is not None:
+            payload[0]["workbenches"][0]["writable"] = writable
+        with patch(
+            "environment.services.api.get_workspace_list"
+        ) as mock_get_workspace_list, patch(
+            "environment.services.PublishedProject.objects"
+        ) as mock_objects:
+            mock_objects.accessible_by.return_value = []
+            mock_objects.all.return_value = []
+            mock_get_workspace_list.return_value.json.return_value = payload
+            return get_workspaces_list(self.user)
+
+    def test_non_editable_draft_still_resolves_but_loses_access(self):
+        # The workbench stays listed (stopped, pending removal) with its project,
+        # and is flagged so the UI hides the start button.
+        project = self._create_draft_for(
+            self.user, submission_status=self.NEEDS_ASSIGNMENT
+        )
+
+        workbench = self._workspaces(project)[0].workbenches[0]
+
+        self.assertEqual(workbench.project, project)
+        self.assertTrue(workbench.is_draft)
+        self.assertFalse(workbench.has_dataset_access)
+
+    def test_writable_flag_is_read_from_the_api_payload(self):
+        project = self._create_draft_for(self.user)
+
+        self.assertTrue(
+            self._workspaces(project, writable=True)[0].workbenches[0].writable
+        )
+        self.assertFalse(
+            self._workspaces(project, writable=False)[0].workbenches[0].writable
+        )
+        # Workbenches created before writable draft mounts shipped report nothing.
+        self.assertFalse(self._workspaces(project)[0].workbenches[0].writable)

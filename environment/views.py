@@ -334,6 +334,7 @@ def create_research_environment(request, workspace_id):
         if workspace.gcp_project_id == workspace_id
     )
     projects = services.get_available_projects(request.user)
+    active_projects = services.get_available_active_projects(request.user)
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
@@ -341,6 +342,7 @@ def create_research_environment(request, workspace_id):
             selected_workspace=selected_workspace,
             projects_list=projects,
             buckets_list=shared_buckets,
+            active_projects_list=active_projects,
         )
         if form.is_valid():
             selected_workbench = form.cleaned_data["machine_type"]
@@ -350,7 +352,9 @@ def create_research_environment(request, workspace_id):
             )
             if new_cpu_usage <= constants.MAX_CPU_USAGE:
                 try:
-                    project = services.get_project(form.cleaned_data["project_id"])
+                    project = services.resolve_selectable_project(
+                        form.cleaned_data["project_id"]
+                    )
                     services.create_research_environment(
                         user=request.user,
                         project=project,
@@ -382,6 +386,7 @@ def create_research_environment(request, workspace_id):
             selected_workspace=selected_workspace,
             projects_list=projects,
             buckets_list=shared_buckets,
+            active_projects_list=active_projects,
         )
 
     instance_projected_costs = {
@@ -703,6 +708,7 @@ def start_stopped_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_name"],
         workspace_project_id=data["gcp_project_id"],
+        dataset_identifier=data.get("dataset_identifier"),
     )
     return JsonResponse({})
 

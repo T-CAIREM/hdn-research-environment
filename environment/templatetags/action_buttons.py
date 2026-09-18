@@ -144,6 +144,9 @@ def environment_action_button(
         "gcp_project_id": environment.workspace_name,
         "instance_name": environment.gcp_identifier,
         "environment_type": environment.type.value,
+        # Sent for every environment so the start view can apply the draft
+        # editable-state gate without a second workspaces fetch.
+        "dataset_identifier": environment.dataset_identifier,
     }
 
     if button_type == "leave":

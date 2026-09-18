@@ -221,10 +221,11 @@ def create_research_environment(request, workspace_project_id):
 
     if not workspace.status == WorkspaceStatus.CREATED:
         return HttpResponse("Workspace is not available", status=406)
-    project = PublishedProject.objects.get(id=data["project_id"])
+    project_pk = str(data["project_id"]).rpartition(":")[2]
+    project = PublishedProject.objects.get(id=project_pk)
 
     form = CreateResearchEnvironmentForm(
-        data,
+        {**data, "project_id": f"published:{project_pk}"},
         selected_workspace=workspace,
         projects_list=[project],
         buckets_list=shared_bucket if shared_bucket is not None else [],
@@ -251,7 +252,7 @@ def create_research_environment(request, workspace_project_id):
                 },
                 status=400,
             )
-        project = services.get_project(form.cleaned_data["project_id"])
+        project = services.get_project(project_pk)
         services.create_research_environment(
             user=user,
             project=project,
@@ -354,6 +355,13 @@ def start_stopped_environment(request):
         workbench_type=data["environment_type"],
         workbench_resource_id=data["instance_id"],
         workspace_project_id=data["gcp_project_id"],
+        # Taken from the workspaces list already fetched above, so the draft
+        # state gate reads an identifier the API reported, not a request field.
+        dataset_identifier=(
+            target_workbench.dataset_identifier
+            if target_workbench is not None
+            else None
+        ),
     )
     return HttpResponse(status=200)
 
