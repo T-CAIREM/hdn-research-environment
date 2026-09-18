@@ -4,7 +4,7 @@ import logging
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_init, post_save
+from django.db.models.signals import post_init, post_save, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from django.core.cache import cache
@@ -32,6 +32,8 @@ DataAccessRequest = apps.get_model("project", "DataAccessRequest")
 Event = apps.get_model("events", "Event")
 
 EventApplication = apps.get_model("events", "EventApplication")
+
+ActiveProject = apps.get_model("project", "ActiveProject")
 
 
 @receiver(post_save, sender=BillingAccountSharingInvite)
@@ -151,6 +153,35 @@ def schedule_stop_environment_if_data_access_request_accepted_or_revoked(
         stop_environments_with_expired_access(user.id, schedule=schedule)
     elif access_was_revoked:
         stop_environments_with_expired_access(user.id)
+
+
+def _submitting_author_user_ids(active_project) -> Iterable[int]:
+    return list(
+        active_project.authors.filter(
+            is_submitting=True, user__isnull=False
+        ).values_list("user_id", flat=True)
+    )
+
+
+@receiver(post_save, sender=ActiveProject)
+def schedule_stop_environments_if_draft_no_longer_editable(instance, **kwargs):
+    # A draft-backed workbench mounts the draft's prefix read-write, and the
+    # mount mode cannot be changed on a live workbench. Once the authors can no
+    # longer edit the draft (submitted, archived), its workbenches are stopped
+    # by the same reaper that handles revoked dataset access.
+    if instance.author_editable():
+        return
+    for user_id in _submitting_author_user_ids(instance):
+        stop_environments_with_expired_access(user_id)
+
+
+@receiver(pre_delete, sender=ActiveProject)
+def schedule_stop_environments_when_draft_removed(instance, **kwargs):
+    # Publication deletes the ActiveProject row inside a transaction and its
+    # Author rows cascade with it, so the submitting authors must be collected
+    # before the delete runs.
+    for user_id in _submitting_author_user_ids(instance):
+        stop_environments_with_expired_access(user_id)
 
 
 @receiver(post_init, sender=EventApplication)

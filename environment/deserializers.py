@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Iterable, Optional, List, Any
 
 from django.apps import apps  # type: ignore
@@ -35,6 +36,7 @@ from environment.entities import (
 )
 
 PublishedProject = apps.get_model("project", "PublishedProject")
+ActiveProject = apps.get_model("project", "ActiveProject")
 
 
 def _project_data_group(project: PublishedProject) -> str:
@@ -49,6 +51,31 @@ def _project_data_group(project: PublishedProject) -> str:
     return "".join(c for c in project.slug + project.version if c.isalnum())
 
 
+def _active_project_data_group(project: ActiveProject) -> str:
+    # Stable across publication, and valid as a Service Account ID.
+    return "a" + project.core_project_id.hex
+
+
+def _group_for(project: Any) -> str:
+    if project._meta.model_name == "activeproject":
+        return _active_project_data_group(project)
+    return _project_data_group(project)
+
+
+# The active-project scheme minted by `_active_project_data_group`: the literal
+# "a" followed by a core project UUID in hex. Published groups are built from a
+# slug and a version, so they never take this shape.
+# `\Z`, not `$`: `$` would also match an identifier with a trailing newline.
+_DRAFT_IDENTIFIER_PATTERN = re.compile(r"a[0-9a-f]{32}\Z")
+
+
+def is_draft_identifier(dataset_identifier: str) -> bool:
+    """Whether a workbench's dataset identifier points at a draft (ActiveProject)."""
+    if not dataset_identifier:
+        return False
+    return bool(_DRAFT_IDENTIFIER_PATTERN.fullmatch(dataset_identifier))
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +84,7 @@ def _deserialize_research_environment(
     gcp_project_id: str,
     projects: Iterable[PublishedProject],
 ) -> ResearchEnvironment:
+    project = _get_project_for_environment(workbench["dataset_identifier"], projects)
     return ResearchEnvironment(
         gcp_identifier=workbench["gcp_identifier"],
         dataset_identifier=workbench["dataset_identifier"],
@@ -69,7 +97,7 @@ def _deserialize_research_environment(
         type=EnvironmentType(workbench["workbench_type"]),
         machine_type=workbench["machine_type"],
         disk_size=workbench.get("disk_size"),
-        project=_get_project_for_environment(workbench["dataset_identifier"], projects),
+        project=project,
         gpu_accelerator_type=workbench.get("gpu_accelerator_type"),
         service_account_name=workbench.get("service_account_name"),
         workbench_owner_username=workbench.get("workbench_owner_username"),
@@ -77,6 +105,8 @@ def _deserialize_research_environment(
             "rstudio_ssl_certificate_expiration_date"
         ),
         service_errors=deserialize_service_errors(workbench.get("service_errors", [])),
+        is_draft=project is not None and project._meta.model_name == "activeproject",
+        writable=bool(workbench.get("writable", False)),
     )
 
 
@@ -286,7 +316,7 @@ def _get_project_for_environment(
             iter(
                 project
                 for project in projects
-                if _project_data_group(project) == dataset_identifier
+                if _group_for(project) == dataset_identifier
             )
         )
     except StopIteration:

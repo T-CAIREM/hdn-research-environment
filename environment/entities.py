@@ -111,6 +111,10 @@ class ResearchEnvironment:
     service_errors: Optional[List["ServiceError"]] = None
     # False when the user has lost access to the dataset (workbench stopped, pending deletion).
     has_dataset_access: bool = True
+    is_draft: bool = False
+    # True when the mount is read-write (draft workbenches only). Reported by the
+    # API; absent on workbenches created before writable draft mounts shipped.
+    writable: bool = False
 
     @property
     def is_running(self):

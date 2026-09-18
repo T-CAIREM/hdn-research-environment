@@ -4,7 +4,7 @@ Your access to a dataset for which you have running research environments has ex
 
 Affected environments:
 {% for project in projects %}
-    - {{ project }}
+    - {{ project|default_if_none:"A draft project that is no longer available" }}
 {% endfor %}
 
 The environments will get automatically destroyed in 2 weeks.
