@@ -2,11 +2,18 @@
 {% research_environment_config as environment_config %}
 
 {% if billing_accounts_list|length %}
+    {# dictsort puts owned accounts last, so this is an owned account if the user has any. #}
+    {% with owned_account=billing_accounts_list|dictsort:"is_owner"|last %}
     <div class="d-flex flex-column align-items-end px-4 mb-3">
         <a class="btn btn-primary btn-sm" href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">
-          + Billing Account
+          {% if owned_account.is_owner %}
+            + Billing Account
+          {% else %}
+            + Create your own billing account (optional)
+          {% endif %}
         </a>
     </div>
+    {% endwith %}
 
     <ul class="list-group list-group-flush">
         <li class="list-group-item">
@@ -27,9 +34,16 @@
             <li class="list-group-item">
                 <div class="row">
                     <div class="col-md-8">
+                    {% if billing_account.is_owner %}
                         <a href="{{ billing_account.cloud_link }}" target="_blank">
                             {{ billing_account.name }}, {{ billing_account.id }}
                         </a>
+                    {% else %}
+                        {{ billing_account.name }}, {{ billing_account.id }}
+                        <small class="d-block text-muted">
+                            Shared with you: select it when you create a workspace. No Google Cloud console access is needed.
+                        </small>
+                    {% endif %}
                     </div>
                     <div class="col-md-4">
                     {% if billing_account.is_owner %}
@@ -46,21 +60,12 @@
     </ul>
 {% else %}
     <div class="container text-center">
-        You don't have any billing accounts.<br>
-        <span >In order to set up billing account please follow one of flows that are shown below:</span><br>
+        You don't have any billing accounts yet.<br>
+    </div>
+    <div class="alert alert-info mt-3" role="alert">
+        Accepted a billing-share invite or joined an event? The shared billing account can take a minute to appear here, so refresh this page shortly. You don't need to create your own billing account or request Google Cloud console access.
     </div>
     <div>
-        <h6>
-            Creation:
-        </h6>
-        <ol>
-            <li>
-                <span class="font-italic">Visit <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">the Google Cloud Platform console</a> and follow the instructions there.</span>
-            </li>
-            <li>
-                <span class="font-italic">After supplying your billing information, the created billing account will become accessible via this panel.</span>
-            </li>
-        </ol>
         <h6>
             Using a shared account:
         </h6>
@@ -73,6 +78,17 @@
             </li>
             <li>
                 <span class="font-italic">You can use shared billing accounts to create resources in the platform the same way you would use one that was created by you.</span>
+            </li>
+        </ol>
+        <h6>
+            Or create your own billing account:
+        </h6>
+        <ol>
+            <li>
+                <span class="font-italic">Visit <a href="https://console.cloud.google.com/billing/create?organizationId=3105849901" target="_blank">the Google Cloud Platform console</a> and follow the instructions there.</span>
+            </li>
+            <li>
+                <span class="font-italic">After supplying your billing information, the created billing account will become accessible via this panel.</span>
             </li>
         </ol>
         <span >After the process is complete go to Running Environments tab and create your first workspace.</span>
