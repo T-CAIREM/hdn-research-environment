@@ -334,7 +334,7 @@ def create_research_environment(request, workspace_id):
         if workspace.gcp_project_id == workspace_id
     )
     projects = services.get_available_projects(request.user)
-    active_projects = services.get_available_active_projects(request.user)
+    active_projects = services.get_selectable_active_projects(request.user)
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(

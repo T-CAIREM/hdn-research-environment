@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch, Mock
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from environment.deserializers import _active_project_data_group
 from environment.entities import (
@@ -29,6 +29,7 @@ from environment.exceptions import (
 from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 from environment.services import (
     DRAFT_NOT_EDITABLE_MESSAGE,
+    DRAFT_WORKBENCHES_DISABLED_MESSAGE,
     _create_workbench_kwargs,
     change_environment_machine_type,
     create_cloud_identity,
@@ -51,6 +52,7 @@ from environment.services import (
     check_collaborator_project_access,
     get_available_active_projects,
     get_environment_project_pairs_with_expired_access,
+    get_selectable_active_projects,
     resolve_selectable_project,
     get_workbench_collaborators,
     add_workbench_collaborator,
@@ -1344,12 +1346,25 @@ class ResolveSelectableProjectTestCase(TestCase):
         mock_get_project.assert_called_once_with("12")
         self.assertEqual(project, mock_get_project.return_value)
 
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
     @patch("environment.services.get_active_project")
     def test_active_prefix_resolves_an_active_project(self, mock_get_active_project):
         project = resolve_selectable_project("active:7")
 
         mock_get_active_project.assert_called_once_with("7")
         self.assertEqual(project, mock_get_active_project.return_value)
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
+    @patch("environment.services.get_active_project")
+    def test_active_prefix_is_rejected_while_drafts_are_disabled(
+        self, mock_get_active_project
+    ):
+        with self.assertRaisesMessage(
+            EnvironmentCreationFailed, DRAFT_WORKBENCHES_DISABLED_MESSAGE
+        ):
+            resolve_selectable_project("active:7")
+
+        mock_get_active_project.assert_not_called()
 
 
 def _draft_workbench_entity(dataset_identifier: str) -> ResearchEnvironment:
@@ -1449,6 +1464,26 @@ class GetAvailableActiveProjectsStateFilterTestCase(
                 )
                 # The states excluded here are exactly the non-author-editable ones.
                 self.assertFalse(project.author_editable())
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class GetSelectableActiveProjectsTestCase(ActiveProjectFixtureMixin, TestCase):
+    """The creation dropdown offers drafts only when the deployment enables them."""
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+        self.draft = self._create_draft_for(self.user)
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
+    def test_offers_no_drafts_while_disabled(self):
+        self.assertEqual(get_selectable_active_projects(self.user), [])
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
+    def test_offers_editable_drafts_when_enabled(self):
+        self.assertEqual(get_selectable_active_projects(self.user), [self.draft])
 
 
 @skipIf(

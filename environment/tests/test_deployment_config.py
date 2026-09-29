@@ -3,11 +3,16 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
-from environment.config import get_organization_domain, get_support_email
+from environment.config import (
+    draft_workbenches_enabled,
+    get_organization_domain,
+    get_support_email,
+)
 from environment.entities import WorkspaceStatus
 from environment.exceptions import CreateSharedBucketFailed
 from environment.views import create_shared_bucket
@@ -166,3 +171,27 @@ class DeploymentTemplateTests(SimpleTestCase):
         self.assertIn("Please contact help@physionet.org", message.call_args.args[1])
         self.assertIn("Unavailable", message.call_args.args[1])
         render.assert_called_once()
+
+
+class DraftWorkbenchesSettingTests(SimpleTestCase):
+    SETTING = "CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES"
+
+    def test_disabled_when_unset(self):
+        with self.settings():
+            if hasattr(settings, self.SETTING):
+                delattr(settings, self.SETTING)
+            self.assertFalse(draft_workbenches_enabled())
+
+    def test_reads_booleans_and_env_strings(self):
+        for value, expected in (
+            (True, True),
+            (False, False),
+            ("True", True),
+            ("true", True),
+            ("1", True),
+            ("False", False),
+            ("0", False),
+            ("", False),
+        ):
+            with self.subTest(value=value), self.settings(**{self.SETTING: value}):
+                self.assertIs(draft_workbenches_enabled(), expected)
