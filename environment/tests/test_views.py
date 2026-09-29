@@ -229,6 +229,8 @@ class CreateResearchEnvironmentDraftChoicesTestCase(
 
     @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
     def test_offers_editable_drafts_when_enabled(self):
+        self._accept_upload_agreement(self.draft, self.user)
+
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
@@ -236,3 +238,36 @@ class CreateResearchEnvironmentDraftChoicesTestCase(
             self._choice_groups(response)[self.DRAFT_GROUP],
             [f"active:{self.draft.id}"],
         )
+        self.assertEqual(response.context["drafts_awaiting_upload_agreement"], [])
+
+    @override_settings(
+        CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+        UPLOAD_AGREEMENT_START_DATE=None,
+    )
+    def test_links_drafts_that_await_the_upload_agreement(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(self.DRAFT_GROUP, self._choice_groups(response))
+        agreement_url = reverse("project_upload_agreement", args=(self.draft.slug,))
+        self.assertContains(response, f'href="{agreement_url}"')
+        self.assertContains(response, "accept the upload agreement")
+
+    @override_settings(
+        CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+        UPLOAD_AGREEMENT_START_DATE=None,
+    )
+    @patch("environment.services.create_research_environment")
+    def test_rejects_a_draft_that_awaits_the_upload_agreement(self, mock_create):
+        response = self.client.post(
+            self.url,
+            {
+                "project_id": f"active:{self.draft.id}",
+                "environment_type": "jupyter",
+                "machine_type": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].errors.get("project_id"))
+        mock_create.assert_not_called()

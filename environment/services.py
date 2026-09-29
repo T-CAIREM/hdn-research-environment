@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 from django.apps import apps
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import Model, Q
+from django.urls import NoReverseMatch, reverse
 
 import environment.constants as constants
 import environment.mailers as mailers
@@ -116,6 +117,13 @@ DRAFT_NOT_EDITABLE_MESSAGE = (
 
 DRAFT_WORKBENCHES_DISABLED_MESSAGE = (
     "Draft projects cannot be attached to workbenches on this site."
+)
+
+# Draft workbenches write to the draft's files, so they are held to the same
+# upload agreement as uploads through the portal.
+UPLOAD_AGREEMENT_REQUIRED_MESSAGE = (
+    "Accept the upload agreement for this draft project before attaching it to "
+    "a workbench: the workbench can write to the project's files."
 )
 
 
@@ -526,14 +534,42 @@ def get_available_active_projects(user: User) -> Iterable[Any]:
     )
 
 
-def get_selectable_active_projects(user: User) -> list:
-    """Drafts offered in the workbench-creation dropdown.
+def draft_upload_agreement_accepted(project: Any) -> bool:
+    """Whether the draft's upload agreement allows writing to its files.
 
-    None unless the deployment enables draft workbenches.
+    Uses the check the host portal applies to uploads
+    (ActiveProject.upload_agreement_accepted), including its exemption for
+    projects created before UPLOAD_AGREEMENT_START_DATE. A host without an
+    upload agreement has nothing to accept.
+    """
+    accepted = getattr(project, "upload_agreement_accepted", None)
+    return accepted is None or bool(accepted())
+
+
+def draft_upload_agreement_url(project: Any) -> Optional[str]:
+    """Where the submitting author accepts the draft's upload agreement."""
+    try:
+        return reverse("project_upload_agreement", args=(project.slug,))
+    except NoReverseMatch:
+        return None
+
+
+def get_selectable_active_projects(user: User) -> Tuple[list, list]:
+    """Drafts for the workbench-creation dropdown.
+
+    Returns the drafts that are offered, and the drafts held back until their
+    upload agreement is accepted. Both lists are empty unless the deployment
+    enables draft workbenches.
     """
     if not draft_workbenches_enabled():
-        return []
-    return list(get_available_active_projects(user))
+        return [], []
+    offered, awaiting_upload_agreement = [], []
+    for project in get_available_active_projects(user):
+        if draft_upload_agreement_accepted(project):
+            offered.append(project)
+        else:
+            awaiting_upload_agreement.append(project)
+    return offered, awaiting_upload_agreement
 
 
 def _user_active_projects(user: User) -> Iterable[Any]:
@@ -574,7 +610,10 @@ def resolve_selectable_project(value: str) -> Any:
     if kind == "active":
         if not draft_workbenches_enabled():
             raise EnvironmentCreationFailed(DRAFT_WORKBENCHES_DISABLED_MESSAGE)
-        return get_active_project(project_id)
+        project = get_active_project(project_id)
+        if not draft_upload_agreement_accepted(project):
+            raise EnvironmentCreationFailed(UPLOAD_AGREEMENT_REQUIRED_MESSAGE)
+        return project
     return get_project(project_id)
 
 
