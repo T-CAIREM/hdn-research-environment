@@ -1,16 +1,22 @@
+import json
 from datetime import datetime, timedelta
 from unittest import skipIf
 from unittest.mock import patch
 
+import requests
+from background_task.models import CompletedTask, Task
+from background_task.tasks import tasks as background_tasks
 from django.apps import apps
 from django.conf import settings
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
+from environment.models import BillingAccountSharingInvite, CloudIdentity
 from environment.signals import (
     ActiveProject,
     DataAccessRequest,
     Event,
+    EventApplication,
     Training,
     User,
 )
@@ -277,3 +283,236 @@ class ActiveProjectSignalsDisabledTestCase(DraftSignalFixtureMixin, TestCase):
         project.delete()
 
         mock_stop.assert_not_called()
+
+
+def _user(username: str, with_cloud_identity: bool = True):
+    user = User.objects.create_user(
+        email=f"{username}@example.com", password="pw", username=username
+    )
+    if with_cloud_identity:
+        CloudIdentity.objects.create(
+            user=user, gcp_user_id=username, email=f"{username}@example.com"
+        )
+    return user
+
+
+def _api_response(status_code: int, body: dict) -> requests.Response:
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = json.dumps(body).encode()
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@override_settings(BACKGROUND_TASK_RUN_ASYNC=False)
+class EventApprovalBillingShareTestCase(TestCase):
+    """#190: approving an event application shares the event's billing account
+    through a durable, retried invite, never inline."""
+
+    BILLING_ACCOUNT_ID = "012345-6789AB-CDEF01"
+    SHARE_TASK = "environment.tasks.give_user_permission_to_access_billing_account"
+
+    def setUp(self):
+        self.host = _user("host")
+        self.event = Event.objects.create(
+            title="Workshop",
+            host=self.host,
+            end_date=timezone.now().date() + timedelta(days=7),
+            gcp_billing_id=self.BILLING_ACCOUNT_ID,
+        )
+        # Scheduling the event's own reaper task is not under test.
+        Task.objects.all().delete()
+
+    def _participant(self, with_cloud_identity=True):
+        return _user("participant", with_cloud_identity)
+
+    def _approve(self, user):
+        application = EventApplication.objects.create(user=user, event=self.event)
+        with self.captureOnCommitCallbacks() as callbacks:
+            application.accept(comment_to_applicant="")
+        return application, callbacks
+
+    def _invites(self, user):
+        return BillingAccountSharingInvite.objects.filter(
+            user=user, billing_account_id=self.BILLING_ACCOUNT_ID
+        )
+
+    def _share_tasks(self):
+        return Task.objects.filter(task_name=self.SHARE_TASK)
+
+    def _run_share_task(self):
+        # Run the queued task the way the task runner does, ignoring its backoff.
+        self._share_tasks().update(run_at=timezone.now() - timedelta(seconds=1))
+        self.assertTrue(background_tasks.run_next_task())
+
+    @patch("environment.services.api.share_billing_account")
+    def test_queues_the_share_only_after_the_approval_commits(self, mock_share):
+        user = self._participant()
+
+        _application, callbacks = self._approve(user)
+
+        # Nothing is shared inline, and nothing is queued before the commit.
+        mock_share.assert_not_called()
+        self.assertFalse(self._share_tasks().exists())
+        invite = self._invites(user).get()
+        self.assertEqual(invite.owner, self.host)
+        self.assertFalse(invite.is_consumed)
+
+        for callback in callbacks:
+            callback()
+
+        self.assertEqual(
+            [task.params() for task in self._share_tasks()],
+            [
+                (
+                    [
+                        invite.id,
+                        "host@example.com",
+                        "participant@example.com",
+                        self.BILLING_ACCOUNT_ID,
+                    ],
+                    {},
+                )
+            ],
+        )
+
+    @patch("environment.services.api.share_billing_account")
+    def test_an_api_5xx_is_retried_until_the_share_succeeds(self, mock_share):
+        user = self._participant()
+        _application, callbacks = self._approve(user)
+        for callback in callbacks:
+            callback()
+        invite = self._invites(user).get()
+
+        mock_share.return_value = _api_response(503, {"error": "Try again"})
+        self._run_share_task()
+
+        task = self._share_tasks().get()
+        self.assertEqual(task.attempts, 1)
+        self.assertIn("BillingSharingFailed", task.last_error)
+        invite.refresh_from_db()
+        self.assertFalse(invite.is_consumed)
+
+        mock_share.return_value = _api_response(200, {})
+        self._run_share_task()
+
+        self.assertFalse(self._share_tasks().exists())
+        self.assertTrue(
+            CompletedTask.objects.filter(task_name=self.SHARE_TASK).exists()
+        )
+        invite.refresh_from_db()
+        self.assertTrue(invite.is_consumed)
+        self.assertEqual(mock_share.call_count, 2)
+        mock_share.assert_called_with(
+            owner_email="host@example.com",
+            user_email="participant@example.com",
+            billing_account_id=self.BILLING_ACCOUNT_ID,
+        )
+
+    @patch("environment.services.api.share_billing_account")
+    def test_an_api_timeout_is_retried(self, mock_share):
+        user = self._participant()
+        _application, callbacks = self._approve(user)
+        for callback in callbacks:
+            callback()
+        mock_share.side_effect = requests.exceptions.ReadTimeout("timed out")
+
+        self._run_share_task()
+
+        task = self._share_tasks().get()
+        self.assertEqual(task.attempts, 1)
+        self.assertFalse(self._invites(user).get().is_consumed)
+
+    def test_reapproval_reuses_the_invite_and_does_not_duplicate_the_task(self):
+        user = self._participant()
+        application, callbacks = self._approve(user)
+        for callback in callbacks:
+            callback()
+
+        application.reject(comment_to_applicant="")
+        application = EventApplication.objects.get(pk=application.pk)
+        with self.captureOnCommitCallbacks(execute=True):
+            application._apply_decision(
+                EventApplication.EventApplicationStatus.APPROVED, ""
+            )
+
+        self.assertEqual(self._invites(user).count(), 1)
+        # The first task is still pending, so an identical one is not queued.
+        self.assertEqual(self._share_tasks().count(), 1)
+
+    def test_reuses_an_invite_the_user_already_holds(self):
+        user = self._participant()
+        existing = BillingAccountSharingInvite.objects.create(
+            owner=self.host,
+            user=user,
+            user_contact_email=user.email,
+            billing_account_id=self.BILLING_ACCOUNT_ID,
+            is_consumed=True,
+        )
+
+        _application, callbacks = self._approve(user)
+        for callback in callbacks:
+            callback()
+
+        self.assertEqual(list(self._invites(user)), [existing])
+        # Sharing again is idempotent and repairs a grant that was undone.
+        self.assertEqual(self._share_tasks().get().params()[0][0], existing.id)
+
+    def test_a_revoked_invite_is_not_reused(self):
+        user = self._participant()
+        revoked = BillingAccountSharingInvite.objects.create(
+            owner=self.host,
+            user=user,
+            user_contact_email=user.email,
+            billing_account_id=self.BILLING_ACCOUNT_ID,
+            is_revoked=True,
+        )
+
+        self._approve(user)
+
+        self.assertEqual(self._invites(user).exclude(pk=revoked.pk).count(), 1)
+
+    def test_without_a_cloud_identity_the_share_waits_for_one(self):
+        user = self._participant(with_cloud_identity=False)
+
+        _application, callbacks = self._approve(user)
+        for callback in callbacks:
+            callback()
+
+        invite = self._invites(user).get()
+        self.assertEqual(invite.owner, self.host)
+        self.assertEqual(invite.user_contact_email, user.email)
+        self.assertFalse(self._share_tasks().exists())
+
+        # Unchanged path: creating the identity queues the outstanding share.
+        with self.captureOnCommitCallbacks(execute=True):
+            CloudIdentity.objects.create(
+                user=user, gcp_user_id=user.username, email="participant@example.com"
+            )
+
+        self.assertEqual(self._share_tasks().get().params()[0][0], invite.id)
+
+    def test_a_host_without_a_cloud_identity_is_logged_not_raised(self):
+        self.host.cloud_identity.delete()
+        self.host = User.objects.get(pk=self.host.pk)
+        self.event.host = self.host
+        self.event.save()
+        user = self._participant()
+
+        with self.assertLogs("environment.signals", level="ERROR"):
+            self._approve(user)
+
+        self.assertFalse(self._invites(user).exists())
+
+    def test_nothing_happens_for_an_event_without_a_billing_account(self):
+        self.event.gcp_billing_id = None
+        self.event.save()
+        user = self._participant()
+
+        self._approve(user)
+
+        self.assertFalse(self._invites(user).exists())
