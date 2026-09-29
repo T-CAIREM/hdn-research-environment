@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.apps import apps
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from environment.signals import (
@@ -175,13 +175,7 @@ class EventSignalsTestCase(TestCase):
         )
 
 
-@skipIf(
-    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
-    "Research environments are disabled",
-)
-class ActiveProjectSignalsTestCase(TestCase):
-    """A draft leaving the author-editable set must stop its writable workbenches."""
-
+class DraftSignalFixtureMixin:
     UNSUBMITTED = 0
     NEEDS_ASSIGNMENT = 10
 
@@ -206,6 +200,15 @@ class ActiveProjectSignalsTestCase(TestCase):
             is_submitting=is_submitting,
         )
         return project
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
+class ActiveProjectSignalsTestCase(DraftSignalFixtureMixin, TestCase):
+    """A draft leaving the author-editable set must stop its writable workbenches."""
 
     @patch("environment.signals.stop_environments_with_expired_access")
     def test_schedules_task_when_draft_is_submitted(self, mock_stop):
@@ -245,6 +248,32 @@ class ActiveProjectSignalsTestCase(TestCase):
 
         project.submission_status = self.NEEDS_ASSIGNMENT
         project.save()
+        project.delete()
+
+        mock_stop.assert_not_called()
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
+class ActiveProjectSignalsDisabledTestCase(DraftSignalFixtureMixin, TestCase):
+    """With draft workbenches off, draft state changes queue no reaper work."""
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_submitting_a_draft_queues_nothing(self, mock_stop):
+        project = self._create_draft()
+
+        project.submission_status = self.NEEDS_ASSIGNMENT
+        project.save()
+
+        mock_stop.assert_not_called()
+
+    @patch("environment.signals.stop_environments_with_expired_access")
+    def test_deleting_a_draft_queues_nothing(self, mock_stop):
+        project = self._create_draft()
+
         project.delete()
 
         mock_stop.assert_not_called()
