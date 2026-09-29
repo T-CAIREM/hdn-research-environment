@@ -2,11 +2,14 @@ from datetime import timedelta
 from unittest import skipIf
 from unittest.mock import Mock, call, patch
 
+from background_task.models import Task
+from django.apps import apps
 from django.conf import settings
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
+from environment.deserializers import _project_data_group
 from environment.entities import (
     EnvironmentStatus,
     EnvironmentType,
@@ -18,7 +21,23 @@ from environment.tasks import (
     stop_environments_with_expired_access,
     terminate_environments_if_access_still_expired,
 )
-from environment.tests.helpers import create_user_with_cloud_identity
+from environment.tests.helpers import (
+    create_user_with_cloud_identity,
+    create_user_without_cloud_identity,
+)
+from project.models import AccessPolicy
+
+CoreProject = apps.get_model("project", "CoreProject")
+ProjectType = apps.get_model("project", "ProjectType")
+PublishedProject = apps.get_model("project", "PublishedProject")
+
+ENFORCE = override_settings(
+    CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT="enforce"
+)
+DRY_RUN = override_settings(
+    CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT="dry_run"
+)
+OFF = override_settings(CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT="off")
 
 
 def _environment(
@@ -57,6 +76,7 @@ def _project(model_name: str, label: str) -> Mock:
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
     "Research environments are disabled",
 )
+@ENFORCE
 class StopEnvironmentsWithExpiredAccessTestCase(TestCase):
     """The reaper's stop leg: it must call the services with their real signatures."""
 
@@ -147,6 +167,7 @@ class StopEnvironmentsWithExpiredAccessTestCase(TestCase):
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
     "Research environments are disabled",
 )
+@ENFORCE
 class TerminateEnvironmentsIfAccessStillExpiredTestCase(TestCase):
     """The reaper's destroy leg, 14 days later."""
 
@@ -231,3 +252,249 @@ class ExpiredAccessMailTestCase(TestCase):
         self.assertIn("Demo Project 1.0.0", body)
         self.assertIn("A draft project that is no longer available", body)
         self.assertNotIn("None", body)
+
+
+def _published_project(slug: str, access_policy: int):
+    resource_type, _created = ProjectType.objects.get_or_create(
+        id=99, defaults={"name": "Test type", "description": "Test type"}
+    )
+    return PublishedProject.objects.create(
+        core_project=CoreProject.objects.create(),
+        resource_type=resource_type,
+        title=f"Dataset {slug}",
+        slug=slug,
+        submission_slug=slug,
+        version="1.0",
+        access_policy=access_policy,
+    )
+
+
+def _workbench_payload(gcp_identifier: str, dataset_identifier: str) -> dict:
+    return {
+        "type": "Workbench",
+        "gcp_identifier": gcp_identifier,
+        "dataset_identifier": dataset_identifier,
+        "url": None,
+        "status": "running",
+        "cpu": 2,
+        "memory": 8,
+        "region": "us-central1",
+        "workbench_type": "jupyter",
+        "machine_type": "n1-standard-2",
+        "disk_size": 100,
+        "gpu_accelerator_type": None,
+        "service_account_name": None,
+        "workbench_owner_username": None,
+        "rstudio_ssl_certificate_expiration_date": None,
+        "service_errors": [],
+    }
+
+
+def _json_response(body) -> Mock:
+    response = Mock(ok=True, status_code=200)
+    response.json.return_value = body
+    return response
+
+
+class ExpiredAccessFixtureMixin:
+    """A workspaces response with every shape #187 tripped over, backed by
+    real PublishedProject rows (no mocked access method)."""
+
+    TERMINATE_TASK = "environment.tasks.terminate_environments_if_access_still_expired"
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.open_project = _published_project("open-data", AccessPolicy.OPEN)
+        # The user is not credentialed, so a credentialed project is not accessible.
+        self.expired_project = _published_project(
+            "credentialed-data", AccessPolicy.CREDENTIALED
+        )
+        patcher = patch(
+            "environment.services.api.get_workspace_list",
+            return_value=_json_response(self._workspaces()),
+        )
+        self.mock_get_workspace_list = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _workspaces(self):
+        return [
+            # A workspace that is still being created.
+            {
+                "type": "EntityScaffolding",
+                "gcp_project_id": "proj-new",
+                "status": "creating",
+            },
+            {
+                "type": "Workspace",
+                "gcp_project_id": "proj-123",
+                "status": "created",
+                "is_owner": True,
+                "billing_info": None,
+                "service_errors": [],
+                "workbenches": [
+                    # A workbench that is still being created (no is_active).
+                    {
+                        "type": "EntityScaffolding",
+                        "gcp_project_id": "proj-123",
+                        "status": "creating",
+                    },
+                    _workbench_payload(
+                        "wb-expired", _project_data_group(self.expired_project)
+                    ),
+                    _workbench_payload(
+                        "wb-open", _project_data_group(self.open_project)
+                    ),
+                ],
+            },
+        ]
+
+    def _queued_terminations(self):
+        return [
+            task.params() for task in Task.objects.filter(task_name=self.TERMINATE_TASK)
+        ]
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@ENFORCE
+class ExpiredAccessEnforceRegressionTestCase(ExpiredAccessFixtureMixin, TestCase):
+    """#187: the stop task must run end to end, not crash, and act only on
+    the workbench whose published-project access has expired."""
+
+    @patch("environment.services.api.stop_workbench")
+    def test_stops_mails_and_queues_termination_for_the_expired_workbench(
+        self, mock_stop_workbench
+    ):
+        mock_stop_workbench.return_value = _json_response({"workflow_id": "wf-stop"})
+
+        stop_environments_with_expired_access.now(self.user.id)
+
+        mock_stop_workbench.assert_called_once_with(
+            workbench_type="jupyter",
+            workbench_resource_id="wb-expired",
+            user_email=self.user.cloud_identity.email,
+            workspace_project_id="proj-123",
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.expired_project.title, mail.outbox[0].body)
+        self.assertNotIn(self.open_project.title, mail.outbox[0].body)
+        self.assertEqual(
+            self._queued_terminations(), [([self.user.id, ["wb-expired"]], {})]
+        )
+
+    @patch("environment.services.api.delete_workbench")
+    def test_terminates_the_workbench_still_expired_14_days_later(
+        self, mock_delete_workbench
+    ):
+        mock_delete_workbench.return_value = _json_response(
+            {"workflow_id": "wf-delete"}
+        )
+
+        terminate_environments_if_access_still_expired.now(
+            self.user.id, ["wb-expired", "wb-open"]
+        )
+
+        mock_delete_workbench.assert_called_once_with(
+            workbench_type="jupyter",
+            user_email=self.user.cloud_identity.email,
+            workspace_project_id="proj-123",
+            workbench_resource_id="wb-expired",
+        )
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ExpiredAccessDryRunTestCase(ExpiredAccessFixtureMixin, TestCase):
+    """dry_run is the default: a full inventory in the log, and no side effects."""
+
+    def test_dry_run_is_the_default(self):
+        with self.settings():
+            name = "CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT"
+            if hasattr(settings, name):
+                delattr(settings, name)
+            self._assert_stop_is_a_dry_run()
+
+    @DRY_RUN
+    def test_stop_task_only_logs(self):
+        self._assert_stop_is_a_dry_run()
+
+    @patch("environment.services.api.stop_workbench")
+    def _assert_stop_is_a_dry_run(self, mock_stop_workbench):
+        with self.assertLogs("environment.tasks", level="INFO") as logs:
+            stop_environments_with_expired_access.now(self.user.id)
+
+        mock_stop_workbench.assert_not_called()
+        self.assertEqual(mail.outbox, [])
+        self.assertEqual(self._queued_terminations(), [])
+        output = "\n".join(logs.output)
+        self.assertIn('"workbench": "wb-expired"', output)
+        self.assertIn('"action": "stop"', output)
+        self.assertIn(
+            f'"project": "publishedproject:{self.expired_project.pk}"', output
+        )
+        self.assertNotIn("wb-open", output)
+
+    @DRY_RUN
+    @patch("environment.services.api.delete_workbench")
+    def test_terminate_task_only_logs(self, mock_delete_workbench):
+        with self.assertLogs("environment.tasks", level="INFO") as logs:
+            terminate_environments_if_access_still_expired.now(
+                self.user.id, ["wb-expired"]
+            )
+
+        mock_delete_workbench.assert_not_called()
+        output = "\n".join(logs.output)
+        self.assertIn('"action": "delete"', output)
+        self.assertIn('"workbench": "wb-expired"', output)
+
+    @override_settings(
+        CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT="enforced"
+    )
+    @patch("environment.services.api.stop_workbench")
+    def test_an_unrecognised_mode_is_a_dry_run(self, mock_stop_workbench):
+        with self.assertLogs("environment.config", level="ERROR"):
+            stop_environments_with_expired_access.now(self.user.id)
+
+        mock_stop_workbench.assert_not_called()
+        self.assertEqual(mail.outbox, [])
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ExpiredAccessOffTestCase(ExpiredAccessFixtureMixin, TestCase):
+    @OFF
+    def test_off_does_not_consult_the_api(self):
+        stop_environments_with_expired_access.now(self.user.id)
+        terminate_environments_if_access_still_expired.now(self.user.id, ["wb-expired"])
+
+        self.mock_get_workspace_list.assert_not_called()
+        self.assertEqual(mail.outbox, [])
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@ENFORCE
+class ExpiredAccessWithoutCloudIdentityTestCase(TestCase):
+    """A user whose access changed before they set up a cloud identity has no
+    workbenches, so both tasks return early instead of crashing."""
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+
+    @patch("environment.services.api.get_workspace_list")
+    def test_both_tasks_return_early(self, mock_get_workspace_list):
+        with self.assertLogs("environment.tasks", level="INFO") as logs:
+            stop_environments_with_expired_access.now(self.user.id)
+            terminate_environments_if_access_still_expired.now(self.user.id, ["wb"])
+
+        mock_get_workspace_list.assert_not_called()
+        self.assertEqual(mail.outbox, [])
+        self.assertEqual(sum("no cloud identity" in line for line in logs.output), 2)

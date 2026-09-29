@@ -664,7 +664,13 @@ def get_active_environments(user: User) -> Iterable[ResearchEnvironment]:
         if hasattr(workspace, "workbenches") and workspace.workbenches:
             all_environments.extend(workspace.workbenches)
 
-    return [environment for environment in all_environments if environment.is_active]
+    # A workbench that is still being created is listed as an EntityScaffolding,
+    # which has no is_active and no project to check access against.
+    return [
+        environment
+        for environment in all_environments
+        if isinstance(environment, ResearchEnvironment) and environment.is_active
+    ]
 
 
 def get_environments_with_projects(
@@ -718,9 +724,17 @@ def get_environment_project_pairs_with_expired_access(
     user: User,
 ) -> Iterable[Tuple[ResearchEnvironment, Any]]:
     active_environments = get_active_environments(user)
+    if not active_environments:
+        return []
     projects = _get_projects_for_environments(active_environments, user)
     all_environment_project_pairs = left_join_iterators(
         _environment_data_group, active_environments, _group_for, projects
+    )
+    # The host's app contract for published-project access (DUAs, trainings,
+    # access requests and events), the same set that offers projects at
+    # creation and flags workbench cards, so the reaper agrees with the UI.
+    accessible_project_ids = set(
+        PublishedProject.objects.accessible_by(user).values_list("id", flat=True)
     )
 
     expired_pairs = []
@@ -735,7 +749,7 @@ def get_environment_project_pairs_with_expired_access(
         elif project._meta.model_name == "activeproject":
             if _draft_access_expired(project, user):
                 expired_pairs.append((environment, project))
-        elif not project.has_access(user):
+        elif project.id not in accessible_project_ids:
             expired_pairs.append((environment, project))
     return expired_pairs
 
