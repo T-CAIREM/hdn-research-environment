@@ -2,8 +2,10 @@ from datetime import datetime
 from typing import Iterable
 import logging
 
+from background_task.tasks import TaskSchedule
 from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models.signals import post_init, post_save, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -16,7 +18,7 @@ from environment.tasks import (
     stop_environments_with_expired_access,
     stop_event_participants_environments_with_expired_access,
 )
-from environment.api import share_billing_account
+from environment.utilities import user_has_cloud_identity
 
 # Setting up constants for Cache
 CACHE_TIMEOUT = 60 * 60 * 24 * 15  # 15 days
@@ -64,10 +66,25 @@ def consume_billing_account_sharing_invites(sender, created, instance, **kwargs)
         cloud_identity = instance.user.cloud_identity
 
     for invite in outstanding_invites:
-        owner_email = invite.owner.cloud_identity.email
-        give_user_permission_to_access_billing_account(
-            invite.id, owner_email, cloud_identity.email, invite.billing_account_id
+        _queue_billing_account_share(invite, cloud_identity.email)
+
+
+def _queue_billing_account_share(invite: BillingAccountSharingInvite, user_email: str):
+    """Queue the retried share task once the invite (and whatever saved it) commits.
+
+    The task reads the invite back by id, so it must never run first. An
+    identical task that is still pending is not queued twice.
+    """
+    owner_email = invite.owner.cloud_identity.email
+    transaction.on_commit(
+        lambda: give_user_permission_to_access_billing_account(
+            invite.id,
+            owner_email,
+            user_email,
+            invite.billing_account_id,
+            schedule=TaskSchedule(action=TaskSchedule.CHECK_EXISTING),
         )
+    )
 
 
 @receiver(post_init, sender=User)
@@ -197,8 +214,15 @@ def memoize_original_application_status(instance, **kwargs):
 
 @receiver(post_save, sender=EventApplication)
 def handle_event_billing_account_on_approval(instance, **kwargs):
-    """When an application is approved, share the event's billing account with the user if possible"""
-    # Early return if conditions aren't met
+    """Share the event's billing account with a newly approved participant.
+
+    The share always goes through a BillingAccountSharingInvite owned by the
+    event host, so it is durable and retried. For a user who already has a
+    cloud identity, the invite's post_save queues the share task once the
+    approval commits. Otherwise the share is queued when the identity is
+    created. An existing invite for the same user and billing account is
+    reused, and its share queued again, instead of creating a duplicate.
+    """
     if not (
         instance.status == instance.EventApplicationStatus.APPROVED
         and getattr(instance, "_original_status", None)
@@ -209,36 +233,53 @@ def handle_event_billing_account_on_approval(instance, **kwargs):
 
     event = instance.event
     user = instance.user
+    billing_account_id = event.gcp_billing_id
 
-    # Try to share billing account immediately if user has cloud identity
-    cloud_identity = CloudIdentity.objects.filter(user=user).first()
+    if not user_has_cloud_identity(event.host):
+        # The share is made on the owner's behalf; without the host's identity
+        # there is no one to share from.
+        logger.error(
+            "Event %s has billing account %s but its host has no cloud identity; "
+            "not sharing it with user %s",
+            event.pk,
+            billing_account_id,
+            user.pk,
+        )
+        return
 
-    if cloud_identity:
-        # User has cloud identity, share billing account immediately
-        try:
-            share_billing_account(
-                owner_email=event.host.cloud_identity.email,
-                user_email=cloud_identity.email,
-                billing_account_id=event.gcp_billing_id,
-            )
-            print(
-                f"Billing account {event.gcp_billing_id} shared with {user.username} using owner email {event.host.cloud_identity.email}"
-            )
-            logger.info(
-                f"Billing account {event.gcp_billing_id} shared with {user.username} immediately"
-            )
-        except Exception as e:
-            print(f"Error sharing billing account immediately: {str(e)}")
-            logger.error(
-                f"Error sharing billing account immediately: {str(e)}", exc_info=True
-            )
-    else:
-        BillingAccountSharingInvite.objects.create(
+    invite = (
+        BillingAccountSharingInvite.objects.filter(
+            user=user, billing_account_id=billing_account_id, is_revoked=False
+        )
+        .select_related("owner__cloud_identity")
+        .order_by("pk")
+        .first()
+    )
+    if invite is None:
+        # Its post_save (consume_billing_account_sharing_invites) queues the
+        # share if the user already has a cloud identity.
+        invite = BillingAccountSharingInvite.objects.create(
             owner=event.host,
             user=user,
             user_contact_email=user.email,
-            billing_account_id=event.gcp_billing_id,
+            billing_account_id=billing_account_id,
         )
         logger.info(
-            f"Stored billing-account share in BillingAccountSharingInvite for user {user.username}, event {event.title}"
+            "Queued billing account %s share for user %s through invite %s (event %s)",
+            billing_account_id,
+            user.pk,
+            invite.pk,
+            event.pk,
+        )
+    elif user_has_cloud_identity(user):
+        # Sharing is idempotent; queue it again in case the earlier task was
+        # lost or the grant was undone.
+        _queue_billing_account_share(invite, user.cloud_identity.email)
+        logger.info(
+            "Re-queued billing account %s share for user %s through existing "
+            "invite %s (event %s)",
+            billing_account_id,
+            user.pk,
+            invite.pk,
+            event.pk,
         )
