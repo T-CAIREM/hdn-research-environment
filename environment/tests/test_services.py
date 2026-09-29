@@ -32,6 +32,7 @@ from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 from environment.services import (
     DRAFT_NOT_EDITABLE_MESSAGE,
     DRAFT_WORKBENCHES_DISABLED_MESSAGE,
+    UPLOAD_AGREEMENT_REQUIRED_MESSAGE,
     _create_workbench_kwargs,
     change_environment_machine_type,
     create_cloud_identity,
@@ -55,6 +56,7 @@ from environment.services import (
     get_available_active_projects,
     get_environment_project_pairs_with_expired_access,
     get_selectable_active_projects,
+    draft_upload_agreement_accepted,
     resolve_selectable_project,
     get_workbench_collaborators,
     add_workbench_collaborator,
@@ -75,6 +77,7 @@ ActiveProject = apps.get_model("project", "ActiveProject")
 Author = apps.get_model("project", "Author")
 CoreProject = apps.get_model("project", "CoreProject")
 ProjectType = apps.get_model("project", "ProjectType")
+UploadAgreement = apps.get_model("project", "UploadAgreement")
 Event = apps.get_model("events", "Event")
 EventDataset = apps.get_model("events", "EventDataset")
 EventParticipant = apps.get_model("events", "EventParticipant")
@@ -1431,6 +1434,14 @@ class ActiveProjectFixtureMixin:
         )
         return project
 
+    def _accept_upload_agreement(self, project, user):
+        UploadAgreement.objects.create(
+            author=project.authors.get(user=user),
+            accepted=True,
+            accepted_datetime=timezone.now(),
+            no_human_subjects=True,
+        )
+
 
 @skipIf(
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
@@ -1477,7 +1488,8 @@ class GetAvailableActiveProjectsStateFilterTestCase(
     "Research environments are disabled",
 )
 class GetSelectableActiveProjectsTestCase(ActiveProjectFixtureMixin, TestCase):
-    """The creation dropdown offers drafts only when the deployment enables them."""
+    """The creation dropdown offers drafts only when the deployment enables them,
+    and only once their upload agreement is accepted."""
 
     def setUp(self):
         self.user = create_user_without_cloud_identity()
@@ -1485,11 +1497,69 @@ class GetSelectableActiveProjectsTestCase(ActiveProjectFixtureMixin, TestCase):
 
     @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
     def test_offers_no_drafts_while_disabled(self):
-        self.assertEqual(get_selectable_active_projects(self.user), [])
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(get_selectable_active_projects(self.user), ([], []))
 
     @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
-    def test_offers_editable_drafts_when_enabled(self):
-        self.assertEqual(get_selectable_active_projects(self.user), [self.draft])
+    def test_offers_drafts_with_an_accepted_upload_agreement(self):
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(get_selectable_active_projects(self.user), ([self.draft], []))
+
+    @override_settings(
+        CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+        UPLOAD_AGREEMENT_START_DATE=None,
+    )
+    def test_holds_back_drafts_without_an_accepted_upload_agreement(self):
+        self.assertEqual(get_selectable_active_projects(self.user), ([], [self.draft]))
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
+    def test_offers_drafts_created_before_the_agreement_start_date(self):
+        with self.settings(
+            UPLOAD_AGREEMENT_START_DATE=timezone.now() + timedelta(days=1)
+        ):
+            self.assertEqual(
+                get_selectable_active_projects(self.user), ([self.draft], [])
+            )
+
+    def test_a_host_without_an_upload_agreement_has_nothing_to_accept(self):
+        self.assertTrue(draft_upload_agreement_accepted(object()))
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@override_settings(
+    CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+    UPLOAD_AGREEMENT_START_DATE=None,
+)
+class ResolveDraftUploadAgreementTestCase(ActiveProjectFixtureMixin, TestCase):
+    """The server refuses a draft without an accepted agreement, whatever the form offered."""
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+        self.draft = self._create_draft_for(self.user)
+
+    def test_rejects_a_draft_without_an_accepted_upload_agreement(self):
+        with self.assertRaisesMessage(
+            EnvironmentCreationFailed, UPLOAD_AGREEMENT_REQUIRED_MESSAGE
+        ):
+            resolve_selectable_project(f"active:{self.draft.id}")
+
+    def test_resolves_a_draft_with_an_accepted_upload_agreement(self):
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(
+            resolve_selectable_project(f"active:{self.draft.id}"), self.draft
+        )
+
+    def test_published_projects_need_no_upload_agreement(self):
+        with patch("environment.services.get_project") as mock_get_project:
+            project = resolve_selectable_project("published:12")
+
+        self.assertEqual(project, mock_get_project.return_value)
 
 
 @skipIf(

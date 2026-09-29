@@ -27,6 +27,20 @@
     <h1 class="mb-4">
       Create Research Environment
     </h1>
+    {% if drafts_awaiting_upload_agreement %}
+      <div class="alert alert-info" role="alert">
+        A workbench on a draft project can write to the project's files, so a draft
+        is listed only after its upload agreement has been accepted.
+        <ul class="mb-0">
+          {% for draft, agreement_url in drafts_awaiting_upload_agreement %}
+            <li>
+              {{ draft.title }}{% if agreement_url %}:
+              <a href="{{ agreement_url }}">accept the upload agreement</a>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
     <div class="container-body">
       <div class="card" style="width: 36rem;">
         <div class="card-body">

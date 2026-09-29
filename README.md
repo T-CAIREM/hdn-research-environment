@@ -26,6 +26,10 @@ cloud identity email and is excluded from collaborator removal controls.
   workbenches with a read-write mount. While it is off, the creation form offers
   only published projects, a draft selection is rejected, and draft state changes
   queue no background work. Workbenches created while it was on are left as they are.
+  While it is on, a draft is offered only once its upload agreement has been accepted
+  (the host's `ActiveProject.upload_agreement_accepted()`, which honours
+  `UPLOAD_AGREEMENT_START_DATE`). Other drafts are listed above the form with a
+  link to accept the agreement.
 - `CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT` (default `"dry_run"`)
   controls the tasks that stop, and 14 days later destroy, workbenches whose data
   access has expired:
