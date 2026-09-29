@@ -2,9 +2,10 @@ from unittest import skipIf
 from unittest.mock import patch
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from environment.entities import ResearchWorkspace, WorkspaceStatus
 from environment.exceptions import (
     BillingVerificationFailed,
     GetAvailableEnvironmentsFailed,
@@ -13,6 +14,7 @@ from environment.tests.helpers import (
     create_user_with_cloud_identity,
     create_user_without_cloud_identity,
 )
+from environment.tests.test_services import ActiveProjectFixtureMixin
 
 
 @skipIf(
@@ -161,3 +163,76 @@ class ResearchEnvironmentsApiFailureTestCase(TestCase):
 
         # The polling JS keeps the current cards when the refresh is not ok.
         self.assertEqual(response.status_code, 503)
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class CreateResearchEnvironmentDraftChoicesTestCase(
+    ActiveProjectFixtureMixin, TestCase
+):
+    """The creation dropdown and POST honour the draft-workbenches setting."""
+
+    DRAFT_GROUP = "My draft projects (read/write)"
+
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.client.force_login(user=self.user)
+        self.draft = self._create_draft_for(self.user)
+        self.url = reverse(
+            "create_research_environment", kwargs={"workspace_id": "ws-1"}
+        )
+        workspace = ResearchWorkspace(
+            gcp_project_id="ws-1",
+            gcp_billing_id="billing-1",
+            status=WorkspaceStatus.CREATED,
+            is_owner=True,
+            workbenches=[],
+        )
+        patchers = (
+            patch("environment.services.get_workspaces_list", return_value=[workspace]),
+            patch("environment.services.get_shared_workspaces_list", return_value=[]),
+        )
+        for patcher in patchers:
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def _choice_groups(self, response):
+        return {
+            group: [value for value, _label in entries]
+            for group, entries in response.context["form"].fields["project_id"].choices
+        }
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
+    def test_offers_only_published_projects_while_disabled(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(self.DRAFT_GROUP, self._choice_groups(response))
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
+    @patch("environment.services.create_research_environment")
+    def test_rejects_a_draft_selection_while_disabled(self, mock_create):
+        response = self.client.post(
+            self.url,
+            {
+                "project_id": f"active:{self.draft.id}",
+                "environment_type": "jupyter",
+                "machine_type": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].errors.get("project_id"))
+        mock_create.assert_not_called()
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
+    def test_offers_editable_drafts_when_enabled(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self._choice_groups(response)[self.DRAFT_GROUP],
+            [f"active:{self.draft.id}"],
+        )

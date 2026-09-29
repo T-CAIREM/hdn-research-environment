@@ -19,6 +19,14 @@ These are Django settings, not environment variables read by this package. No
 additional context processor is required. The owner is identified by their full
 cloud identity email and is excluded from collaborator removal controls.
 
+### Feature settings
+
+- `CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES` (default `False`) lets
+  researchers attach their own editable draft projects to new Jupyter and RStudio
+  workbenches with a read-write mount. While it is off, the creation form offers
+  only published projects, a draft selection is rejected, and draft state changes
+  queue no background work. Workbenches created while it was on are left as they are.
+
 ## Regression tests
 
 The Python tests run in a configured PhysioNet Django host with this checkout on

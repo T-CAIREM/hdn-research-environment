@@ -10,6 +10,7 @@ from django.db.models import Model, Q
 import environment.constants as constants
 import environment.mailers as mailers
 from environment import api
+from environment.config import draft_workbenches_enabled
 from environment.decorators import handle_api_error
 from environment.deserializers import (
     _active_project_data_group,
@@ -111,6 +112,10 @@ DEFAULT_REGION = "us-central1"
 DRAFT_NOT_EDITABLE_MESSAGE = (
     "This draft is not editable right now (submitted, published or archived), "
     "so its workbench cannot be started."
+)
+
+DRAFT_WORKBENCHES_DISABLED_MESSAGE = (
+    "Draft projects cannot be attached to workbenches on this site."
 )
 
 
@@ -521,6 +526,16 @@ def get_available_active_projects(user: User) -> Iterable[Any]:
     )
 
 
+def get_selectable_active_projects(user: User) -> list:
+    """Drafts offered in the workbench-creation dropdown.
+
+    None unless the deployment enables draft workbenches.
+    """
+    if not draft_workbenches_enabled():
+        return []
+    return list(get_available_active_projects(user))
+
+
 def _user_active_projects(user: User) -> Iterable[Any]:
     """Every draft the user authors, in any submission state.
 
@@ -557,6 +572,8 @@ def get_active_project(project_id: str) -> Any:
 def resolve_selectable_project(value: str) -> Any:
     kind, _, project_id = value.partition(":")
     if kind == "active":
+        if not draft_workbenches_enabled():
+            raise EnvironmentCreationFailed(DRAFT_WORKBENCHES_DISABLED_MESSAGE)
         return get_active_project(project_id)
     return get_project(project_id)
 

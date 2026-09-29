@@ -9,6 +9,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.core.cache import cache
 
+from environment.config import draft_workbenches_enabled
 from environment.models import BillingAccountSharingInvite, CloudIdentity
 from environment.tasks import (
     give_user_permission_to_access_billing_account,
@@ -169,7 +170,7 @@ def schedule_stop_environments_if_draft_no_longer_editable(instance, **kwargs):
     # mount mode cannot be changed on a live workbench. Once the authors can no
     # longer edit the draft (submitted, archived), its workbenches are stopped
     # by the same reaper that handles revoked dataset access.
-    if instance.author_editable():
+    if not draft_workbenches_enabled() or instance.author_editable():
         return
     for user_id in _submitting_author_user_ids(instance):
         stop_environments_with_expired_access(user_id)
@@ -180,6 +181,8 @@ def schedule_stop_environments_when_draft_removed(instance, **kwargs):
     # Publication deletes the ActiveProject row inside a transaction and its
     # Author rows cascade with it, so the submitting authors must be collected
     # before the delete runs.
+    if not draft_workbenches_enabled():
+        return
     for user_id in _submitting_author_user_ids(instance):
         stop_environments_with_expired_access(user_id)
 
