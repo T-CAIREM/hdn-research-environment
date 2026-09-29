@@ -1,8 +1,10 @@
 <button
     type="button"
     class="environment-action-button inside-modal-button {{ button_class }}"
-    onclick="sendRequest('{{ request_data }}', '{{ http_method }}', '{{ url }}', '{{ button_type }}')"
+    data-loading-text="{{ loading_text }}"
+    onclick="sendRequest('{{ request_data }}', '{{ http_method }}', '{{ url }}', '{{ button_type }}', this)"
 >
-    {{ button_text }}
+    <span class="action-button-spinner" aria-hidden="true" hidden></span>
+    <span class="action-button-label">{{ button_text }}</span>
+    <span class="action-button-status sr-only" role="status"></span>
 </button>
-

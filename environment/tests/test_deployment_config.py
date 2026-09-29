@@ -10,6 +10,7 @@ from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from environment.config import (
     draft_workbenches_enabled,
+    get_expired_access_enforcement,
     get_organization_domain,
     get_support_email,
 )
@@ -195,3 +196,30 @@ class DraftWorkbenchesSettingTests(SimpleTestCase):
         ):
             with self.subTest(value=value), self.settings(**{self.SETTING: value}):
                 self.assertIs(draft_workbenches_enabled(), expected)
+
+
+class ExpiredAccessEnforcementSettingTests(SimpleTestCase):
+    SETTING = "CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT"
+
+    def test_defaults_to_dry_run(self):
+        with self.settings():
+            if hasattr(settings, self.SETTING):
+                delattr(settings, self.SETTING)
+            self.assertEqual(get_expired_access_enforcement(), "dry_run")
+
+    def test_normalises_known_modes(self):
+        for value, expected in (
+            ("off", "off"),
+            ("dry_run", "dry_run"),
+            ("Dry-Run", "dry_run"),
+            (" enforce ", "enforce"),
+            ("ENFORCE", "enforce"),
+        ):
+            with self.subTest(value=value), self.settings(**{self.SETTING: value}):
+                self.assertEqual(get_expired_access_enforcement(), expected)
+
+    def test_unknown_mode_falls_back_to_dry_run(self):
+        for value in ("enforced", "", "true", None):
+            with self.subTest(value=value), self.settings(**{self.SETTING: value}):
+                with self.assertLogs("environment.config", level="ERROR"):
+                    self.assertEqual(get_expired_access_enforcement(), "dry_run")

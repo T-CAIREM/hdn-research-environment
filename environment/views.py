@@ -334,7 +334,10 @@ def create_research_environment(request, workspace_id):
         if workspace.gcp_project_id == workspace_id
     )
     projects = services.get_available_projects(request.user)
-    active_projects = services.get_selectable_active_projects(request.user)
+    (
+        active_projects,
+        drafts_awaiting_upload_agreement,
+    ) = services.get_selectable_active_projects(request.user)
 
     if request.method == "POST":
         form = CreateResearchEnvironmentForm(
@@ -411,6 +414,10 @@ def create_research_environment(request, workspace_id):
         "instance_projected_costs": instance_projected_costs,
         "gpu_projected_costs": gpu_projected_costs,
         "data_storage_projected_costs": constants.DATA_STORAGE_PROJECTED_COSTS,
+        "drafts_awaiting_upload_agreement": [
+            (project, services.draft_upload_agreement_url(project))
+            for project in drafts_awaiting_upload_agreement
+        ],
     }
     return render(request, "environment/create_research_environment.html", context)
 

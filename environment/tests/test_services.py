@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from unittest import skipIf
 from unittest.mock import MagicMock, patch, Mock
 
@@ -6,8 +7,9 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from environment.deserializers import _active_project_data_group
+from environment.deserializers import _active_project_data_group, _project_data_group
 from environment.entities import (
     EnvironmentStatus,
     EnvironmentType,
@@ -30,6 +32,7 @@ from environment.models import BillingAccountSharingInvite, BucketSharingInvite
 from environment.services import (
     DRAFT_NOT_EDITABLE_MESSAGE,
     DRAFT_WORKBENCHES_DISABLED_MESSAGE,
+    UPLOAD_AGREEMENT_REQUIRED_MESSAGE,
     _create_workbench_kwargs,
     change_environment_machine_type,
     create_cloud_identity,
@@ -53,6 +56,7 @@ from environment.services import (
     get_available_active_projects,
     get_environment_project_pairs_with_expired_access,
     get_selectable_active_projects,
+    draft_upload_agreement_accepted,
     resolve_selectable_project,
     get_workbench_collaborators,
     add_workbench_collaborator,
@@ -66,12 +70,17 @@ from environment.tests.mocks import (
     get_workspace_list_json,
     get_billing_account_list_json,
 )
+from project.models import AccessPolicy
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 ActiveProject = apps.get_model("project", "ActiveProject")
 Author = apps.get_model("project", "Author")
 CoreProject = apps.get_model("project", "CoreProject")
 ProjectType = apps.get_model("project", "ProjectType")
+UploadAgreement = apps.get_model("project", "UploadAgreement")
+Event = apps.get_model("events", "Event")
+EventDataset = apps.get_model("events", "EventDataset")
+EventParticipant = apps.get_model("events", "EventParticipant")
 
 
 User = get_user_model()
@@ -1425,6 +1434,14 @@ class ActiveProjectFixtureMixin:
         )
         return project
 
+    def _accept_upload_agreement(self, project, user):
+        UploadAgreement.objects.create(
+            author=project.authors.get(user=user),
+            accepted=True,
+            accepted_datetime=timezone.now(),
+            no_human_subjects=True,
+        )
+
 
 @skipIf(
     not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
@@ -1471,7 +1488,8 @@ class GetAvailableActiveProjectsStateFilterTestCase(
     "Research environments are disabled",
 )
 class GetSelectableActiveProjectsTestCase(ActiveProjectFixtureMixin, TestCase):
-    """The creation dropdown offers drafts only when the deployment enables them."""
+    """The creation dropdown offers drafts only when the deployment enables them,
+    and only once their upload agreement is accepted."""
 
     def setUp(self):
         self.user = create_user_without_cloud_identity()
@@ -1479,11 +1497,69 @@ class GetSelectableActiveProjectsTestCase(ActiveProjectFixtureMixin, TestCase):
 
     @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=False)
     def test_offers_no_drafts_while_disabled(self):
-        self.assertEqual(get_selectable_active_projects(self.user), [])
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(get_selectable_active_projects(self.user), ([], []))
 
     @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
-    def test_offers_editable_drafts_when_enabled(self):
-        self.assertEqual(get_selectable_active_projects(self.user), [self.draft])
+    def test_offers_drafts_with_an_accepted_upload_agreement(self):
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(get_selectable_active_projects(self.user), ([self.draft], []))
+
+    @override_settings(
+        CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+        UPLOAD_AGREEMENT_START_DATE=None,
+    )
+    def test_holds_back_drafts_without_an_accepted_upload_agreement(self):
+        self.assertEqual(get_selectable_active_projects(self.user), ([], [self.draft]))
+
+    @override_settings(CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True)
+    def test_offers_drafts_created_before_the_agreement_start_date(self):
+        with self.settings(
+            UPLOAD_AGREEMENT_START_DATE=timezone.now() + timedelta(days=1)
+        ):
+            self.assertEqual(
+                get_selectable_active_projects(self.user), ([self.draft], [])
+            )
+
+    def test_a_host_without_an_upload_agreement_has_nothing_to_accept(self):
+        self.assertTrue(draft_upload_agreement_accepted(object()))
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+@override_settings(
+    CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES=True,
+    UPLOAD_AGREEMENT_START_DATE=None,
+)
+class ResolveDraftUploadAgreementTestCase(ActiveProjectFixtureMixin, TestCase):
+    """The server refuses a draft without an accepted agreement, whatever the form offered."""
+
+    def setUp(self):
+        self.user = create_user_without_cloud_identity()
+        self.draft = self._create_draft_for(self.user)
+
+    def test_rejects_a_draft_without_an_accepted_upload_agreement(self):
+        with self.assertRaisesMessage(
+            EnvironmentCreationFailed, UPLOAD_AGREEMENT_REQUIRED_MESSAGE
+        ):
+            resolve_selectable_project(f"active:{self.draft.id}")
+
+    def test_resolves_a_draft_with_an_accepted_upload_agreement(self):
+        self._accept_upload_agreement(self.draft, self.user)
+
+        self.assertEqual(
+            resolve_selectable_project(f"active:{self.draft.id}"), self.draft
+        )
+
+    def test_published_projects_need_no_upload_agreement(self):
+        with patch("environment.services.get_project") as mock_get_project:
+            project = resolve_selectable_project("published:12")
+
+        self.assertEqual(project, mock_get_project.return_value)
 
 
 @skipIf(
@@ -1635,20 +1711,88 @@ class ExpiredDraftAccessTestCase(ActiveProjectFixtureMixin, TestCase):
 
         self.assertEqual(self._pairs_for(environment), [])
 
-    @patch("environment.services.PublishedProject.objects")
-    def test_published_predicate_is_unchanged(self, mock_objects):
-        project = Mock()
-        project._meta.model_name = "publishedproject"
-        project.slug = "demo-project"
-        project.version = "1.0.0"
-        mock_objects.all.return_value = [project]
-        environment = _draft_workbench_entity("demoproject100")
 
-        project.has_access.return_value = True
-        self.assertEqual(self._pairs_for(environment), [])
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ExpiredPublishedAccessTestCase(TestCase):
+    """Published access is read from real rows through the host's
+    accessible_by contract. The host has no PublishedProject.has_access, and
+    a mock of it hid the reaper's crash (#187)."""
 
-        project.has_access.return_value = False
-        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.host = User.objects.create_user(
+            email="host@example.com", password="host-password", username="host"
+        )
+        self.resource_type, _created = ProjectType.objects.get_or_create(
+            id=99, defaults={"name": "Test type", "description": "Test type"}
+        )
+
+    def _published_project(self, slug, access_policy):
+        return PublishedProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self.resource_type,
+            title=slug,
+            slug=slug,
+            submission_slug=slug,
+            version="1.0",
+            access_policy=access_policy,
+        )
+
+    def _pairs_for(self, project):
+        environment = _draft_workbench_entity(_project_data_group(project))
+        with patch(
+            "environment.services.get_active_environments", return_value=[environment]
+        ):
+            pairs = get_environment_project_pairs_with_expired_access(self.user)
+        return environment, pairs
+
+    def test_accessible_project_is_not_expired(self):
+        project = self._published_project("open-data", AccessPolicy.OPEN)
+
+        _environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [])
+
+    def test_inaccessible_project_is_expired(self):
+        # The user is not credentialed.
+        project = self._published_project("credentialed", AccessPolicy.CREDENTIALED)
+
+        environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [(environment, project)])
+
+    def test_access_through_an_active_event_is_not_expired(self):
+        # can_access_project() ignores event datasets; accessible_by() does not,
+        # so an event participant's workbench is not reaped mid-event.
+        project = self._published_project("event-data", AccessPolicy.CREDENTIALED)
+        event = Event.objects.create(
+            title="Workshop",
+            host=self.host,
+            end_date=timezone.now().date() + timedelta(days=7),
+        )
+        EventParticipant.objects.create(user=self.user, event=event)
+        EventDataset.objects.create(event=event, dataset=project, is_active=True)
+
+        _environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [])
+
+    def test_access_ends_with_the_event(self):
+        project = self._published_project("event-data", AccessPolicy.CREDENTIALED)
+        event = Event.objects.create(
+            title="Past workshop",
+            host=self.host,
+            end_date=timezone.now().date() - timedelta(days=1),
+        )
+        EventParticipant.objects.create(user=self.user, event=event)
+        EventDataset.objects.create(event=event, dataset=project, is_active=True)
+
+        environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [(environment, project)])
 
 
 @skipIf(

@@ -1,5 +1,29 @@
 {% extends 'environment/base_environment_home.html' %}
 
+{% block local_css %}
+  {{ block.super }}
+  <style>
+    /* Workbench actions take a while to answer; show the clicked button is busy. */
+    .action-button-spinner {
+      display: inline-block;
+      width: 0.85em;
+      height: 0.85em;
+      margin-right: 0.35em;
+      vertical-align: -0.1em;
+      border: 0.15em solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: action-button-spin 0.75s linear infinite;
+    }
+    @keyframes action-button-spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .action-button-spinner { animation: none; }
+    }
+  </style>
+{% endblock %}
+
 {% block local_js_top %}
   {{ block.super }}
 
@@ -54,10 +78,36 @@
 
 {% block local_js_bottom %}
 <script>
+  // Marks the clicked workbench action button as busy (spinner, "Pausing…"
+  // style label, aria-busy and a screen-reader status) until the cards refresh,
+  // or puts it back when the request fails.
+  function setActionButtonLoading(button, loading) {
+    if (!button) return;
+    const $button = $(button);
+    const $label = $button.find(".action-button-label");
+    const $status = $button.find(".action-button-status");
+    if (loading) {
+      const loadingText = $button.data("loading-text");
+      $button.data("idle-text", $label.text());
+      $label.text(loadingText);
+      $status.text(loadingText);
+      $button.find(".action-button-spinner").prop("hidden", false);
+      $button.attr("aria-busy", "true");
+    } else {
+      if ($button.data("idle-text") !== undefined) {
+        $label.text($button.data("idle-text"));
+      }
+      $status.text("");
+      $button.find(".action-button-spinner").prop("hidden", true);
+      $button.removeAttr("aria-busy");
+    }
+  }
+
   const sendRequest = (function() {
     const csrfToken = getCookie("csrftoken");
+    const genericError = "The request failed. Please try again.";
 
-    return function(request_data, http_method, url, button_type) {
+    return function(request_data, http_method, url, button_type, button) {
         $(".inside-modal-button").prop("disabled", true);
 
         let data = request_data;
@@ -70,6 +120,7 @@
             data["machine_type"] = instance;
             data = JSON.stringify(data);
         }
+        setActionButtonLoading(button, true);
         fetch(url, {
             method: http_method,
             body: data,
@@ -92,15 +143,26 @@
             $(".modal").on("hidden.bs.modal", (e) => {
               if (html){
                 $("#environment-tabs").html(html);
+              } else {
+                // The cards were not replaced, so the button is still on the page.
+                setActionButtonLoading(button, false);
+                $(".inside-modal-button").prop("disabled", false);
               };
             });
             $(".modal").modal("hide");
           }).catch(errorResponseJson => {
             $(".modal").modal("hide");
-            errorResponseJson.then(message => {
-            $("#environment-tabs").prepend(`<div class='alert alert-danger' role='alert'>${message.error}</div>`);
+            setActionButtonLoading(button, false);
             $(".inside-modal-button").prop("disabled", false);
-            });
+            // An error status carries a JSON body; a network failure does not.
+            Promise.resolve(errorResponseJson)
+              .then(message => (message && message.error) || genericError)
+              .catch(() => genericError)
+              .then(text => {
+                $("#environment-tabs").prepend(
+                  $("<div class='alert alert-danger' role='alert'></div>").text(text)
+                );
+              });
           })
       }
   })();

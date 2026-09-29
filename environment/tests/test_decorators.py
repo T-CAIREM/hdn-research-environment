@@ -1,10 +1,13 @@
 from unittest import skipIf
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import requests
 from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
+
+from environment import api
+from environment.api.decorators import API_REQUEST_TIMEOUT_SECONDS
 
 from environment.decorators import (
     cloud_identity_required,
@@ -122,3 +125,26 @@ class HandleApiErrorTestCase(TestCase):
         )
         with self.assertRaises(self.OperationFailed):
             decorated()
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ApiRequestTimeoutTestCase(TestCase):
+    @patch("environment.api.decorators._apply_api_credentials")
+    @patch("environment.api.decorators.Session.send")
+    def test_api_calls_are_sent_with_a_timeout(self, mock_send, _mock_credentials):
+        api.share_billing_account(
+            owner_email="owner@example.com",
+            user_email="user@example.com",
+            billing_account_id="012345-6789AB-CDEF01",
+        )
+
+        self.assertEqual(
+            mock_send.call_args.kwargs["timeout"], API_REQUEST_TIMEOUT_SECONDS
+        )
+
+    def test_timeout_outlasts_the_api_billing_retry_budget(self):
+        # The API retries a conflicting billing share for about 35 s at worst.
+        self.assertGreater(API_REQUEST_TIMEOUT_SECONDS, 35)

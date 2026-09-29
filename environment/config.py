@@ -1,11 +1,23 @@
 """Deployment-specific values shared by environment views and templates."""
 
+import logging
 from email.utils import parseaddr
 
 from django.conf import settings
 from django.db.models import Model
 
+logger = logging.getLogger(__name__)
+
 _TRUE_STRINGS = {"1", "true", "yes", "on"}
+
+EXPIRED_ACCESS_ENFORCEMENT_OFF = "off"
+EXPIRED_ACCESS_ENFORCEMENT_DRY_RUN = "dry_run"
+EXPIRED_ACCESS_ENFORCEMENT_ENFORCE = "enforce"
+_EXPIRED_ACCESS_ENFORCEMENT_MODES = (
+    EXPIRED_ACCESS_ENFORCEMENT_OFF,
+    EXPIRED_ACCESS_ENFORCEMENT_DRY_RUN,
+    EXPIRED_ACCESS_ENFORCEMENT_ENFORCE,
+)
 
 
 def _setting_enabled(name: str, default: bool = False) -> bool:
@@ -42,3 +54,25 @@ def draft_workbenches_enabled() -> bool:
     deployment opts in explicitly.
     """
     return _setting_enabled("CLOUD_RESEARCH_ENVIRONMENTS_ENABLE_DRAFT_WORKBENCHES")
+
+
+def get_expired_access_enforcement() -> str:
+    """How the expired-access tasks act: "off", "dry_run" (default) or "enforce".
+
+    "dry_run" logs every workbench an enforcing run would stop or destroy and
+    changes nothing (no stop, no delete, no email), so the first run on a
+    deployment is an inventory. An unrecognised value also means "dry_run",
+    so that a typo never enforces.
+    """
+    name = "CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT"
+    value = getattr(settings, name, EXPIRED_ACCESS_ENFORCEMENT_DRY_RUN)
+    mode = str(value).strip().lower().replace("-", "_")
+    if mode not in _EXPIRED_ACCESS_ENFORCEMENT_MODES:
+        logger.error(
+            "Unrecognised %s value %r; using %r",
+            name,
+            value,
+            EXPIRED_ACCESS_ENFORCEMENT_DRY_RUN,
+        )
+        return EXPIRED_ACCESS_ENFORCEMENT_DRY_RUN
+    return mode
