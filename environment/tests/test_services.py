@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from unittest import skipIf
 from unittest.mock import MagicMock, patch, Mock
 
@@ -6,8 +7,9 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from environment.deserializers import _active_project_data_group
+from environment.deserializers import _active_project_data_group, _project_data_group
 from environment.entities import (
     EnvironmentStatus,
     EnvironmentType,
@@ -66,12 +68,16 @@ from environment.tests.mocks import (
     get_workspace_list_json,
     get_billing_account_list_json,
 )
+from project.models import AccessPolicy
 
 PublishedProject = apps.get_model("project", "PublishedProject")
 ActiveProject = apps.get_model("project", "ActiveProject")
 Author = apps.get_model("project", "Author")
 CoreProject = apps.get_model("project", "CoreProject")
 ProjectType = apps.get_model("project", "ProjectType")
+Event = apps.get_model("events", "Event")
+EventDataset = apps.get_model("events", "EventDataset")
+EventParticipant = apps.get_model("events", "EventParticipant")
 
 
 User = get_user_model()
@@ -1635,20 +1641,88 @@ class ExpiredDraftAccessTestCase(ActiveProjectFixtureMixin, TestCase):
 
         self.assertEqual(self._pairs_for(environment), [])
 
-    @patch("environment.services.PublishedProject.objects")
-    def test_published_predicate_is_unchanged(self, mock_objects):
-        project = Mock()
-        project._meta.model_name = "publishedproject"
-        project.slug = "demo-project"
-        project.version = "1.0.0"
-        mock_objects.all.return_value = [project]
-        environment = _draft_workbench_entity("demoproject100")
 
-        project.has_access.return_value = True
-        self.assertEqual(self._pairs_for(environment), [])
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class ExpiredPublishedAccessTestCase(TestCase):
+    """Published access is read from real rows through the host's
+    accessible_by contract. The host has no PublishedProject.has_access, and
+    a mock of it hid the reaper's crash (#187)."""
 
-        project.has_access.return_value = False
-        self.assertEqual(self._pairs_for(environment), [(environment, project)])
+    def setUp(self):
+        self.user = create_user_with_cloud_identity()
+        self.host = User.objects.create_user(
+            email="host@example.com", password="host-password", username="host"
+        )
+        self.resource_type, _created = ProjectType.objects.get_or_create(
+            id=99, defaults={"name": "Test type", "description": "Test type"}
+        )
+
+    def _published_project(self, slug, access_policy):
+        return PublishedProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=self.resource_type,
+            title=slug,
+            slug=slug,
+            submission_slug=slug,
+            version="1.0",
+            access_policy=access_policy,
+        )
+
+    def _pairs_for(self, project):
+        environment = _draft_workbench_entity(_project_data_group(project))
+        with patch(
+            "environment.services.get_active_environments", return_value=[environment]
+        ):
+            pairs = get_environment_project_pairs_with_expired_access(self.user)
+        return environment, pairs
+
+    def test_accessible_project_is_not_expired(self):
+        project = self._published_project("open-data", AccessPolicy.OPEN)
+
+        _environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [])
+
+    def test_inaccessible_project_is_expired(self):
+        # The user is not credentialed.
+        project = self._published_project("credentialed", AccessPolicy.CREDENTIALED)
+
+        environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [(environment, project)])
+
+    def test_access_through_an_active_event_is_not_expired(self):
+        # can_access_project() ignores event datasets; accessible_by() does not,
+        # so an event participant's workbench is not reaped mid-event.
+        project = self._published_project("event-data", AccessPolicy.CREDENTIALED)
+        event = Event.objects.create(
+            title="Workshop",
+            host=self.host,
+            end_date=timezone.now().date() + timedelta(days=7),
+        )
+        EventParticipant.objects.create(user=self.user, event=event)
+        EventDataset.objects.create(event=event, dataset=project, is_active=True)
+
+        _environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [])
+
+    def test_access_ends_with_the_event(self):
+        project = self._published_project("event-data", AccessPolicy.CREDENTIALED)
+        event = Event.objects.create(
+            title="Past workshop",
+            host=self.host,
+            end_date=timezone.now().date() - timedelta(days=1),
+        )
+        EventParticipant.objects.create(user=self.user, event=event)
+        EventDataset.objects.create(event=event, dataset=project, is_active=True)
+
+        environment, pairs = self._pairs_for(project)
+
+        self.assertEqual(pairs, [(environment, project)])
 
 
 @skipIf(

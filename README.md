@@ -26,6 +26,17 @@ cloud identity email and is excluded from collaborator removal controls.
   workbenches with a read-write mount. While it is off, the creation form offers
   only published projects, a draft selection is rejected, and draft state changes
   queue no background work. Workbenches created while it was on are left as they are.
+- `CLOUD_RESEARCH_ENVIRONMENTS_EXPIRED_ACCESS_ENFORCEMENT` (default `"dry_run"`)
+  controls the tasks that stop, and 14 days later destroy, workbenches whose data
+  access has expired:
+  - `"off"`: the tasks do nothing.
+  - `"dry_run"`: each workbench an enforcing run would stop or destroy is logged at
+    INFO as a JSON line prefixed `Expired-access dry run:`. Nothing is stopped,
+    destroyed or mailed, and no termination is queued.
+  - `"enforce"`: the workbenches are stopped, the user is mailed, and termination
+    is queued.
+
+  An unrecognised value is treated as `"dry_run"` and logged as an error.
 
 ## Regression tests
 
