@@ -28,7 +28,11 @@ from environment.exceptions import (
     InvitedUserIsAccountOwner,
     PublishedProjectAccessFailed,
 )
-from environment.models import BillingAccountSharingInvite, BucketSharingInvite
+from environment.models import (
+    BillingAccountSharingInvite,
+    BucketSharingInvite,
+    CloudIdentity,
+)
 from environment.services import (
     DRAFT_NOT_EDITABLE_MESSAGE,
     DRAFT_WORKBENCHES_DISABLED_MESSAGE,
@@ -870,12 +874,12 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
 
         result = check_collaborator_project_access(
             collaborator_email="user@healthdatanexus.ai",
-            project_id="proj-abc",
+            project_id="published:7",
         )
 
         mock_get_collaborator_user.assert_called_once_with("user@healthdatanexus.ai")
         mock_accessible_by.assert_called_once_with(mock_user)
-        mock_accessible_by.return_value.filter.assert_called_once_with(id="proj-abc")
+        mock_accessible_by.return_value.filter.assert_called_once_with(id="7")
 
         self.assertTrue(result)
 
@@ -885,7 +889,7 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
 
         result = check_collaborator_project_access(
             collaborator_email="ghost@example.com",
-            project_id="proj-123",
+            project_id="published:123",
         )
 
         self.assertIsNone(result)
@@ -905,11 +909,102 @@ class CheckCollaboratorProjectAccessTestCase(TestCase):
         with self.assertRaises(PublishedProjectAccessFailed):
             check_collaborator_project_access(
                 collaborator_email="user@healthdatanexus.ai",
-                project_id="proj-abc",
+                project_id="published:7",
             )
 
         mock_accessible_by.assert_called_once_with(mock_user)
-        mock_accessible_by.return_value.filter.assert_called_once_with(id="proj-abc")
+        mock_accessible_by.return_value.filter.assert_called_once_with(id="7")
+
+    @patch("environment.services.get_collaborator_user_by_email")
+    @patch("environment.services.PublishedProject.objects.accessible_by")
+    def test_accepts_a_bare_published_id(
+        self,
+        mock_accessible_by,
+        mock_get_collaborator_user,
+    ):
+        mock_accessible_by.return_value.filter.return_value.exists.return_value = True
+
+        result = check_collaborator_project_access(
+            collaborator_email="user@healthdatanexus.ai",
+            project_id="7",
+        )
+
+        mock_accessible_by.return_value.filter.assert_called_once_with(id="7")
+        self.assertTrue(result)
+
+    @patch("environment.services.get_collaborator_user_by_email")
+    @patch("environment.services.PublishedProject.objects.accessible_by")
+    def test_refuses_a_draft_project(
+        self,
+        mock_accessible_by,
+        mock_get_collaborator_user,
+    ):
+        with self.assertRaisesMessage(
+            PublishedProjectAccessFailed,
+            "Collaborators can only be added to a workbench on a published dataset.",
+        ):
+            check_collaborator_project_access(
+                collaborator_email="user@healthdatanexus.ai",
+                project_id="active:7",
+            )
+
+        mock_accessible_by.assert_not_called()
+
+    @patch("environment.services.get_collaborator_user_by_email")
+    @patch("environment.services.PublishedProject.objects.accessible_by")
+    def test_refuses_a_malformed_project_id(
+        self,
+        mock_accessible_by,
+        mock_get_collaborator_user,
+    ):
+        for project_id in (None, "", "published:abc", "draft:7", "published:\u0663"):
+            with self.subTest(project_id=project_id):
+                with self.assertRaisesMessage(
+                    PublishedProjectAccessFailed,
+                    "Select a valid project before adding collaborators.",
+                ):
+                    check_collaborator_project_access(
+                        collaborator_email="user@healthdatanexus.ai",
+                        project_id=project_id,
+                    )
+
+        mock_accessible_by.assert_not_called()
+
+
+@skipIf(
+    not settings.ENABLE_CLOUD_RESEARCH_ENVIRONMENTS,
+    "Research environments are disabled",
+)
+class CheckCollaboratorProjectAccessDatabaseTestCase(TestCase):
+    def test_prefixed_published_id_is_looked_up_by_its_number(self):
+        # Mocks hid this: "published:<id>" reached the integer id filter and
+        # raised ValueError, an HTTP 500 on the creation page.
+        collaborator = User.objects.create_user(
+            email="collaborator@example.com", password="pw", username="collaborator"
+        )
+        CloudIdentity.objects.create(
+            user=collaborator,
+            gcp_user_id="collaborator",
+            email="collaborator@example.com",
+        )
+        resource_type, _created = ProjectType.objects.get_or_create(
+            id=99, defaults={"name": "Test type", "description": "Test type"}
+        )
+        project = PublishedProject.objects.create(
+            core_project=CoreProject.objects.create(),
+            resource_type=resource_type,
+            title="open-data",
+            slug="open-data",
+            submission_slug="open-data",
+            version="1.0",
+            access_policy=AccessPolicy.OPEN,
+        )
+
+        result = check_collaborator_project_access(
+            "collaborator@example.com", f"published:{project.id}"
+        )
+
+        self.assertTrue(result)
 
 
 class GetWorkbenchCollaboratorsTestCase(TestCase):

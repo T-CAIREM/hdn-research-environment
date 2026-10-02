@@ -626,13 +626,27 @@ def get_collaborator_user_by_email(email: str):
 
 
 def check_collaborator_project_access(collaborator_email: str, project_id: str) -> bool:
+    # project_id is the creation form's "published:<id>" or "active:<id>", or a
+    # bare published id (older pages, the collaborative management URL).
+    kind, _, pk = str(project_id or "").rpartition(":")
+    if kind == "active":
+        # Only collaborative workbenches have collaborators, and the creation
+        # form refuses a draft on that environment type.
+        raise PublishedProjectAccessFailed(
+            "Collaborators can only be added to a workbench on a published dataset."
+        )
+    if kind not in ("", "published") or not (pk.isascii() and pk.isdigit()):
+        raise PublishedProjectAccessFailed(
+            "Select a valid project before adding collaborators."
+        )
+
     collaborator_user = get_collaborator_user_by_email(collaborator_email)
     if not collaborator_user:
         return
 
     if (
         not PublishedProject.objects.accessible_by(collaborator_user)
-        .filter(id=project_id)
+        .filter(id=pk)
         .exists()
     ):
         raise PublishedProjectAccessFailed(
